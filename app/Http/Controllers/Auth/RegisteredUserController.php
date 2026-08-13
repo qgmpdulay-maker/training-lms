@@ -30,22 +30,30 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'age' => ['required', 'integer', 'min:1', 'max:120'],
+            'sex' => ['required', 'in:Male,Female,Other'],
+            'participant_type' => ['required', 'string', 'max:255'],
+            'organization' => ['required', 'string', 'max:255'],
             'agency' => ['required', 'string', 'max:255'],
             'mobile_number' => ['required', 'digits:11'],
-            'landline_number' => ['nullable', 'digits:8'],
+            'landline_number' => ['nullable', 'digits:10'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'agency' => $request->agency,
-            'mobile_number' => $request->mobile_number,
-            'landline_number' => $request->landline_number,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'name' => $validated['name'],
+            'age' => $validated['age'],
+            'sex' => $validated['sex'],
+            'participant_type' => $validated['participant_type'],
+            'organization' => $validated['organization'],
+            'agency' => $validated['agency'],
+            'mobile_number' => $validated['mobile_number'],
+            'landline_number' => $validated['landline_number'] ?? null,
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
         ]);
 
         event(new Registered($user));

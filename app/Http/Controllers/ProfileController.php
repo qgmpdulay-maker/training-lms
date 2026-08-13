@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 
@@ -25,36 +24,33 @@ class ProfileController extends Controller
      * Update the user's profile information.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
-{
-    $request->user()->fill($request->validated());
+    {
+        $validated = $request->validated();
 
-    if ($request->user()->isDirty('email')) {
-        $request->user()->email_verified_at = null;
-    }
+        if ($request->hasFile('picture')) {
+            $validated['picture'] = $request->file('picture')->store('participant-pictures', 'public');
+        } else {
+            unset($validated['picture']);
+        }
 
-    $request->user()->save();
+        $request->user()->fill($validated);
 
-    return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        if ($request->user()->isDirty('email')) {
+            $request->user()->email_verified_at = null;
+        }
+
+        $request->user()->save();
+
+        return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
     /**
-     * Delete the user's account.
+     * Display the participant's printable ID card.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function idCard(Request $request): View
     {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
+        return view('profile.id-card', [
+            'user' => $request->user(),
         ]);
-
-        $user = $request->user();
-
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
     }
 }

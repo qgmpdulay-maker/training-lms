@@ -6,19 +6,24 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('agency')->after('name');
-            $table->string('mobile_number', 11)->after('agency');
-            $table->string('landline_number', 10)->nullable()->after('mobile_number');
+            $table->string('theme')->default('light')->after('recommended_training_at');
+            $table->string('locale')->default('en')->after('theme');
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['agency', 'mobile_number', 'landline_number']);
+            $table->dropColumn(['theme', 'locale']);
         });
     }
 };

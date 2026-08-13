@@ -1,56 +1,135 @@
-<x-guest-layout>
-    <!-- Back Button -->
-    <div class="mb-4">
-    <a href="{{ route('welcome') }}" class="inline-flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">            <svg class="w-4 h-4 me-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
-            {{ __('Back') }}
-        </a>
-    </div>
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <title>{{ config('app.name', 'OCD Training LMS') }} — {{ __('Sign In') }}</title>
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
 
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    </head>
+    <body class="font-sans antialiased">
+        <div class="min-h-screen flex flex-col lg:flex-row">
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <!-- Left: Form -->
+            <div class="flex-1 flex flex-col px-6 sm:px-12 lg:px-20 py-10 bg-white">
+
+                <!-- Logo -->
+                <div class="flex items-center gap-3 mb-16">
+                    <img src="{{ asset('images/ocd-seal.png') }}" alt="{{ __('OCD Seal') }}" class="h-20 w-20 object-contain">
+                    <span class="text-base font-semibold text-[#152A4E] tracking-tight">
+                        {{ __('OCD Training LMS') }}
+                    </span>
+                </div>
+
+                <div class="flex-1 flex items-center">
+                    <div class="w-full max-w-sm mx-auto lg:mx-0">
+
+                        <p class="text-sm text-gray-500 mb-1">{{ __('Welcome back') }}</p>
+                        <h1 class="text-2xl font-bold text-[#152A4E] mb-8">
+                            {{ __('Sign In to the Training Portal') }}
+                        </h1>
+
+                        <x-auth-session-status class="mb-4" :status="session('status')" />
+
+                        <form method="POST" action="{{ route('login') }}" class="space-y-5">
+                            @csrf
+
+                            <!-- Email -->
+                            <div>
+                                <label for="email" class="block text-xs font-medium text-gray-500 mb-1">
+                                    {{ __('Email') }}
+                                </label>
+                                <div class="relative">
+                                    <input id="email" type="email" name="email"
+                                        value="{{ old('email') }}"
+                                        required autofocus autocomplete="username"
+                                        placeholder="{{ __('you@example.com') }}"
+                                        class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] text-lg h-12 pr-10">
+                                    <svg class="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                                    </svg>
+                                </div>
+                                <x-input-error :messages="$errors->get('email')" class="mt-1" />
+                            </div>
+
+                            <!-- Password -->
+                            <div>
+                                <label for="password" class="block text-xs font-medium text-gray-500 mb-1">
+                                    {{ __('Password') }}
+                                </label>
+                                <div class="relative">
+                                    <input id="password" type="password" name="password"
+                                        required autocomplete="current-password"
+                                        placeholder="••••••••"
+                                        class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] text-lg h-12 pr-10">
+                                    <button type="button" onclick="const p=document.getElementById('password'); p.type = p.type === 'password' ? 'text' : 'password';"
+                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <x-input-error :messages="$errors->get('password')" class="mt-1" />
+                            </div>
+
+                            <!-- Remember + Forgot -->
+                            <div class="flex items-center justify-between">
+                                <label for="remember_me" class="inline-flex items-center">
+                                    <input id="remember_me" type="checkbox" name="remember"
+                                        class="rounded border-gray-300 text-[#152A4E] shadow-sm focus:ring-[#152A4E]">
+                                    <span class="ms-2 text-xs text-gray-600">{{ __('Remember me') }}</span>
+                                </label>
+
+                                @if (Route::has('password.request'))
+                                    <a href="{{ route('password.request') }}" class="text-xs text-[#152A4E] hover:text-[#E2762D] font-medium">
+                                        {{ __('Forgot password?') }}
+                                    </a>
+                                @endif
+                            </div>
+
+                            <!-- Submit -->
+                            <button type="submit"
+                                class="w-full bg-[#152A4E] hover:bg-[#1E3A66] text-white text-sm font-semibold rounded-lg py-3 transition">
+                                {{ __('Sign In') }}
+                            </button>
+                        </form>
+
+                    </div>
+                </div>
+
+                <p class="text-sm text-gray-500 text-center lg:text-left">
+                    {{ __("Don't have an account?") }}
+                    <a href="{{ route('register') }}" class="text-[#152A4E] font-semibold hover:text-[#E2762D]">
+                        {{ __('Register') }}
+                    </a>
+                </p>
+            </div>
+
+            <!-- Right: Visual -->
+            <div class="hidden lg:flex lg:flex-1 relative overflow-hidden bg-gradient-to-br from-[#152A4E] via-[#1E3A66] to-[#0D1B33]">
+                <img src="{{ asset('images/ocd-seal.png') }}" alt=""
+                    class="absolute -right-24 -bottom-24 w-[560px] h-[560px] object-contain opacity-[0.07] pointer-events-none">
+
+                <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#152A4E] via-[#152A4E] to-[#E2762D]"></div>
+
+                <div class="relative z-10 flex flex-col justify-end p-16 text-white">
+                    <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase mb-4">
+                        {{ __('National Disaster Risk Reduction and Management Council') }}
+                    </p>
+                    <h2 class="text-3xl font-bold leading-snug mb-4 max-w-md">
+                        {{ __('Building prepared, resilient communities across the Philippines.') }}
+                    </h2>
+                    <p class="text-sm text-white/70 max-w-sm">
+                        {{ __('Sign in to access training courses, request programs, and manage your participation records.') }}
+                    </p>
+                </div>
+            </div>
+
         </div>
-
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:focus:ring-offset-gray-800" name="remember">
-                <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Remember me') }}</span>
-            </label>
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800" href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
-
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
-        </div>
-    </form>
-</x-guest-layout>
+    </body>
+</html>

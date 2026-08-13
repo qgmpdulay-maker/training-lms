@@ -18,10 +18,15 @@ class ProfileUpdateRequest extends FormRequest
         {
             return [
                 'name' => ['required', 'string', 'max:255'],
+                'age' => ['required', 'integer', 'min:1', 'max:150'],
+                'sex' => ['required', 'string', 'in:Male,Female,Other'],
+                'participant_type' => ['required', 'string', 'max:255'],
+                'organization' => ['required', 'string', 'max:255'],
                 'agency' => ['required', 'string', 'max:255'],
                 'mobile_number' => ['required', 'digits:11'],
-                'landline_number' => ['nullable', 'digits:8'],
+                'landline_number' => ['nullable', 'digits:10'],
                 'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($this->user()->id)],
+                'picture' => ['nullable', 'image', 'max:4096'],
                 ];
         }
     }
