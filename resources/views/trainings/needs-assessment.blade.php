@@ -159,11 +159,11 @@
                             <span x-text="recommendation.hours"></span> {{ __('training hours') }}
                         </p>
 
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                            {{ __('Your OCD Regional Office will review this and schedule you for a training accordingly.') }}
+                        </p>
+
                         <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-                            <a :href="'{{ route('training-requests.create') }}?training=' + recommendation.slug"
-                                class="w-full sm:w-auto inline-flex items-center justify-center bg-[#152A4E] hover:bg-[#1E3A66] text-white text-sm font-semibold rounded-lg px-6 py-3 transition">
-                                {{ __('Request This Training') }}
-                            </a>
                             <button type="button" @click="restart()"
                                 class="w-full sm:w-auto text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white px-6 py-3">
                                 {{ __('Retake Assessment') }}

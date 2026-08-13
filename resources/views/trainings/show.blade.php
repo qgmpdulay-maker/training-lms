@@ -16,7 +16,7 @@
                     <svg class="w-4 h-4 me-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                     </svg>
-                    {{ __('My Training Requests') }}
+                    {{ __('My Upcoming Trainings') }}
                 </a>
                 <button type="button" onclick="window.print()"
                     class="inline-flex items-center gap-2 text-sm font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">
@@ -27,68 +27,41 @@
                 </button>
             </div>
 
-            <!-- Confirmation banner -->
-            <div class="no-print mb-8 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-6 sm:p-8 text-center">
-                <div class="mx-auto mb-4 flex items-center justify-center w-14 h-14 rounded-full bg-green-100 dark:bg-green-800/40">
-                    <svg class="w-7 h-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-                <h1 class="text-xl font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Your request has been submitted') }}</h1>
-                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">{{ __('Please keep this reference number for your records.') }}</p>
-                <p class="text-2xl font-bold tracking-wide text-[#152A4E] dark:text-white mb-4">{{ $trainingRequest->reference_number }}</p>
-                <span class="inline-flex items-center text-xs font-semibold rounded-full border px-3 py-1.5 {{ $statusStyles[$trainingRequest->status] ?? 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600' }}">
-                    {{ $trainingRequest->statusLabel() }}
-                </span>
-                <p class="text-sm text-gray-600 dark:text-gray-300 mt-5 max-w-md mx-auto">
-                    {{ __('CDTI will review your request and get in touch using the contact details you provided. A copy of your request letter is below — you can print it or save it as a PDF for your files.') }}
-                </p>
-            </div>
-
-            <!-- Printable letter -->
-            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-8 sm:p-12 leading-relaxed text-gray-800">
-                <p class="text-sm text-gray-500 mb-8">{{ $trainingRequest->created_at->format('F j, Y') }}</p>
-
-                <p class="font-bold mb-0">MR. GILBERT H. CONDE</p>
-                <p class="mb-0">Director III</p>
-                <p class="mb-0">Civil Defense and Disaster Management Training Institute</p>
-                <p class="mb-0">Office of Civil Defense</p>
-                <p class="mb-6">Camp General Emilio Aguinaldo, Quezon City</p>
-
-                <p class="mb-4">{{ __('Dear Director Conde,') }}</p>
-
-                <p class="mb-4">
-                    {{ __('On behalf of :agency, I am writing to formally request the conduct of the :training training for approximately :count participant(s), preferably on :date at :venue.', [
-                        'agency' => $trainingRequest->requesting_agency,
-                        'training' => $trainingRequest->training_title,
-                        'count' => $trainingRequest->number_of_participants,
-                        'date' => $trainingRequest->preferred_date->format('F j, Y'),
-                        'venue' => $trainingRequest->venue,
-                    ]) }}
-                </p>
-
-                <p class="mb-4">{{ $trainingRequest->purpose }}</p>
-
-                <p class="mb-6">
-                    {{ __('We acknowledge that this training is offered free of charge, and that our agency will be responsible for the training venue, accommodation and meals for the instructor(s) and participants, reproduction of training materials, and honoraria for instructors and facilitators.') }}
-                </p>
-
-                <p class="mb-1">{{ __('Respectfully yours,') }}</p>
-                <p class="italic text-lg mt-6 mb-0">{{ $trainingRequest->signature_name }}</p>
-                <div class="w-56 border-t border-gray-400 mb-1"></div>
-                <p class="font-semibold mb-0">{{ $trainingRequest->contact_person }}</p>
-                <p class="mb-0">{{ $trainingRequest->requesting_agency }}</p>
-                <p class="text-sm text-gray-500">{{ $trainingRequest->contact_number }} &middot; {{ $trainingRequest->contact_email }}</p>
-
-                @if ($trainingRequest->signed_letter_path)
-                    <div class="no-print mt-8 pt-6 border-t border-gray-100">
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">{{ __('A separately signed copy was also uploaded with this request:') }}</p>
-                        <a href="{{ \Illuminate\Support\Facades\Storage::url($trainingRequest->signed_letter_path) }}" target="_blank"
-                            class="text-sm font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">
-                            {{ __('View uploaded file') }} &rarr;
-                        </a>
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-8 sm:p-10">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-8">
+                    <div>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ $trainingRequest->reference_number ?? __('Reference pending') }}</p>
+                        <h1 class="text-xl font-bold text-[#152A4E] dark:text-white">{{ $trainingRequest->training_title }}</h1>
                     </div>
-                @endif
+                    <span class="shrink-0 inline-flex items-center text-xs font-semibold rounded-full border px-3 py-1.5 {{ $statusStyles[$trainingRequest->status] ?? 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600' }}">
+                        {{ $trainingRequest->statusLabel() }}
+                    </span>
+                </div>
+
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">{{ __('Date') }}</dt>
+                        <dd class="text-sm text-gray-800 dark:text-gray-200">{{ $trainingRequest->preferred_date->format('F j, Y') }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">{{ __('Venue') }}</dt>
+                        <dd class="text-sm text-gray-800 dark:text-gray-200">{{ $trainingRequest->venue }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">{{ __('Requesting Agency') }}</dt>
+                        <dd class="text-sm text-gray-800 dark:text-gray-200">{{ $trainingRequest->requesting_agency }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">{{ __('Number of Participants') }}</dt>
+                        <dd class="text-sm text-gray-800 dark:text-gray-200">{{ $trainingRequest->number_of_participants }}</dd>
+                    </div>
+                    @if ($trainingRequest->purpose)
+                        <div class="sm:col-span-2">
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">{{ __('Notes') }}</dt>
+                            <dd class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{{ $trainingRequest->purpose }}</dd>
+                        </div>
+                    @endif
+                </dl>
             </div>
 
         </div>

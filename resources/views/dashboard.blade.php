@@ -34,7 +34,7 @@
                         </a>
                         <a href="{{ route('training-requests.index') }}"
                             class="inline-flex items-center justify-center bg-white/10 text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-white/20 transition border border-white/20">
-                            {{ __('My Requests') }}
+                            {{ __('Upcoming Trainings') }}
                         </a>
                     </div>
                 </div>
@@ -83,11 +83,10 @@
                                 {{ $recommendedTraining['category'] }}
                             </span>
                             <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ $recommendedTraining['title'] }}</h3>
-                            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">{{ $recommendedTraining['hours'] }} {{ __('training hours') }}</p>
-                            <a href="{{ route('training-requests.create') }}?training={{ $recommendedTraining['slug'] }}"
-                                class="inline-flex items-center text-sm font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D] transition">
-                                {{ __('Request This Training') }} &rarr;
-                            </a>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">{{ $recommendedTraining['hours'] }} {{ __('training hours') }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                                {{ __('Your OCD Regional Office will use this to help schedule your next training.') }}
+                            </p>
                         </div>
                     @else
                         <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">

@@ -52,17 +52,17 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <template x-for="training in filtered" :key="training.title">
-                        <div class="flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition overflow-hidden">
+                        <div x-data="{ open: false }" class="flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition overflow-hidden">
                             <div class="h-1.5 bg-gradient-to-r from-[#152A4E] to-[#E2762D]"></div>
-                            <div class="p-6 flex flex-col flex-1">
+                            <button type="button" @click="open = ! open" class="p-6 flex flex-col flex-1 text-left w-full">
                                 <span class="inline-block w-fit text-[11px] font-semibold tracking-wide uppercase text-[#152A4E] dark:text-white bg-[#152A4E]/8 dark:bg-[#152A4E]/30 rounded-full px-2.5 py-1 mb-3"
                                     x-text="training.category"></span>
 
                                 <h3 class="text-base font-bold text-[#152A4E] dark:text-white mb-2 leading-snug" x-text="training.title"></h3>
 
-                                <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed flex-1" x-text="training.description"></p>
+                                <p x-show="open" x-transition class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed flex-1 mb-4" x-text="training.description"></p>
 
-                                <div class="flex items-center justify-between mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+                                <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                                     <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
                                         <svg class="w-4 h-4 text-[#E2762D]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -70,12 +70,14 @@
                                         <span x-text="training.hours"></span> {{ __('training hours') }}
                                     </span>
 
-                                    <a :href="'{{ route('training-requests.create') }}?training=' + training.slug"
-                                        class="text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D] transition">
-                                        {{ __('Request This Training') }} &rarr;
-                                    </a>
+                                    <span class="inline-flex items-center gap-1 text-xs font-semibold text-[#152A4E] dark:text-white">
+                                        <span x-text="open ? '{{ __('Show less') }}' : '{{ __('Show details') }}'"></span>
+                                        <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                        </svg>
+                                    </span>
                                 </div>
-                            </div>
+                            </button>
                         </div>
                     </template>
                 </div>

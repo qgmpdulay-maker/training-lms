@@ -98,7 +98,7 @@
 
                 <!-- Logo -->
                 <div class="flex items-center gap-3 mb-10">
-                    <img src="{{ asset('images/ocd-seal.png') }}" alt="{{ __('OCD Seal') }}" class="app-logo-img">
+                    <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training LMS Logo') }}" class="app-logo-img">
                     <span class="font-semibold text-[#152A4E] tracking-tight text-lg">
                         {{ __('OCD Training IMS') }}
                     </span>

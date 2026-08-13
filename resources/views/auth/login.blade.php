@@ -19,7 +19,7 @@
 
                 <!-- Logo -->
                 <div class="flex items-center gap-3 mb-16">
-                    <img src="{{ asset('images/ocd-seal.png') }}" alt="{{ __('OCD Seal') }}" class="h-20 w-20 object-contain">
+                    <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training LMS Logo') }}" class="h-20 w-20 object-contain">
                     <span class="text-base font-semibold text-[#152A4E] tracking-tight">
                         {{ __('OCD Training LMS') }}
                     </span>
@@ -47,7 +47,7 @@
                                     <input id="email" type="email" name="email"
                                         value="{{ old('email') }}"
                                         required autofocus autocomplete="username"
-                                        placeholder="{{ __('you@example.com') }}"
+                                        placeholder="{{ __('Enter your email') }}"
                                         class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] text-lg h-12 pr-10">
                                     <svg class="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />

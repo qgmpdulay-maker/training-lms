@@ -30,8 +30,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/training-needs-assessment/recommendation', [TrainingNeedsAssessmentController::class, 'storeRecommendation'])->name('training-needs-assessment.recommendation');
 
     Route::get('/training-requests', [TrainingRequestController::class, 'index'])->name('training-requests.index');
-    Route::get('/training-requests/create', [TrainingRequestController::class, 'create'])->name('training-requests.create');
-    Route::post('/training-requests', [TrainingRequestController::class, 'store'])->name('training-requests.store');
     Route::get('/training-requests/{trainingRequest}', [TrainingRequestController::class, 'show'])->name('training-requests.show');
 });
 

@@ -6,7 +6,7 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center gap-2">
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-2">
-                        <img src="{{ asset('images/ocd-seal.png') }}" alt="{{ __('OCD Seal') }}" class="h-9 w-9 object-contain">
+                        <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training LMS Logo') }}" class="h-9 w-9 object-contain">
                         <span class="hidden md:inline text-sm font-semibold text-white tracking-tight">
                             {{ __('OCD Training LMS') }}
                         </span>
@@ -29,7 +29,7 @@
                     </a>
                     <a href="{{ route('training-requests.index') }}"
                         class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition duration-150 ease-in-out {{ request()->routeIs('training-requests.*') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
-                        {{ __('My Requests') }}
+                        {{ __('Upcoming Trainings') }}
                     </a>
                 </div>
             </div>
@@ -101,7 +101,7 @@
             </a>
             <a href="{{ route('training-requests.index') }}"
                 class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('training-requests.*') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
-                {{ __('My Requests') }}
+                {{ __('Upcoming Trainings') }}
             </a>
         </div>
 
