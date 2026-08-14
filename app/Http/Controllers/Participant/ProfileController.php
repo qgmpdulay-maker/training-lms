@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Participant;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
-        return view('profile.edit', [
+        return view('participant.profile.edit', [
             'user' => $request->user(),
         ]);
     }
@@ -49,7 +50,7 @@ class ProfileController extends Controller
      */
     public function idCard(Request $request): View
     {
-        return view('profile.id-card', [
+        return view('participant.profile.id-card', [
             'user' => $request->user(),
         ]);
     }

@@ -1,11 +1,18 @@
 <?php
 
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Admin\CalendarController as AdminCalendarController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\InstructorController;
+use App\Http\Controllers\Admin\SummaryController;
+use App\Http\Controllers\Admin\SuperAdmin\UserManagementController;
+use App\Http\Controllers\Admin\ToolsController;
+use App\Http\Controllers\Admin\TrainingNeedsAssessmentController as AdminTrainingNeedsAssessmentController;
+use App\Http\Controllers\Participant\DashboardController;
+use App\Http\Controllers\Participant\ProfileController;
+use App\Http\Controllers\Participant\TrainingCatalogController;
+use App\Http\Controllers\Participant\TrainingNeedsAssessmentController;
+use App\Http\Controllers\Participant\TrainingRequestController;
 use App\Http\Controllers\SettingsController;
-use App\Http\Controllers\TrainingCatalogController;
-use App\Http\Controllers\TrainingNeedsAssessmentController;
-use App\Http\Controllers\TrainingRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -31,6 +38,27 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/training-requests', [TrainingRequestController::class, 'index'])->name('training-requests.index');
     Route::get('/training-requests/{trainingRequest}', [TrainingRequestController::class, 'show'])->name('training-requests.show');
+});
+
+Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/summary', [SummaryController::class, 'index'])->name('summary');
+    Route::patch('/summary/{trainingRequest}', [SummaryController::class, 'update'])->name('summary.update');
+    Route::get('/tools', [ToolsController::class, 'index'])->name('tools');
+    Route::post('/tools/{trainingRequest}/files', [ToolsController::class, 'uploadFiles'])->name('tools.files');
+    Route::get('/calendar', [AdminCalendarController::class, 'index'])->name('calendar');
+
+    Route::get('/training-needs-assessment', [AdminTrainingNeedsAssessmentController::class, 'index'])->name('training-needs-assessment');
+
+    Route::get('/instructors', [InstructorController::class, 'index'])->name('instructors.index');
+    Route::post('/instructors', [InstructorController::class, 'store'])->name('instructors.store');
+});
+
+Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+    Route::post('/users/{user}/promote', [UserManagementController::class, 'promote'])->name('users.promote');
+    Route::post('/users/{user}/demote', [UserManagementController::class, 'demote'])->name('users.demote');
 });
 
 require __DIR__.'/auth.php';

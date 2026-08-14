@@ -61,6 +61,20 @@
                             <dd class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{{ $trainingRequest->purpose }}</dd>
                         </div>
                     @endif
+                    @if ($trainingRequest->certificate_file_path)
+                        <div class="sm:col-span-2">
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">{{ __('Certificate') }}</dt>
+                            <dd class="text-sm">
+                                <a href="{{ asset('storage/' . $trainingRequest->certificate_file_path) }}" target="_blank"
+                                    class="no-print inline-flex items-center gap-1.5 font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 12m0 0l4.5-4.5M12 12V3" />
+                                    </svg>
+                                    {{ __('Download Certificate') }}
+                                </a>
+                            </dd>
+                        </div>
+                    @endif
                 </dl>
             </div>
 

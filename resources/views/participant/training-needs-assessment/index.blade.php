@@ -63,7 +63,13 @@
                     finished: {{ $existingRecommendation ? 'true' : 'false' }},
                     recommendation: {{ Js::from($existingRecommendation) }},
                     choose(option) {
-                        this.answers[this.step] = option;
+                        this.answers[this.step] = {
+                            question: this.questions[this.step].question,
+                            selected: option.label,
+                            category: option.category ?? null,
+                            points: option.points ?? null,
+                            hours: option.hours ?? null,
+                        };
                         if (this.step < this.questions.length - 1) {
                             this.step++;
                         } else {
@@ -105,7 +111,13 @@
                                 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
                                 'Accept': 'application/json',
                             },
-                            body: JSON.stringify({ training_slug: this.recommendation.slug }),
+                            body: JSON.stringify({
+                                training_slug: this.recommendation.slug,
+                                answers: this.answers,
+                                category_scores: scores,
+                                top_category: topCategory,
+                                max_hours: maxHours,
+                            }),
                         }).catch(() => {});
                     },
                 }"

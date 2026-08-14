@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Participant;
 
+use App\Http\Controllers\Controller;
 use App\Models\TrainingRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -20,13 +21,13 @@ class TrainingRequestController extends Controller
             ->orderBy('preferred_date')
             ->get();
 
-        return view('trainings.index', compact('upcomingTrainings'));
+        return view('participant.training-requests.index', compact('upcomingTrainings'));
     }
 
     public function show(TrainingRequest $trainingRequest)
     {
         abort_unless($trainingRequest->user_id === Auth::id(), 403);
 
-        return view('trainings.show', compact('trainingRequest'));
+        return view('participant.training-requests.show', compact('trainingRequest'));
     }
 }

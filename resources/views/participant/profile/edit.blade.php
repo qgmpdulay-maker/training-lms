@@ -22,7 +22,7 @@
 
             <!-- Profile Information -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                @include('profile.partials.update-profile-information-form')
+                @include('participant.profile.partials.update-profile-information-form')
             </div>
 
             <!-- Password note -->

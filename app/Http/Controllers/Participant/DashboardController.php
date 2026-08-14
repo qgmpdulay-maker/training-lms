@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Participant;
 
+use App\Http\Controllers\Controller;
 use App\Models\TrainingRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -20,6 +21,6 @@ class DashboardController extends Controller
             ? collect(config('trainings.catalog'))->firstWhere('slug', $user->recommended_training_slug)
             : null;
 
-        return view('dashboard', compact('takenTrainings', 'recommendedTraining'));
+        return view('participant.dashboard', compact('takenTrainings', 'recommendedTraining'));
     }
 }

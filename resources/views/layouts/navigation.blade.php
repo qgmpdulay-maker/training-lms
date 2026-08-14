@@ -1,11 +1,11 @@
-<nav x-data="{ open: false }" class="bg-[#03055a] relative">
+<nav x-data="{ open: false }" class="bg-[#03055a] sticky top-0 z-50">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
-            <div class="flex">
+            <div class="flex min-w-0">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center gap-2">
-                    <a href="{{ route('dashboard') }}" class="flex items-center gap-2">
+                    <a href="{{ route(Auth::user()->isParticipant() ? 'dashboard' : 'admin.dashboard') }}" class="flex items-center gap-2">
                         <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training LMS Logo') }}" class="h-9 w-9 object-contain">
                         <span class="hidden md:inline text-sm font-semibold text-white tracking-tight">
                             {{ __('OCD Training LMS') }}
@@ -14,28 +14,61 @@
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden space-x-6 lg:-my-px lg:ms-8 lg:flex">
-                    <a href="{{ route('dashboard') }}"
-                        class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition duration-150 ease-in-out {{ request()->routeIs('dashboard') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
-                        {{ __('Dashboard') }}
-                    </a>
-                    <a href="{{ route('trainings.index') }}"
-                        class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition duration-150 ease-in-out {{ request()->routeIs('trainings.*') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
-                        {{ __('Trainings') }}
-                    </a>
-                    <a href="{{ route('training-needs-assessment.index') }}"
-                        class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition duration-150 ease-in-out {{ request()->routeIs('training-needs-assessment.*') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
-                        {{ __('Needs Assessment') }}
-                    </a>
-                    <a href="{{ route('training-requests.index') }}"
-                        class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition duration-150 ease-in-out {{ request()->routeIs('training-requests.*') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
-                        {{ __('Upcoming Trainings') }}
-                    </a>
+                <div class="hidden lg:flex lg:-my-px lg:ms-8 items-center gap-5 overflow-x-auto">
+                    @if (Auth::user()->isParticipant())
+                        <a href="{{ route('dashboard') }}"
+                            class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('dashboard') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                            {{ __('Dashboard') }}
+                        </a>
+                        <a href="{{ route('trainings.index') }}"
+                            class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('trainings.*') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                            {{ __('Trainings') }}
+                        </a>
+                        <a href="{{ route('training-needs-assessment.index') }}"
+                            class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('training-needs-assessment.*') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                            {{ __('Needs Assessment') }}
+                        </a>
+                        <a href="{{ route('training-requests.index') }}"
+                            class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('training-requests.*') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                            {{ __('Upcoming Trainings') }}
+                        </a>
+                    @else
+                        <a href="{{ route('admin.dashboard') }}"
+                            class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('admin.dashboard') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                            {{ __('Dashboard') }}
+                        </a>
+                        <a href="{{ route('admin.summary') }}"
+                            class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('admin.summary') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                            {{ __('Summary') }}
+                        </a>
+                        <a href="{{ route('admin.tools') }}"
+                            class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('admin.tools') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                            {{ __('Tools') }}
+                        </a>
+                        <a href="{{ route('admin.instructors.index') }}"
+                            class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('admin.instructors.*') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                            {{ __('Instructors') }}
+                        </a>
+                        <a href="{{ route('admin.training-needs-assessment') }}"
+                            class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('admin.training-needs-assessment') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                            {{ __('Needs Assessment') }}
+                        </a>
+                        <a href="{{ route('admin.calendar') }}"
+                            class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('admin.calendar') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                            {{ __('Calendar') }}
+                        </a>
+                        @if (Auth::user()->isSuperAdmin())
+                            <a href="{{ route('admin.users.index') }}"
+                                class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap transition duration-150 ease-in-out {{ request()->routeIs('admin.users.*') ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white hover:border-white/50' }}">
+                                {{ __('Manage Admins') }}
+                            </a>
+                        @endif
+                    @endif
                 </div>
             </div>
 
             <!-- Settings Dropdown -->
-            <div class="hidden lg:flex lg:items-center lg:ms-6">
+            <div class="hidden lg:flex lg:items-center lg:ms-6 shrink-0">
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-white/15 hover:bg-white/25 focus:outline-none transition ease-in-out duration-150">
@@ -50,6 +83,12 @@
                     </x-slot>
 
                     <x-slot name="content">
+                        @unless (Auth::user()->isParticipant())
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                                {{ Auth::user()->isSuperAdmin() ? __('Super Admin') : __('Regional Admin').' — '.Auth::user()->region }}
+                            </div>
+                        @endunless
+
                         <x-dropdown-link :href="route('profile.edit')">
                             {{ __('Profile') }}
                         </x-dropdown-link>
@@ -85,24 +124,57 @@
     </div>
 
     <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden lg:hidden bg-white dark:bg-gray-800 border-t border-black/10 dark:border-gray-700">
+    <div :class="{'block': open, 'hidden': ! open}" class="hidden lg:hidden bg-white dark:bg-gray-800 border-t border-black/10 dark:border-gray-700 max-h-[calc(100vh-4rem)] overflow-y-auto">
         <div class="pt-2 pb-3 space-y-1">
-            <a href="{{ route('dashboard') }}"
-                class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('dashboard') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
-                {{ __('Dashboard') }}
-            </a>
-            <a href="{{ route('trainings.index') }}"
-                class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('trainings.*') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
-                {{ __('Trainings') }}
-            </a>
-            <a href="{{ route('training-needs-assessment.index') }}"
-                class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('training-needs-assessment.*') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
-                {{ __('Needs Assessment') }}
-            </a>
-            <a href="{{ route('training-requests.index') }}"
-                class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('training-requests.*') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
-                {{ __('Upcoming Trainings') }}
-            </a>
+            @if (Auth::user()->isParticipant())
+                <a href="{{ route('dashboard') }}"
+                    class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('dashboard') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                    {{ __('Dashboard') }}
+                </a>
+                <a href="{{ route('trainings.index') }}"
+                    class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('trainings.*') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                    {{ __('Trainings') }}
+                </a>
+                <a href="{{ route('training-needs-assessment.index') }}"
+                    class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('training-needs-assessment.*') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                    {{ __('Needs Assessment') }}
+                </a>
+                <a href="{{ route('training-requests.index') }}"
+                    class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('training-requests.*') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                    {{ __('Upcoming Trainings') }}
+                </a>
+            @else
+                <a href="{{ route('admin.dashboard') }}"
+                    class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('admin.dashboard') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                    {{ __('Dashboard') }}
+                </a>
+                <a href="{{ route('admin.summary') }}"
+                    class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('admin.summary') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                    {{ __('Summary') }}
+                </a>
+                <a href="{{ route('admin.tools') }}"
+                    class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('admin.tools') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                    {{ __('Tools') }}
+                </a>
+                <a href="{{ route('admin.instructors.index') }}"
+                    class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('admin.instructors.*') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                    {{ __('Instructors') }}
+                </a>
+                <a href="{{ route('admin.training-needs-assessment') }}"
+                    class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('admin.training-needs-assessment') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                    {{ __('Needs Assessment') }}
+                </a>
+                <a href="{{ route('admin.calendar') }}"
+                    class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('admin.calendar') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                    {{ __('Calendar') }}
+                </a>
+                @if (Auth::user()->isSuperAdmin())
+                    <a href="{{ route('admin.users.index') }}"
+                        class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('admin.users.*') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                        {{ __('Manage Admins') }}
+                    </a>
+                @endif
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->
