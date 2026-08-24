@@ -7,11 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'age', 'sex', 'picture', 'participant_type', 'organization', 'agency', 'mobile_number', 'landline_number', 'email', 'password', 'theme', 'locale'])]
+#[Fillable(['name', 'age', 'sex', 'picture', 'participant_type', 'organization', 'agency', 'region', 'mobile_number', 'landline_number', 'email', 'password', 'theme', 'locale'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -53,11 +54,27 @@ class User extends Authenticatable
     }
 
     /**
+     * Requests this user submitted themselves (the old self-service flow, and
+     * the admin's own copy of a bulk request they filed). For "trainings this
+     * participant is actually attending," use participatingTrainingRequests()
+     * or the trainingRequestsInvolving() scope, which also cover bulk requests
+     * an admin filed on this participant's behalf.
+     *
      * @return HasMany<TrainingRequest>
      */
     public function trainingRequests(): HasMany
     {
         return $this->hasMany(TrainingRequest::class);
+    }
+
+    /**
+     * Bulk requests this user was selected as a participant for.
+     *
+     * @return BelongsToMany<TrainingRequest>
+     */
+    public function participatingTrainingRequests(): BelongsToMany
+    {
+        return $this->belongsToMany(TrainingRequest::class)->withTimestamps();
     }
 
     /**

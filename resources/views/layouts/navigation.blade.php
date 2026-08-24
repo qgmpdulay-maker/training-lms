@@ -67,8 +67,18 @@
                 </div>
             </div>
 
-            <!-- Settings Dropdown -->
-            <div class="hidden lg:flex lg:items-center lg:ms-6 shrink-0">
+            <!-- Actions -->
+            <div class="hidden lg:flex lg:items-center gap-3 lg:ms-6 shrink-0">
+                @if (Auth::user()->isAdmin())
+                    <a href="{{ route('admin.training-requests.create') }}"
+                        class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition {{ request()->routeIs('admin.training-requests.*') ? 'bg-[#E2762D] text-white' : 'bg-white/10 text-white hover:bg-white/20' }}">
+                        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        {{ __('Request Training') }}
+                    </a>
+                @endif
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-white/15 hover:bg-white/25 focus:outline-none transition ease-in-out duration-150">
@@ -168,6 +178,12 @@
                     class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('admin.calendar') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
                     {{ __('Calendar') }}
                 </a>
+                @if (Auth::user()->isAdmin())
+                    <a href="{{ route('admin.training-requests.create') }}"
+                        class="block w-full ps-3 pe-4 py-2 border-l-4 border-[#E2762D] text-start text-base font-semibold transition duration-150 ease-in-out {{ request()->routeIs('admin.training-requests.*') ? 'text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'text-[#E2762D] hover:bg-orange-50 dark:hover:bg-orange-900/20' }}">
+                        {{ __('Request Training') }}
+                    </a>
+                @endif
                 @if (Auth::user()->isSuperAdmin())
                     <a href="{{ route('admin.users.index') }}"
                         class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out {{ request()->routeIs('admin.users.*') ? 'border-[#E2762D] text-[#152A4E] dark:text-white bg-[#152A4E]/5 dark:bg-[#152A4E]/30' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-[#152A4E] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">

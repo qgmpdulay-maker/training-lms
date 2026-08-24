@@ -17,79 +17,12 @@
             @endif
 
             <!-- Add Instructor -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Add Instructor') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Instructor ratings are computed automatically from L1 Evaluation data once that feature is built — leave it blank for now.') }}</p>
-
-                <form method="POST" action="{{ route('admin.instructors.store') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    @csrf
-
-                    <div>
-                        <x-input-label for="name" :value="__('Instructor Name')" />
-                        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" required value="{{ old('name') }}" />
-                        <x-input-error :messages="$errors->get('name')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="training_type" :value="__('Type of Training')" />
-                        <x-text-input id="training_type" name="training_type" type="text" class="mt-1 block w-full" required value="{{ old('training_type') }}" />
-                        <x-input-error :messages="$errors->get('training_type')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="certificate_code" :value="__('Certificate Code')" />
-                        <x-text-input id="certificate_code" name="certificate_code" type="text" class="mt-1 block w-full" value="{{ old('certificate_code') }}" />
-                        <x-input-error :messages="$errors->get('certificate_code')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="deployment" :value="__('Deployment (if applicable)')" />
-                        <x-text-input id="deployment" name="deployment" type="text" class="mt-1 block w-full" value="{{ old('deployment') }}" />
-                        <x-input-error :messages="$errors->get('deployment')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="agency_organization" :value="__('Agency / Organization (if applicable)')" />
-                        <x-text-input id="agency_organization" name="agency_organization" type="text" class="mt-1 block w-full" value="{{ old('agency_organization') }}" />
-                        <x-input-error :messages="$errors->get('agency_organization')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="lgu" :value="__('LGU (if applicable)')" />
-                        <x-text-input id="lgu" name="lgu" type="text" class="mt-1 block w-full" value="{{ old('lgu') }}" />
-                        <x-input-error :messages="$errors->get('lgu')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="region" :value="__('Region')" />
-                        @if (Auth::user()->isAdmin())
-                            <x-text-input type="text" class="mt-1 block w-full bg-gray-50 dark:bg-gray-700" value="{{ Auth::user()->region }}" disabled />
-                            <p class="text-xs text-gray-400 mt-1">{{ __('Locked to your region.') }}</p>
-                        @else
-                            <select id="region" name="region"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                <option value="">{{ __('Central / unassigned') }}</option>
-                                @foreach ($regions as $region)
-                                    <option value="{{ $region }}" @selected(old('region') === $region)>{{ $region }}</option>
-                                @endforeach
-                            </select>
-                            <x-input-error :messages="$errors->get('region')" class="mt-1" />
-                        @endif
-                    </div>
-
-                    <div class="sm:col-span-2 lg:col-span-3 flex justify-end">
-                        <button type="submit"
-                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition">
-                            {{ __('Add Instructor') }}
-                        </button>
-                    </div>
-                </form>
-            </div>
+            @include('admin.partials.instructor-form')
 
             <!-- Instructor Roster -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                 <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Instructor Roster') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('All instructors on file, across all regions.') }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Instructors on file for :region.', ['region' => Auth::user()->region]) }}</p>
 
                 @if ($instructors->isEmpty())
                     <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">

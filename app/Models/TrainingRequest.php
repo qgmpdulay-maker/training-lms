@@ -5,12 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 #[Fillable([
-    'training_slug', 'training_title', 'requesting_agency', 'contact_person',
+    'training_slug', 'training_title', 'category', 'requesting_agency', 'contact_person',
     'contact_number', 'contact_email', 'number_of_participants', 'preferred_date',
     'venue', 'purpose', 'tna_completed', 'tna_file_path', 'logistics_acknowledged',
-    'signature_name', 'signed_letter_path', 'lgu', 'certificate_code', 'certificate_remarks',
+    'signature_name', 'signed_letter_path', 'lgu', 'region', 'certificate_code', 'certificate_remarks',
+    'status',
 ])]
 class TrainingRequest extends Model
 {
@@ -28,6 +32,10 @@ class TrainingRequest extends Model
 
     const CERTIFICATE_REMARKS_PARTICIPATION = 'participation';
 
+    const CATEGORY_APB = 'apb';
+
+    const CATEGORY_TA = 'ta';
+
     public static array $statusLabels = [
         self::STATUS_SUBMITTED => 'Received',
         self::STATUS_UNDER_REVIEW => 'Being Reviewed',
@@ -39,6 +47,11 @@ class TrainingRequest extends Model
     public static array $certificateRemarksLabels = [
         self::CERTIFICATE_REMARKS_COMPLETION => 'Completion',
         self::CERTIFICATE_REMARKS_PARTICIPATION => 'Participation',
+    ];
+
+    public static array $categoryLabels = [
+        self::CATEGORY_APB => 'APB',
+        self::CATEGORY_TA => 'Technical Assistance',
     ];
 
     protected function casts(): array
@@ -55,8 +68,56 @@ class TrainingRequest extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * The participants selected for this request when it was filed (see
+     * Admin\TrainingRequestController::store). Bulk requests can carry many;
+     * older, pre-bulk records have none, so callers needing "who attended"
+     * should use effectiveParticipants() instead of this directly.
+     */
+    public function participants(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class)->withTimestamps();
+    }
+
+    public function trainingEvaluation(): HasOne
+    {
+        return $this->hasOne(TrainingEvaluation::class);
+    }
+
+    /**
+     * Every request that actually involves the given user — either they
+     * submitted it themselves, or an admin selected them as a participant
+     * in a bulk request.
+     */
+    public function scopeInvolvingUser($query, User $user)
+    {
+        return $query->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+                ->orWhereHas('participants', fn ($q2) => $q2->where('users.id', $user->id));
+        });
+    }
+
     public function statusLabel(): string
     {
         return self::$statusLabels[$this->status] ?? ucfirst($this->status);
+    }
+
+    public function categoryLabel(): ?string
+    {
+        return self::$categoryLabels[$this->category] ?? null;
+    }
+
+    /**
+     * Who this request actually covers: the selected participants if any were
+     * attached, otherwise the submitter — covers both the bulk admin-submitted
+     * flow and older records from before participant selection existed.
+     */
+    public function effectiveParticipants(): Collection
+    {
+        if ($this->participants->isNotEmpty()) {
+            return $this->participants;
+        }
+
+        return $this->user ? collect([$this->user]) : collect();
     }
 }

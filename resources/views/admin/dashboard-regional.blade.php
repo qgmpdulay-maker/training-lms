@@ -28,10 +28,11 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 @foreach ([
                     ['title' => 'Summary', 'description' => 'Participant and training records, including status.', 'icon' => 'summary', 'route' => 'admin.summary'],
+                    ['title' => 'Request Training', 'description' => 'File a new training request on behalf of a requesting agency in your region.', 'icon' => 'request', 'route' => 'admin.training-requests.create'],
                     ['title' => 'Tools', 'description' => 'Graduates list now available; charts, ATAR, evaluations, certificates, and maps still to come.', 'icon' => 'tools', 'route' => 'admin.tools'],
                     ['title' => 'Instructors', 'description' => 'Instructor roster, deployments, and certificate codes.', 'icon' => 'instructors', 'route' => 'admin.instructors.index'],
                     ['title' => 'Training Needs Assessment', 'description' => 'TNA submissions from participants and their recommendations.', 'icon' => 'tna', 'route' => 'admin.training-needs-assessment'],
-                    ['title' => 'Calendar', 'description' => 'Scheduled trainings, color-coded by request status.', 'icon' => 'calendar', 'route' => 'admin.calendar'],
+                    ['title' => 'Calendar', 'description' => 'Your region\'s scheduled trainings, color-coded by APB / Technical Assistance.', 'icon' => 'calendar', 'route' => 'admin.calendar'],
                 ] as $module)
                     <a href="{{ route($module['route']) }}"
                         class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-7 hover:border-[#152A4E]/40 dark:hover:border-white/30 transition">

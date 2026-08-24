@@ -57,8 +57,8 @@
                                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $admin->region ?? '—' }}</td>
                                         <td class="py-3 pr-4 text-right">
                                             @if ($admin->isAdmin())
-                                                <form method="POST" action="{{ route('admin.users.demote', $admin) }}"
-                                                    onsubmit="return confirm('{{ __('Return :name to a participant account?', ['name' => $admin->name]) }}');">
+                                                <form method="POST" action="{{ route('admin.users.demote', $admin) }}" x-data
+                                                    @submit="if (! confirm('Return ' + @js($admin->name) + ' to a participant account?')) $event.preventDefault()">
                                                     @csrf
                                                     <button type="submit"
                                                         class="inline-flex items-center justify-center border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold rounded-md px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 transition whitespace-nowrap">
@@ -102,8 +102,8 @@
                                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $participant->email }}</td>
                                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $participant->organization }}</td>
                                         <td class="py-3 pr-4">
-                                            <form method="POST" action="{{ route('admin.users.promote', $participant) }}" class="flex items-center gap-2"
-                                                onsubmit="return confirm('{{ __('Make :name a Regional Admin?', ['name' => $participant->name]) }}');">
+                                            <form method="POST" action="{{ route('admin.users.promote', $participant) }}" class="flex items-center gap-2" x-data
+                                                @submit="if (! confirm('Make ' + @js($participant->name) + ' a Regional Admin?')) $event.preventDefault()">
                                                 @csrf
                                                 <select name="region" required
                                                     class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">

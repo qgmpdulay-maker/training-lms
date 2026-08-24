@@ -12,7 +12,7 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        $takenTrainings = $user->trainingRequests()
+        $takenTrainings = TrainingRequest::involvingUser($user)
             ->where('status', TrainingRequest::STATUS_COMPLETED)
             ->latest()
             ->get();

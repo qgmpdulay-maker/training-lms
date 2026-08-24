@@ -21,7 +21,7 @@
                     <svg class="w-5 h-5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                     </svg>
-                    <span>{{ __("Participants and training requests aren't linked to a region yet, so this shows records for all regions rather than just :region. Filtering by region needs a region field on participants or trainings.", ['region' => Auth::user()->region]) }}</span>
+                    <span>{{ __('This still shows records for all regions rather than just :region — only the Calendar tab filters to your own region so far.', ['region' => Auth::user()->region]) }}</span>
                 </div>
             @endif
 
@@ -29,7 +29,7 @@
                 <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
                     <div>
                         <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Training Requests') }}</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Every participant training request on record, most recent first. Certificate details are editable per record.') }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Every training request on record, most recent first. Click Manage to update its status, certificate details, or move its date and venue.') }}</p>
                     </div>
                     <form method="GET" class="flex items-center gap-2">
                         <select name="status" onchange="this.form.submit()"
@@ -52,70 +52,43 @@
                             <thead>
                                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
                                     <th class="py-2 pr-4">{{ __('Training') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Participant') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Age / Sex') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Contact') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Participant Type') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Agency / Organization') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Date') }}</th>
+                                    <th class="py-2 pr-4">{{ __('Requesting Agency') }}</th>
+                                    <th class="py-2 pr-4">{{ __('Participants') }}</th>
+                                    <th class="py-2 pr-4">{{ __('Date & Venue') }}</th>
                                     <th class="py-2 pr-4">{{ __('Status') }}</th>
-                                    <th class="py-2 pr-4 min-w-[280px]">{{ __('Certificate') }}</th>
+                                    <th class="py-2 pr-4"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach ($records as $record)
+                                    @php $participants = $record->effectiveParticipants(); @endphp
                                     <tr>
                                         <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $record->training_title }}</td>
                                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
-                                            <div class="flex items-center gap-2">
-                                                @if ($record->user->picture)
-                                                    <img src="{{ asset('storage/' . $record->user->picture) }}" alt="{{ $record->user->name }}"
-                                                        class="h-8 w-8 rounded-full object-cover shrink-0">
-                                                @else
-                                                    <div class="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-[10px] font-semibold text-gray-400 shrink-0">
-                                                        {{ strtoupper(substr($record->user->name, 0, 1)) }}
-                                                    </div>
-                                                @endif
-                                                <div>
-                                                    {{ $record->user->name }}
-                                                    <div class="text-xs text-gray-400">{{ $record->user->email }}</div>
-                                                </div>
-                                            </div>
+                                            {{ $record->requesting_agency }}
+                                            <div class="text-xs text-gray-400">{{ $record->contact_person }} &middot; {{ $record->contact_number }}</div>
                                         </td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->user->age }} / {{ $record->user->sex }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->user->mobile_number }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->user->participant_type }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->user->organization }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->preferred_date->format('M j, Y') }}</td>
+                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
+                                            @if ($participants->isEmpty())
+                                                <span class="text-gray-400">{{ __('None on file') }}</span>
+                                            @else
+                                                {{ trans_choice(':count participant|:count participants', $participants->count(), ['count' => $participants->count()]) }}
+                                            @endif
+                                        </td>
+                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
+                                            {{ $record->preferred_date->format('M j, Y') }}
+                                            <div class="text-xs text-gray-400">{{ $record->venue }}</div>
+                                        </td>
                                         <td class="py-3 pr-4">
-                                            <span class="inline-flex items-center text-xs font-semibold rounded-full border px-2.5 py-1 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600">
+                                            <span class="inline-flex items-center text-xs font-semibold rounded-full border px-2.5 py-1 {{ $statusColors[$record->status] ?? '' }}">
                                                 {{ $record->statusLabel() }}
                                             </span>
                                         </td>
-                                        <td class="py-3 pr-4">
-                                            <form method="POST" action="{{ route('admin.summary.update', $record) }}" class="flex flex-col gap-1.5 min-w-[260px]">
-                                                @csrf
-                                                @method('PATCH')
-                                                <div class="flex gap-1.5">
-                                                    <input type="text" name="lgu" value="{{ old('lgu', $record->lgu) }}" placeholder="{{ __('LGU') }}"
-                                                        class="w-1/2 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                                    <input type="text" name="certificate_code" value="{{ old('certificate_code', $record->certificate_code) }}" placeholder="{{ __('Certificate code') }}"
-                                                        class="w-1/2 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                                </div>
-                                                <div class="flex gap-1.5">
-                                                    <select name="certificate_remarks"
-                                                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                                        <option value="">{{ __('No remarks') }}</option>
-                                                        @foreach ($certificateRemarksLabels as $value => $label)
-                                                            <option value="{{ $value }}" @selected(old('certificate_remarks', $record->certificate_remarks) === $value)>{{ $label }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <button type="submit"
-                                                        class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-3 py-1.5 hover:bg-[#1E3A66] transition">
-                                                        {{ __('Save') }}
-                                                    </button>
-                                                </div>
-                                            </form>
+                                        <td class="py-3 pr-4 text-right">
+                                            <a href="{{ route('admin.summary.edit', $record) }}"
+                                                class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                                                {{ __('Manage') }}
+                                            </a>
                                         </td>
                                     </tr>
                                 @endforeach

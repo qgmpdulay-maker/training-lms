@@ -50,6 +50,9 @@ class RegisteredUserController extends Controller
             'participant_type' => $validated['participant_type'],
             'organization' => $validated['organization'],
             'agency' => $validated['agency'],
+            // Derived from the "OCD Regional Office" picklist so participants can be
+            // scoped to a region the same way admins are (see config/regions.php).
+            'region' => config('regions.agency_map')[$validated['agency']] ?? null,
             'mobile_number' => $validated['mobile_number'],
             'landline_number' => $validated['landline_number'] ?? null,
             'email' => $validated['email'],

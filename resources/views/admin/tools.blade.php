@@ -17,6 +17,15 @@
                 </div>
             @endif
 
+            @if ($region)
+                <div class="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3">
+                    <svg class="w-5 h-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    <span>{{ __('Showing :region only. Requests need to be tagged with a region on the Summary tab to show up here.', ['region' => $region]) }}</span>
+                </div>
+            @endif
+
             <!-- Charts -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -142,8 +151,8 @@
                     const container = document.getElementById('files-section');
 
                     container.addEventListener('click', function (event) {
-                        const link = event.target.closest('a');
-                        if (!link || !container.contains(link) || !link.href) {
+                        const link = event.target.closest('.files-pagination a');
+                        if (!link || !link.href) {
                             return;
                         }
 
@@ -159,19 +168,126 @@
                 });
             </script>
 
-            <!-- Not yet available -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                @foreach ($notYetAvailable as $tool)
-                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-7">
-                        <div class="flex items-start justify-between mb-4">
-                            <span class="inline-flex items-center text-[11px] font-semibold rounded-full border px-2.5 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700">
-                                {{ __('Not Yet Available') }}
-                            </span>
-                        </div>
-                        <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __($tool['title']) }}</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __($tool['description']) }}</p>
+            <!-- Evaluation Computation (L1 / L2) -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Evaluation Computation (L1 / L2)') }}</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                    {{ __('Auto-computed from evaluations entered per training request — use "Add Evaluation" in the table above to enter results.') }}
+                </p>
+
+                @if (empty($evaluationSummaries))
+                    <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
+                        {{ __('No evaluations entered yet.') }}
                     </div>
-                @endforeach
+                @else
+                    <div class="space-y-8">
+                        @foreach ($evaluationSummaries as $summary)
+                            <div class="border border-gray-100 dark:border-gray-700 rounded-lg p-5">
+                                <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                                    <h3 class="font-bold text-[#152A4E] dark:text-white">{{ $summary['training_title'] }}</h3>
+                                    <span class="text-xs text-gray-400">{{ trans_choice(':count evaluation|:count evaluations', $summary['evaluation_count'], ['count' => $summary['evaluation_count']]) }}</span>
+                                </div>
+
+                                @if ($summary['modules']->isNotEmpty())
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{{ __('L1 — Module & Trainer Ratings') }}</p>
+                                    <div class="overflow-x-auto mb-4">
+                                        <table class="min-w-full text-sm">
+                                            <thead>
+                                                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                    <th class="py-2 pr-4">{{ __('Module') }}</th>
+                                                    <th class="py-2 pr-4">{{ __('Avg. Module Rating') }}</th>
+                                                    <th class="py-2 pr-4">{{ __('Avg. Trainer Rating') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                @foreach ($summary['modules'] as $module)
+                                                    <tr>
+                                                        <td class="py-2 pr-4 text-gray-700 dark:text-gray-200">{{ $module['module'] }}</td>
+                                                        <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $module['avg_module_rating'] ?? '—' }}</td>
+                                                        <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $module['avg_trainer_rating'] ?? '—' }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                                        {{ __('Overall Trainer Rating:') }} <span class="font-semibold text-[#152A4E] dark:text-white">{{ $summary['overall_trainer_rating'] ?? '—' }}</span>
+                                        {{ __('(reflected on the Instructors tab when exactly one instructor teaches this training)') }}
+                                    </p>
+                                @endif
+
+                                @if ($summary['pretest']['count'] > 0 || $summary['posttest']['count'] > 0)
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{{ __('L2 — Pre/Post Test') }}</p>
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full text-sm">
+                                            <thead>
+                                                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                    <th class="py-2 pr-4"></th>
+                                                    <th class="py-2 pr-4">{{ __('Mean') }}</th>
+                                                    <th class="py-2 pr-4">{{ __('Median') }}</th>
+                                                    <th class="py-2 pr-4">{{ __('Mode') }}</th>
+                                                    <th class="py-2 pr-4">{{ __('Min') }}</th>
+                                                    <th class="py-2 pr-4">{{ __('Max') }}</th>
+                                                    <th class="py-2 pr-4">{{ __('Count') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                <tr>
+                                                    <td class="py-2 pr-4 font-medium text-gray-700 dark:text-gray-200">{{ __('Pre-Test') }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['pretest']['mean'] ?? '—' }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['pretest']['median'] ?? '—' }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['pretest']['mode'] ?? '—' }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['pretest']['min'] ?? '—' }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['pretest']['max'] ?? '—' }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['pretest']['count'] }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="py-2 pr-4 font-medium text-gray-700 dark:text-gray-200">{{ __('Post-Test') }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['posttest']['mean'] ?? '—' }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['posttest']['median'] ?? '—' }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['posttest']['mode'] ?? '—' }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['posttest']['min'] ?? '—' }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['posttest']['max'] ?? '—' }}</td>
+                                                    <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $summary['posttest']['count'] }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
+            <!-- Graduates by LGU -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by LGU') }}</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    {{ __('Completed trainings grouped by the LGU recorded on Summary.') }}
+                </p>
+                <p class="text-xs text-amber-700 dark:text-amber-400 mb-5">
+                    {{ __("This is a ranked breakdown, not a geographic map — we don't have real coordinate data for LGUs, and didn't want to plot fabricated positions on a map that looks authoritative. \"Teams Organized\" isn't shown either since there's no team data in the system yet.") }}
+                </p>
+
+                @if (empty($graduatesByLgu))
+                    <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
+                        {{ __('No completed trainings with an LGU recorded yet.') }}
+                    </div>
+                @else
+                    @php $maxTotal = max(array_column($graduatesByLgu, 'total')); @endphp
+                    <div class="space-y-3">
+                        @foreach ($graduatesByLgu as $row)
+                            <div class="flex items-center gap-3">
+                                <div class="w-48 shrink-0 text-xs font-medium text-gray-600 dark:text-gray-300 truncate">{{ $row['lgu'] }}</div>
+                                <div class="flex-1 h-5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                                    <div class="h-full rounded-full bg-[#152A4E] dark:bg-[#E2762D] transition-all" style="width: {{ round(($row['total'] / $maxTotal) * 100) }}%;"></div>
+                                </div>
+                                <div class="w-8 text-right text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $row['total'] }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             </div>
 
         </div>

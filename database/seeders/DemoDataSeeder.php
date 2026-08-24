@@ -92,6 +92,7 @@ class DemoDataSeeder extends Seeder
                 'participant_type' => self::PARTICIPANT_TYPES[$i % count(self::PARTICIPANT_TYPES)],
                 'organization' => self::ORGANIZATIONS[$i % count(self::ORGANIZATIONS)],
                 'agency' => self::ORGANIZATIONS[$i % count(self::ORGANIZATIONS)],
+                'region' => 'Region III',
                 'mobile_number' => '09'.str_pad((string) random_int(100000000, 999999999), 9, '0', STR_PAD_LEFT),
             ]);
             $user->forceFill(['email_verified_at' => now()])->save();
