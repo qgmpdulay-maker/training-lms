@@ -5,10 +5,13 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EvaluationController;
 use App\Http\Controllers\Admin\InstructorController;
 use App\Http\Controllers\Admin\SummaryController;
+use App\Http\Controllers\Admin\SuperAdmin\MonitoringController;
+use App\Http\Controllers\Admin\SuperAdmin\TnaSubmissionController;
 use App\Http\Controllers\Admin\SuperAdmin\UserManagementController;
 use App\Http\Controllers\Admin\ToolsController;
 use App\Http\Controllers\Admin\TrainingNeedsAssessmentController as AdminTrainingNeedsAssessmentController;
 use App\Http\Controllers\Admin\TrainingRequestController as AdminTrainingRequestController;
+use App\Http\Controllers\Participant\CertificateController;
 use App\Http\Controllers\Participant\DashboardController;
 use App\Http\Controllers\Participant\ProfileController;
 use App\Http\Controllers\Participant\TrainingCatalogController;
@@ -40,6 +43,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/training-requests', [TrainingRequestController::class, 'index'])->name('training-requests.index');
     Route::get('/training-requests/{trainingRequest}', [TrainingRequestController::class, 'show'])->name('training-requests.show');
+
+    Route::get('/certificates', [CertificateController::class, 'index'])->name('certificates.index');
 });
 
 Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -66,7 +71,19 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
     Route::post('/users/{user}/demote', [UserManagementController::class, 'demote'])->name('users.demote');
 
     Route::get('/instructors/{instructor}', [InstructorController::class, 'show'])->name('instructors.show');
-    Route::patch('/instructors/{instructor}/complaints', [InstructorController::class, 'updateComplaints'])->name('instructors.complaints');
+
+    Route::get('/tna-submissions', [TnaSubmissionController::class, 'index'])->name('tna-submissions.index');
+    Route::get('/tna-submissions/per-organization', [TnaSubmissionController::class, 'perOrganization'])->name('tna-submissions.per-organization');
+    Route::get('/tna-submissions/form', [TnaSubmissionController::class, 'downloadForm'])->name('tna-submissions.form');
+    Route::post('/tna-submissions', [TnaSubmissionController::class, 'store'])->name('tna-submissions.store');
+    Route::patch('/tna-submissions/{tnaSubmission}', [TnaSubmissionController::class, 'update'])->name('tna-submissions.update');
+    Route::post('/tna-submissions/{tnaSubmission}/results', [TnaSubmissionController::class, 'uploadResults'])->name('tna-submissions.results');
+
+    Route::get('/monitoring/regional', [MonitoringController::class, 'regional'])->name('monitoring.regional');
+    Route::get('/monitoring/map', [MonitoringController::class, 'map'])->name('monitoring.map');
+
+    Route::post('/calendar-events', [AdminCalendarController::class, 'store'])->name('calendar-events.store');
+    Route::delete('/calendar-events/{calendarEvent}', [AdminCalendarController::class, 'destroy'])->name('calendar-events.destroy');
 });
 
 // Regional admins only — requesting a training is a regional-office responsibility,

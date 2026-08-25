@@ -49,6 +49,22 @@
                             <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __('Position') }}</div>
                             <div class="text-sm text-gray-700 dark:text-gray-200">{{ $instructor->position ?? '—' }}</div>
                         </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __('Email') }}</div>
+                            <div class="text-sm text-gray-700 dark:text-gray-200">{{ $instructor->email ?? '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __('Phone') }}</div>
+                            <div class="text-sm text-gray-700 dark:text-gray-200">{{ $instructor->phone ?? '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __('Specialization') }}</div>
+                            <div class="text-sm text-gray-700 dark:text-gray-200">{{ $instructor->specialization ?? '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __('Certification') }}</div>
+                            <div class="text-sm text-gray-700 dark:text-gray-200">{{ $instructor->certification ?? '—' }}</div>
+                        </div>
                         <div class="sm:col-span-2">
                             <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __('Organization / LGU / Corporation') }}</div>
                             <div class="text-sm text-gray-700 dark:text-gray-200">{{ $instructor->agency_organization ?? $instructor->lgu ?? '—' }}</div>
@@ -130,22 +146,15 @@
                 <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Complaints Received') }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Free-text record of any complaints filed against this instructor, if applicable.') }}</p>
 
-                <form method="POST" action="{{ route('admin.instructors.complaints', $instructor) }}" class="space-y-3">
-                    @csrf
-                    @method('PATCH')
-
-                    <textarea name="complaints" rows="4"
-                        class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#152A4E] focus:ring-[#152A4E] text-sm"
-                        placeholder="{{ __('No complaints on record. Add details here if applicable.') }}">{{ old('complaints', $instructor->complaints) }}</textarea>
-                    <x-input-error :messages="$errors->get('complaints')" class="mt-1" />
-
-                    <div class="flex justify-end">
-                        <button type="submit"
-                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition">
-                            {{ __('Save') }}
-                        </button>
+                @if (filled($instructor->complaints))
+                    <div class="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-line">
+                        {{ $instructor->complaints }}
                     </div>
-                </form>
+                @else
+                    <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
+                        {{ __('No complaints on record.') }}
+                    </div>
+                @endif
             </div>
 
         </div>

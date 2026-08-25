@@ -30,9 +30,33 @@
         </div>
 
         <div>
+            <x-input-label for="email" :value="__('Email')" />
+            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" value="{{ old('email') }}" />
+            <x-input-error :messages="$errors->get('email')" class="mt-1" />
+        </div>
+
+        <div>
+            <x-input-label for="phone" :value="__('Phone')" />
+            <x-text-input id="phone" name="phone" type="text" class="mt-1 block w-full" value="{{ old('phone') }}" />
+            <x-input-error :messages="$errors->get('phone')" class="mt-1" />
+        </div>
+
+        <div>
             <x-input-label for="training_type" :value="__('Type of Training')" />
             <x-text-input id="training_type" name="training_type" type="text" class="mt-1 block w-full" required value="{{ old('training_type') }}" />
             <x-input-error :messages="$errors->get('training_type')" class="mt-1" />
+        </div>
+
+        <div>
+            <x-input-label for="specialization" :value="__('Specialization')" />
+            <x-text-input id="specialization" name="specialization" type="text" class="mt-1 block w-full" value="{{ old('specialization') }}" />
+            <x-input-error :messages="$errors->get('specialization')" class="mt-1" />
+        </div>
+
+        <div>
+            <x-input-label for="certification" :value="__('Certification')" />
+            <x-text-input id="certification" name="certification" type="text" class="mt-1 block w-full" value="{{ old('certification') }}" />
+            <x-input-error :messages="$errors->get('certification')" class="mt-1" />
         </div>
 
         <div>

@@ -11,20 +11,34 @@ use Illuminate\View\View;
 
 class UserManagementController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $adminSearch = trim((string) $request->query('admins_q'));
+        $participantSearch = trim((string) $request->query('participants_q'));
+
+        $searchScope = fn ($query, string $search) => $query->when($search !== '', function ($q) use ($search) {
+            $q->where(function ($q2) use ($search) {
+                $q2->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('organization', 'like', "%{$search}%");
+            });
+        });
+
         $participants = User::where('role', User::ROLE_PARTICIPANT)
+            ->tap(fn ($q) => $searchScope($q, $participantSearch))
             ->orderBy('name')
-            ->paginate(15, ['*'], 'participants');
+            ->paginate(15, ['*'], 'participants')
+            ->withQueryString();
 
         $admins = User::whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])
+            ->tap(fn ($q) => $searchScope($q, $adminSearch))
             ->orderBy('role')
             ->orderBy('name')
             ->get();
 
         $regions = config('regions.list');
 
-        return view('admin.super-admin.users.index', compact('participants', 'admins', 'regions'));
+        return view('admin.super-admin.users.index', compact('participants', 'admins', 'regions', 'adminSearch', 'participantSearch'));
     }
 
     public function promote(Request $request, User $user): RedirectResponse

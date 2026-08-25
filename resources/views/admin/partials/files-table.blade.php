@@ -16,7 +16,7 @@
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 @foreach ($filesRecords as $record)
-                    <tr>
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
                         <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">
                             {{ $record->training_title }}
                             <div class="text-xs text-gray-400 font-normal">{{ $record->preferred_date->format('M j, Y') }}</div>
@@ -32,40 +32,39 @@
                             @endif
                         </td>
                         <td class="py-3 pr-4">
-                            <form method="POST" action="{{ route('admin.tools.files', $record) }}" enctype="multipart/form-data" class="flex items-center gap-1.5">
-                                @csrf
-                                @if ($record->certificate_file_path)
-                                    <a href="{{ asset('storage/' . $record->certificate_file_path) }}" target="_blank"
-                                        class="text-xs font-semibold text-[#152A4E] dark:text-white underline shrink-0">{{ __('View') }}</a>
-                                @endif
-                                <input type="file" name="certificate_file" accept=".pdf,.jpg,.jpeg,.png"
-                                    class="w-36 text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-100 dark:file:bg-gray-700 file:text-gray-700 dark:file:text-gray-200">
-                                <button type="submit"
-                                    class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-2.5 py-1.5 hover:bg-[#1E3A66] transition">
-                                    {{ __('Upload') }}
-                                </button>
-                            </form>
+                            @include('admin.partials.file-upload-cell', [
+                                'record' => $record,
+                                'field' => 'certificate_file',
+                                'path' => $record->certificate_file_path,
+                                'accept' => '.pdf,.jpg,.jpeg,.png',
+                            ])
                         </td>
                         <td class="py-3 pr-4">
-                            <form method="POST" action="{{ route('admin.tools.files', $record) }}" enctype="multipart/form-data" class="flex items-center gap-1.5">
-                                @csrf
-                                @if ($record->atar_file_path)
-                                    <a href="{{ asset('storage/' . $record->atar_file_path) }}" target="_blank"
-                                        class="text-xs font-semibold text-[#152A4E] dark:text-white underline shrink-0">{{ __('View') }}</a>
-                                @endif
-                                <input type="file" name="atar_file" accept=".pdf"
-                                    class="w-36 text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-100 dark:file:bg-gray-700 file:text-gray-700 dark:file:text-gray-200">
-                                <button type="submit"
-                                    class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-2.5 py-1.5 hover:bg-[#1E3A66] transition">
-                                    {{ __('Upload') }}
-                                </button>
-                            </form>
+                            @include('admin.partials.file-upload-cell', [
+                                'record' => $record,
+                                'field' => 'atar_file',
+                                'path' => $record->atar_file_path,
+                                'accept' => '.pdf',
+                            ])
                         </td>
                         <td class="py-3 pr-4">
-                            <a href="{{ route('admin.evaluations.edit', $record) }}"
-                                class="text-xs font-semibold text-[#152A4E] dark:text-white underline whitespace-nowrap">
-                                {{ $record->trainingEvaluation ? __('Edit Evaluation') : __('Add Evaluation') }}
-                            </a>
+                            @if ($record->trainingEvaluation)
+                                <a href="{{ route('admin.evaluations.edit', $record) }}"
+                                    class="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-full pl-2 pr-2.5 py-1 hover:bg-green-100 dark:hover:bg-green-900/50 transition whitespace-nowrap">
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    {{ __('Edit Evaluation') }}
+                                </a>
+                            @else
+                                <a href="{{ route('admin.evaluations.edit', $record) }}"
+                                    class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-full pl-2 pr-2.5 py-1 hover:text-[#152A4E] dark:hover:text-white hover:border-gray-400 dark:hover:border-gray-500 transition whitespace-nowrap">
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    {{ __('Add Evaluation') }}
+                                </a>
+                            @endif
                         </td>
                     </tr>
                 @endforeach

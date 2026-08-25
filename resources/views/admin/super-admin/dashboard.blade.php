@@ -24,6 +24,20 @@
                 </div>
             </div>
 
+            <!-- Stat tiles -->
+            <div class="grid grid-cols-3 gap-3">
+                @foreach ([
+                    ['label' => 'Instructors on File', 'value' => $stats['instructors']],
+                    ['label' => 'TNA Submissions', 'value' => $stats['tna_submissions']],
+                    ['label' => 'Upcoming Trainings', 'value' => $stats['upcoming_trainings']],
+                ] as $card)
+                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm px-3 py-2.5">
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{{ __($card['label']) }}</div>
+                        <div class="text-xl font-bold text-[#152A4E] dark:text-white mt-0.5">{{ $card['value'] }}</div>
+                    </div>
+                @endforeach
+            </div>
+
             <!-- Module Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 @foreach ([
@@ -32,7 +46,9 @@
                     ['title' => 'Instructors', 'description' => 'Instructor list with ratings, deployments, and certificate codes.', 'icon' => 'instructors', 'route' => 'admin.instructors.index'],
                     ['title' => 'Training Needs Assessment Results', 'description' => 'TNA results aggregated across all regions.', 'icon' => 'tna', 'route' => 'admin.training-needs-assessment'],
                     ['title' => 'Regional Training Calendar', 'description' => 'Color-coded by request status, all regions and Central.', 'icon' => 'calendar', 'route' => 'admin.calendar'],
-                    ['title' => 'Regional Monitoring', 'description' => 'Overall training data, graduate demographics, and 3-year data generation across all regions.', 'icon' => 'monitoring', 'route' => null],
+                    ['title' => 'Regional Monitoring', 'description' => 'Overall training data, graduate demographics, and 3-year data generation across all regions.', 'icon' => 'monitoring', 'route' => 'admin.monitoring.regional'],
+                    ['title' => 'TNA Submissions (Org.)', 'description' => 'Formal Training Needs Assessment reports submitted by LGUs and NGAs.', 'icon' => 'tna', 'route' => 'admin.tna-submissions.index'],
+                    ['title' => 'Graduates Map', 'description' => 'Map of training graduates and teams organized, plotted by LGU / NGA and region.', 'icon' => 'map', 'route' => 'admin.monitoring.map'],
                 ] as $module)
                     @if ($module['route'])
                         <a href="{{ route($module['route']) }}"

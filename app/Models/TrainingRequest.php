@@ -14,7 +14,9 @@ use Illuminate\Support\Collection;
     'contact_number', 'contact_email', 'number_of_participants', 'preferred_date',
     'venue', 'purpose', 'tna_completed', 'tna_file_path', 'logistics_acknowledged',
     'signature_name', 'signed_letter_path', 'lgu', 'region', 'certificate_code', 'certificate_remarks',
-    'status',
+    'status', 'agency_type', 'latitude', 'longitude', 'teams_organized',
+    'graduates_male', 'graduates_female',
+    'graduates_age_18_30', 'graduates_age_31_45', 'graduates_age_46_59', 'graduates_age_60_up',
 ])]
 class TrainingRequest extends Model
 {
@@ -35,6 +37,16 @@ class TrainingRequest extends Model
     const CATEGORY_APB = 'apb';
 
     const CATEGORY_TA = 'ta';
+
+    const AGENCY_TYPE_LGU = 'lgu';
+
+    const AGENCY_TYPE_NGA = 'nga';
+
+    /**
+     * Fallback map marker location (geographic centre of the Philippines)
+     * for a completed training with no region and no encoded coordinates.
+     */
+    const DEFAULT_MAP_COORDINATES = [12.8797, 121.7740];
 
     public static array $statusLabels = [
         self::STATUS_SUBMITTED => 'Received',
@@ -60,6 +72,15 @@ class TrainingRequest extends Model
             'preferred_date' => 'date',
             'tna_completed' => 'boolean',
             'logistics_acknowledged' => 'boolean',
+            'latitude' => 'float',
+            'longitude' => 'float',
+            'teams_organized' => 'integer',
+            'graduates_male' => 'integer',
+            'graduates_female' => 'integer',
+            'graduates_age_18_30' => 'integer',
+            'graduates_age_31_45' => 'integer',
+            'graduates_age_46_59' => 'integer',
+            'graduates_age_60_up' => 'integer',
         ];
     }
 
@@ -105,6 +126,48 @@ class TrainingRequest extends Model
     public function categoryLabel(): ?string
     {
         return self::$categoryLabels[$this->category] ?? null;
+    }
+
+    public function getGraduatesAttribute(): int
+    {
+        return $this->graduates_male + $this->graduates_female;
+    }
+
+    public function getNonCompletersAttribute(): int
+    {
+        return max($this->number_of_participants - $this->graduates, 0);
+    }
+
+    /**
+     * @return array{0: float, 1: float}
+     */
+    public function getMapCoordinatesAttribute(): array
+    {
+        if ($this->latitude !== null && $this->longitude !== null) {
+            return [$this->latitude, $this->longitude];
+        }
+
+        return config("regions.geo.{$this->region}", self::DEFAULT_MAP_COORDINATES);
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', self::STATUS_COMPLETED);
+    }
+
+    /**
+     * @param  array{regions?: array, category?: string, agency_type?: string, from?: string, until?: string}|null  $filters
+     */
+    public function scopeFilteredBy($query, ?array $filters)
+    {
+        $filters ??= [];
+
+        return $query
+            ->when(! empty($filters['regions']), fn ($q) => $q->whereIn('region', $filters['regions']))
+            ->when(! empty($filters['category']), fn ($q) => $q->where('category', $filters['category']))
+            ->when(! empty($filters['agency_type']), fn ($q) => $q->where('agency_type', $filters['agency_type']))
+            ->when(! empty($filters['from']), fn ($q) => $q->whereDate('preferred_date', '>=', $filters['from']))
+            ->when(! empty($filters['until']), fn ($q) => $q->whereDate('preferred_date', '<=', $filters['until']));
     }
 
     /**

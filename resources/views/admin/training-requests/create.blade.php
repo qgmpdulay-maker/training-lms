@@ -42,18 +42,28 @@
                     step: {{ $initialStep }},
                     training_slug: '{{ old('training_slug', $preselected['slug'] ?? '') }}',
                     trainingTitle: '{{ addslashes(old('training_slug') ? (collect($trainings)->firstWhere('slug', old('training_slug'))['title'] ?? '') : ($preselected['title'] ?? '')) }}',
-                    preferredDate: '{{ old('preferred_date') }}',
+                    preferredDate: '{{ old('preferred_date', $defaultPreferredDate) }}',
                     venue: '{{ addslashes(old('venue', '')) }}',
                     tnaFileName: '',
                     signedLetterName: '',
                     participantSearch: '',
                     selectedParticipants: [],
+                    participantsData: @js($participants->map(fn ($p) => ['id' => (string) $p->id, 'name' => strtolower($p->name)])->values()),
                     numberOfParticipants: '{{ old('number_of_participants', '') }}',
                     stepError: '',
                     get daysUntil() {
                         if (!this.preferredDate) return null;
                         const diff = (new Date(this.preferredDate) - new Date(new Date().toDateString())) / 86400000;
                         return Math.round(diff);
+                    },
+                    get isWeekend() {
+                        if (!this.preferredDate) return false;
+                        const day = new Date(this.preferredDate + 'T00:00:00').getDay();
+                        return day === 0 || day === 6;
+                    },
+                    get filteredParticipantIds() {
+                        const term = this.participantSearch.toLowerCase();
+                        return this.participantsData.filter(p => p.name.includes(term)).map(p => p.id);
                     },
                     next() {
                         const stepEl = document.getElementById('step-' + this.step);
@@ -65,6 +75,13 @@
                             this.stepError = invalid.validationMessage || '{{ __('Please complete this step before continuing.') }}';
                             invalid.focus({ preventScroll: true });
                             invalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            return;
+                        }
+                        if (this.step === 2 && this.isWeekend) {
+                            this.stepError = '{{ __('Trainings can only be scheduled on weekdays (Monday–Friday). Please choose a different date.') }}';
+                            const dateEl = document.getElementById('preferred_date');
+                            dateEl.focus({ preventScroll: true });
+                            dateEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             return;
                         }
                         this.stepError = '';
@@ -198,13 +215,22 @@
                                     <input id="preferred_date" type="date" name="preferred_date" required
                                         x-model="preferredDate"
                                         min="{{ now()->addDay()->toDateString() }}"
-                                        value="{{ old('preferred_date') }}"
+                                        value="{{ old('preferred_date', $defaultPreferredDate) }}"
                                         class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3">
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Defaults to a month out on the nearest weekday — trainings can only be held on office days (Monday–Friday).') }}</p>
                                     <x-input-error :messages="$errors->get('preferred_date')" class="mt-1" />
                                 </div>
                             </div>
 
-                            <p x-show="daysUntil !== null && daysUntil < 30" x-cloak
+                            <p x-show="isWeekend" x-cloak
+                                class="flex items-start gap-2 text-sm text-red-800 dark:text-red-300 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+                                <svg class="w-5 h-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{{ __('Trainings can only be scheduled on weekdays (Monday–Friday). Please choose a different date.') }}</span>
+                            </p>
+
+                            <p x-show="!isWeekend && daysUntil !== null && daysUntil < 30" x-cloak
                                 class="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg px-4 py-3">
                                 <svg class="w-5 h-5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -230,6 +256,18 @@
                                 @else
                                     <input type="text" x-model="participantSearch" placeholder="{{ __('Search by name...') }}"
                                         class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-sm py-2 mb-2">
+
+                                    <label class="flex items-center gap-2 px-1 py-1.5 mb-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer select-none w-fit">
+                                        <input type="checkbox"
+                                            class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-[#152A4E] focus:ring-[#152A4E]"
+                                            :checked="filteredParticipantIds.length > 0 && filteredParticipantIds.every(id => selectedParticipants.includes(id))"
+                                            @change="$event.target.checked
+                                                ? selectedParticipants = [...new Set([...selectedParticipants, ...filteredParticipantIds])]
+                                                : selectedParticipants = selectedParticipants.filter(id => !filteredParticipantIds.includes(id))">
+                                        <span x-text="participantSearch
+                                            ? '{{ __('Select all matching') }} (' + filteredParticipantIds.length + ')'
+                                            : '{{ __('Select all participants') }} (' + filteredParticipantIds.length + ')'"></span>
+                                    </label>
 
                                     <div class="max-h-56 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 divide-y divide-gray-100 dark:divide-gray-700">
                                         @foreach ($participants as $participant)

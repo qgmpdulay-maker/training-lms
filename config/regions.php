@@ -53,4 +53,29 @@ return [
         'OCD-Region XII: SOCCSKSARGEN' => 'Region XII',
         'OCD-Region XIII: Caraga' => 'Region XIII',
     ],
+
+    /**
+     * Approximate [latitude, longitude] centre of each region, used by the
+     * Training Graduates Map to plot trainings that weren't encoded with
+     * their own coordinates.
+     */
+    'geo' => [
+        'Region I' => [16.6159, 120.3166],
+        'Region II' => [16.9754, 121.8107],
+        'Region III' => [15.4828, 120.7120],
+        'Region IV-A' => [14.1008, 121.0794],
+        'MIMAROPA' => [12.4293, 121.0349],
+        'Region V' => [13.4209, 123.4137],
+        'Region VI' => [10.9971, 122.5711],
+        'Region VII' => [10.0000, 123.6000],
+        'Region VIII' => [11.4000, 124.9000],
+        'Region IX' => [7.8383, 123.2968],
+        'Region X' => [8.4822, 124.6472],
+        'Region XI' => [7.0731, 125.6128],
+        'Region XII' => [6.2707, 124.6857],
+        'Region XIII' => [8.9475, 125.5406],
+        'NCR' => [14.5995, 120.9842],
+        'CAR' => [17.3513, 121.1719],
+        'BARMM' => [7.2078, 124.2500],
+    ],
 ];

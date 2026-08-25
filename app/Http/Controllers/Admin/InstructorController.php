@@ -16,14 +16,41 @@ class InstructorController extends Controller
         $user = $request->user();
 
         if ($user->isSuperAdmin()) {
-            $instructorsByRegion = Instructor::orderBy('name')
-                ->get()
+            $region = $request->query('region');
+            $complaintsOnly = $request->boolean('complaints_only');
+            $search = trim((string) $request->query('instructors_q'));
+
+            $instructors = Instructor::when($region, fn ($query) => $query->where('region', $region))
+                ->when($complaintsOnly, fn ($query) => $query->whereNotNull('complaints')->where('complaints', '!=', ''))
+                ->when($search !== '', function ($query) use ($search) {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('training_type', 'like', "%{$search}%")
+                            ->orWhere('certificate_code', 'like', "%{$search}%")
+                            ->orWhere('agency_organization', 'like', "%{$search}%")
+                            ->orWhere('lgu', 'like', "%{$search}%");
+                    });
+                })
+                ->orderBy('name')
+                ->get();
+
+            $instructorsByRegion = $instructors
                 ->groupBy(fn (Instructor $instructor) => $instructor->region ?: 'Central / Unassigned')
                 ->sortKeys();
+
+            $withComplaints = $instructors->filter(fn (Instructor $instructor) => filled($instructor->complaints));
 
             return view('admin.super-admin.instructors.index', [
                 'instructorsByRegion' => $instructorsByRegion,
                 'regions' => config('regions.list'),
+                'selectedRegion' => $region,
+                'complaintsOnly' => $complaintsOnly,
+                'instructorSearch' => $search,
+                'stats' => [
+                    'total' => $instructors->pluck('name')->unique()->count(),
+                    'regions' => $instructors->pluck('region')->filter()->unique()->count(),
+                    'complaints' => $withComplaints->pluck('name')->unique()->count(),
+                ],
             ]);
         }
 
@@ -39,9 +66,13 @@ class InstructorController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30'],
             'sex' => ['nullable', 'string', 'in:Male,Female,Other'],
             'position' => ['nullable', 'string', 'max:255'],
             'training_type' => ['required', 'string', 'max:255'],
+            'specialization' => ['nullable', 'string', 'max:255'],
+            'certification' => ['nullable', 'string', 'max:255'],
             'certificate_code' => ['nullable', 'string', 'max:255'],
             'deployment' => ['nullable', 'string', 'max:255'],
             'agency_organization' => ['nullable', 'string', 'max:255'],
@@ -70,16 +101,5 @@ class InstructorController extends Controller
             'records' => $records,
             'overallRating' => $ratings->isNotEmpty() ? round($ratings->avg(), 2) : null,
         ]);
-    }
-
-    public function updateComplaints(Request $request, Instructor $instructor): RedirectResponse
-    {
-        $validated = $request->validate([
-            'complaints' => ['nullable', 'string', 'max:2000'],
-        ]);
-
-        $instructor->update($validated);
-
-        return Redirect::route('admin.instructors.show', $instructor)->with('status', 'Complaints record updated.');
     }
 }

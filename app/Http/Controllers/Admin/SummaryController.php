@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Instructor;
 use App\Models\TrainingRequest;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -23,24 +25,99 @@ class SummaryController extends Controller
 
     public function index(Request $request): View
     {
-        $status = $request->query('status');
+        $user = $request->user();
+        $statusParam = $request->query('status');
+        // No status chosen yet: prioritize newly received requests over ones
+        // already being reviewed, approved, completed, or declined.
+        $status = $statusParam ?? TrainingRequest::STATUS_SUBMITTED;
+        $statusDefaulted = $statusParam === null;
+        $showAllStatuses = $status === 'all';
+        $search = trim((string) $request->query('q'));
+        $region = $user->isSuperAdmin() ? $request->query('region') : null;
 
         $records = TrainingRequest::with(['user', 'participants'])
-            ->when($status, fn ($query) => $query->where('status', $status))
+            ->when($user->isAdmin(), fn ($query) => $query->where('region', $user->region))
+            ->when($region, fn ($query) => $query->where('region', $region))
+            ->when(! $showAllStatuses, fn ($query) => $query->where('status', $status))
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('venue', 'like', "%{$search}%")
+                        ->orWhere('training_title', 'like', "%{$search}%")
+                        ->orWhere('requesting_agency', 'like', "%{$search}%")
+                        ->orWhere('contact_person', 'like', "%{$search}%")
+                        ->orWhereRaw("DATE_FORMAT(preferred_date, '%b %d, %Y') like ?", ["%{$search}%"])
+                        ->orWhereHas('participants', fn ($p) => $p->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%"));
+                });
+            })
             ->orderByDesc('preferred_date')
-            ->paginate(20)
-            ->withQueryString();
+            ->paginate(10)
+            ->withQueryString()
+            ->fragment('training-requests');
+
+        $participantSearch = trim((string) $request->query('participants_q'));
+
+        $participants = ($user->isAdmin() || $user->isSuperAdmin())
+            ? User::where('role', User::ROLE_PARTICIPANT)
+                ->when($user->isAdmin(), fn ($query) => $query->where('region', $user->region))
+                ->when($region, fn ($query) => $query->where('region', $region))
+                ->when($participantSearch !== '', function ($query) use ($participantSearch) {
+                    $query->where(function ($q) use ($participantSearch) {
+                        $q->where('name', 'like', "%{$participantSearch}%")
+                            ->orWhere('email', 'like', "%{$participantSearch}%")
+                            ->orWhere('organization', 'like', "%{$participantSearch}%")
+                            ->orWhere('agency', 'like', "%{$participantSearch}%")
+                            ->orWhere('participant_type', 'like', "%{$participantSearch}%")
+                            ->orWhere('mobile_number', 'like', "%{$participantSearch}%");
+                    });
+                })
+                ->orderBy('name')
+                ->paginate(10, ['*'], 'participants')
+                ->withQueryString()
+                ->fragment('registered-participants')
+            : null;
+
+        $instructorSearch = trim((string) $request->query('instructors_q'));
+
+        $instructors = $user->isSuperAdmin()
+            ? Instructor::when($region, fn ($query) => $query->where('region', $region))
+                ->when($instructorSearch !== '', function ($query) use ($instructorSearch) {
+                    $query->where(function ($q) use ($instructorSearch) {
+                        $q->where('name', 'like', "%{$instructorSearch}%")
+                            ->orWhere('training_type', 'like', "%{$instructorSearch}%")
+                            ->orWhere('specialization', 'like', "%{$instructorSearch}%")
+                            ->orWhere('agency_organization', 'like', "%{$instructorSearch}%")
+                            ->orWhere('lgu', 'like', "%{$instructorSearch}%")
+                            ->orWhere('certificate_code', 'like', "%{$instructorSearch}%");
+                    });
+                })
+                ->orderBy('name')
+                ->paginate(10, ['*'], 'instructors')
+                ->withQueryString()
+                ->fragment('instructors')
+            : null;
 
         return view('admin.summary', [
             'records' => $records,
             'statusLabels' => TrainingRequest::$statusLabels,
             'statusColors' => self::STATUS_COLORS,
             'selectedStatus' => $status,
+            'statusDefaulted' => $statusDefaulted,
+            'search' => $search,
+            'participants' => $participants,
+            'participantSearch' => $participantSearch,
+            'instructors' => $instructors,
+            'instructorSearch' => $instructorSearch,
+            'regions' => config('regions.list'),
+            'selectedRegion' => $region,
         ]);
     }
 
-    public function edit(TrainingRequest $trainingRequest): View
+    public function edit(Request $request, TrainingRequest $trainingRequest): View
     {
+        // Regional admins may only manage training requests tagged to their own region.
+        abort_if($request->user()->isAdmin() && $trainingRequest->region !== $request->user()->region, 403);
+
         $trainingRequest->load('participants');
 
         return view('admin.summary-edit', [
@@ -55,6 +132,8 @@ class SummaryController extends Controller
 
     public function update(Request $request, TrainingRequest $trainingRequest): RedirectResponse
     {
+        abort_if($request->user()->isAdmin() && $trainingRequest->region !== $request->user()->region, 403);
+
         $validated = $request->validate([
             'status' => ['required', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$statusLabels))],
             'preferred_date' => ['required', 'date'],

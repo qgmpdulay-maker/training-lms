@@ -19,12 +19,31 @@
 
             <!-- Current Admins -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Current Admins') }}</h2>
+                <div class="flex items-center justify-between flex-wrap gap-3 mb-1">
+                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">{{ __('Current Admins') }}</h2>
+                    <form method="GET" action="{{ route('admin.users.index') }}" class="flex items-center flex-wrap gap-2">
+                        @if ($participantSearch !== '')
+                            <input type="hidden" name="participants_q" value="{{ $participantSearch }}">
+                        @endif
+                        <input type="text" name="admins_q" value="{{ $adminSearch }}" placeholder="{{ __('Search name, email, or organization…') }}"
+                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-72">
+                        <button type="submit"
+                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                            {{ __('Search') }}
+                        </button>
+                        @if ($adminSearch !== '')
+                            <a href="{{ route('admin.users.index', array_filter(['participants_q' => $participantSearch ?: null])) }}"
+                                class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                                {{ __('Clear') }}
+                            </a>
+                        @endif
+                    </form>
+                </div>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Regional admins and super admins with access to the admin dashboard.') }}</p>
 
                 @if ($admins->isEmpty())
                     <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
-                        {{ __('No admin accounts yet.') }}
+                        {{ $adminSearch !== '' ? __('No admins match your search.') : __('No admin accounts yet.') }}
                     </div>
                 @else
                     <div class="overflow-x-auto">
@@ -77,12 +96,31 @@
 
             <!-- Participants -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Participants') }}</h2>
+                <div class="flex items-center justify-between flex-wrap gap-3 mb-1">
+                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">{{ __('Participants') }}</h2>
+                    <form method="GET" action="{{ route('admin.users.index') }}" class="flex items-center flex-wrap gap-2">
+                        @if ($adminSearch !== '')
+                            <input type="hidden" name="admins_q" value="{{ $adminSearch }}">
+                        @endif
+                        <input type="text" name="participants_q" value="{{ $participantSearch }}" placeholder="{{ __('Search name, email, or organization…') }}"
+                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-72">
+                        <button type="submit"
+                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                            {{ __('Search') }}
+                        </button>
+                        @if ($participantSearch !== '')
+                            <a href="{{ route('admin.users.index', array_filter(['admins_q' => $adminSearch ?: null])) }}"
+                                class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                                {{ __('Clear') }}
+                            </a>
+                        @endif
+                    </form>
+                </div>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Elevate a participant to Regional Admin by assigning them a region.') }}</p>
 
                 @if ($participants->isEmpty())
                     <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
-                        {{ __('No participant accounts yet.') }}
+                        {{ $participantSearch !== '' ? __('No participants match your search.') : __('No participant accounts yet.') }}
                     </div>
                 @else
                     <div class="overflow-x-auto">

@@ -7,6 +7,7 @@ use App\Mail\TrainingRequestConfirmation;
 use App\Mail\TrainingRequestSubmitted;
 use App\Models\TrainingRequest;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -32,7 +33,21 @@ class TrainingRequestController extends Controller
             'user' => $user,
             'participants' => $participants,
             'categoryLabels' => TrainingRequest::$categoryLabels,
+            'defaultPreferredDate' => self::nextOfficeDay(now()->addMonthNoOverflow()->startOfDay())->toDateString(),
         ]);
+    }
+
+    /**
+     * Rolls a date forward onto the nearest weekday — trainings are only
+     * held on office days, so Sat/Sun are never valid.
+     */
+    private static function nextOfficeDay(Carbon $date): Carbon
+    {
+        while ($date->isWeekend()) {
+            $date->addDay();
+        }
+
+        return $date;
     }
 
     public function store(Request $request): RedirectResponse
@@ -48,7 +63,14 @@ class TrainingRequestController extends Controller
             'contact_number' => ['required', 'string', 'max:20'],
             'contact_email' => ['required', 'email', 'max:255'],
             'number_of_participants' => ['required', 'integer', 'min:1', 'max:1000'],
-            'preferred_date' => ['required', 'date', 'after:today'],
+            'preferred_date' => [
+                'required', 'date', 'after:today',
+                function ($attribute, $value, $fail) {
+                    if (Carbon::parse($value)->isWeekend()) {
+                        $fail('Trainings can only be scheduled on weekdays (Monday through Friday).');
+                    }
+                },
+            ],
             'venue' => ['required', 'string', 'max:255'],
             'purpose' => ['required', 'string', 'max:2000'],
             'tna_completed' => ['accepted'],
