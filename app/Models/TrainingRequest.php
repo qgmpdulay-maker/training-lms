@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
 
@@ -66,6 +67,11 @@ class TrainingRequest extends Model
         self::CATEGORY_TA => 'Technical Assistance',
     ];
 
+    public static array $agencyTypeLabels = [
+        self::AGENCY_TYPE_LGU => 'LGU',
+        self::AGENCY_TYPE_NGA => 'NGA',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -103,6 +109,21 @@ class TrainingRequest extends Model
     public function trainingEvaluation(): HasOne
     {
         return $this->hasOne(TrainingEvaluation::class);
+    }
+
+    /**
+     * Per-participant feedback on this training, one row per participant who
+     * has submitted theirs. Distinct from trainingEvaluation(), which is the
+     * admin's single aggregate record for the whole class.
+     */
+    public function participantEvaluations(): HasMany
+    {
+        return $this->hasMany(ParticipantEvaluation::class);
+    }
+
+    public function instructors(): BelongsToMany
+    {
+        return $this->belongsToMany(Instructor::class)->withTimestamps();
     }
 
     /**
@@ -182,5 +203,41 @@ class TrainingRequest extends Model
         }
 
         return $this->user ? collect([$this->user]) : collect();
+    }
+
+    /**
+     * Recompute the sex/age graduate breakdown straight from the participant
+     * roster, so Regional Monitoring and the Graduates Map always match who
+     * was actually on the training — no separate hand-typed numbers to keep
+     * in sync. Called whenever a request is saved as Completed.
+     */
+    public function syncGraduateCountsFromParticipants(): void
+    {
+        $participants = $this->effectiveParticipants();
+
+        $counts = [
+            'graduates_male' => $participants->where('sex', 'Male')->count(),
+            'graduates_female' => $participants->where('sex', 'Female')->count(),
+            'graduates_age_18_30' => 0,
+            'graduates_age_31_45' => 0,
+            'graduates_age_46_59' => 0,
+            'graduates_age_60_up' => 0,
+        ];
+
+        foreach ($participants as $participant) {
+            $bracket = match (true) {
+                $participant->age === null => null,
+                $participant->age <= 30 => 'graduates_age_18_30',
+                $participant->age <= 45 => 'graduates_age_31_45',
+                $participant->age <= 59 => 'graduates_age_46_59',
+                default => 'graduates_age_60_up',
+            };
+
+            if ($bracket) {
+                $counts[$bracket]++;
+            }
+        }
+
+        $this->update($counts);
     }
 }

@@ -44,6 +44,39 @@
                 </div>
             @endif
 
+            @if ($completedTrainings->isNotEmpty())
+                <div class="mt-10">
+                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Completed Trainings') }}</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __("Trainings you've finished — share your feedback while it's fresh.") }}</p>
+
+                    <div class="space-y-4">
+                        @foreach ($completedTrainings as $training)
+                            @php $hasEvaluated = $training->participantEvaluations->isNotEmpty(); @endphp
+                            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 sm:p-6">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    <a href="{{ route('training-requests.show', $training) }}" class="min-w-0">
+                                        <h3 class="font-bold text-[#152A4E] dark:text-white hover:text-[#E2762D]">{{ $training->training_title }}</h3>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                            {{ __(':date at :venue', ['date' => $training->preferred_date->format('F j, Y'), 'venue' => $training->venue]) }}
+                                        </p>
+                                    </a>
+                                    @if ($hasEvaluated)
+                                        <span class="shrink-0 inline-flex items-center text-xs font-semibold rounded-full border px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700">
+                                            {{ __('Evaluated') }}
+                                        </span>
+                                    @else
+                                        <a href="{{ route('training-requests.evaluation.edit', $training) }}"
+                                            class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-lg px-4 py-2 hover:bg-[#1E3A66] transition">
+                                            {{ __('Evaluate Training') }}
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
         </div>
     </div>
 </x-app-layout>

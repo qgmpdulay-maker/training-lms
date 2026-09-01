@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Instructor;
+use App\Models\TrainingRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 
@@ -37,6 +39,18 @@ class InstructorController extends Controller
             $instructorsByRegion = $instructors
                 ->groupBy(fn (Instructor $instructor) => $instructor->region ?: 'Central / Unassigned')
                 ->sortKeys();
+
+            // The roster search box re-requests this same route and swaps in just the
+            // results, so typing doesn't reload the whole page — see resources/views/
+            // admin/partials/live-search-script.blade.php for the client-side half.
+            if ($request->ajax() && $request->query('_section') === 'instructor-roster') {
+                return view('admin.partials.instructor-roster-results', [
+                    'instructorsByRegion' => $instructorsByRegion,
+                    'complaintsOnly' => $complaintsOnly,
+                    'selectedRegion' => $region,
+                    'instructorSearch' => $search,
+                ]);
+            }
 
             $withComplaints = $instructors->filter(fn (Instructor $instructor) => filled($instructor->complaints));
 
@@ -100,6 +114,43 @@ class InstructorController extends Controller
             'instructor' => $instructor,
             'records' => $records,
             'overallRating' => $ratings->isNotEmpty() ? round($ratings->avg(), 2) : null,
+            'sessions' => $this->sessionHistory($instructor),
         ]);
+    }
+
+    /**
+     * One row per completed TrainingRequest this instructor is formally
+     * attached to (via Summary's instructor selection, not just sharing a
+     * name on the roster) — Category, Module(s), Rate, and Comments per
+     * session. Modules are the session's own recorded module list, not
+     * verified as taught specifically by this instructor, since nothing in
+     * the schema links a module to a particular co-instructor.
+     */
+    private function sessionHistory(Instructor $instructor): Collection
+    {
+        return $instructor->trainingRequests()
+            ->where('status', TrainingRequest::STATUS_COMPLETED)
+            ->with(['participantEvaluations', 'trainingEvaluation'])
+            ->orderByDesc('preferred_date')
+            ->get()
+            ->map(function (TrainingRequest $trainingRequest) use ($instructor) {
+                $ratingRows = $trainingRequest->participantEvaluations
+                    ->pluck('instructor_ratings')->filter()->flatten(1)
+                    ->where('instructor_id', $instructor->id);
+
+                $scores = $ratingRows->pluck('rating')->filter(fn ($r) => is_numeric($r));
+
+                return [
+                    'training_title' => $trainingRequest->training_title,
+                    'category' => $trainingRequest->categoryLabel(),
+                    'preferred_date' => $trainingRequest->preferred_date,
+                    'venue' => $trainingRequest->venue,
+                    'modules' => collect($trainingRequest->trainingEvaluation?->module_ratings ?? [])
+                        ->pluck('module')->filter()->unique()->values()->all(),
+                    'rate' => $scores->isNotEmpty() ? round($scores->avg(), 2) : null,
+                    'responses' => $scores->count(),
+                    'comments' => $ratingRows->pluck('comment')->filter(fn ($c) => filled(trim((string) $c)))->values()->all(),
+                ];
+            });
     }
 }

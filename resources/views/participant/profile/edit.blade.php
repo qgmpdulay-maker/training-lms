@@ -25,11 +25,9 @@
                 @include('participant.profile.partials.update-profile-information-form')
             </div>
 
-            <!-- Password note -->
-            <div class="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-sm text-gray-600 dark:text-gray-400">
-                {{ __('To change your password, log out and use the ') }}
-                <a href="{{ route('password.request') }}" class="text-[#152A4E] dark:text-white font-semibold hover:text-[#E2762D]">{{ __('Forgot Password') }}</a>
-                {{ __(' link on the sign-in page.') }}
+            <!-- Change Password -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                @include('participant.profile.partials.update-password-form')
             </div>
 
         </div>

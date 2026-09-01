@@ -11,6 +11,7 @@
             <div id="trainings" x-data="{
                 search: '',
                 category: 'All',
+                selected: null,
                 get filtered() {
                     return trainings.filter(t =>
                         (this.category === 'All' || t.category === this.category) &&
@@ -50,17 +51,15 @@
                     trainings = {{ Js::from($trainings) }}
                 "></template>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                     <template x-for="training in filtered" :key="training.title">
-                        <div x-data="{ open: false }" class="flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition overflow-hidden">
+                        <div class="flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition overflow-hidden">
                             <div class="h-1.5 bg-gradient-to-r from-[#152A4E] to-[#E2762D]"></div>
-                            <button type="button" @click="open = ! open" class="p-6 flex flex-col flex-1 text-left w-full">
+                            <button type="button" @click="selected = training" class="p-6 flex flex-col flex-1 text-left w-full">
                                 <span class="inline-block w-fit text-[11px] font-semibold tracking-wide uppercase text-[#152A4E] dark:text-white bg-[#152A4E]/8 dark:bg-[#152A4E]/30 rounded-full px-2.5 py-1 mb-3"
                                     x-text="training.category"></span>
 
                                 <h3 class="text-base font-bold text-[#152A4E] dark:text-white mb-2 leading-snug" x-text="training.title"></h3>
-
-                                <p x-show="open" x-transition class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed flex-1 mb-4" x-text="training.description"></p>
 
                                 <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                                     <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -71,10 +70,7 @@
                                     </span>
 
                                     <span class="inline-flex items-center gap-1 text-xs font-semibold text-[#152A4E] dark:text-white">
-                                        <span x-text="open ? '{{ __('Show less') }}' : '{{ __('Show details') }}'"></span>
-                                        <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                                        </svg>
+                                        {{ __('Show details') }}
                                     </span>
                                 </div>
                             </button>
@@ -85,6 +81,51 @@
                 <p x-show="filtered.length === 0" class="text-sm text-gray-500 dark:text-gray-400 text-center py-12">
                     {{ __('No trainings match your search.') }}
                 </p>
+
+                <!-- Details modal -->
+                <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    :class="selected ? '' : 'pointer-events-none'">
+                    <div x-show="selected" x-cloak x-transition.opacity @click="selected = null"
+                        class="absolute inset-0 bg-gray-900/50"></div>
+
+                    <div x-show="selected" x-cloak
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 scale-95"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 scale-100"
+                        x-transition:leave-end="opacity-0 scale-95"
+                        @click.outside="selected = null" @keydown.escape.window="selected = null"
+                        class="relative w-full max-w-2xl min-h-[36rem] max-h-[85vh] flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden">
+                        <template x-if="selected">
+                            <div class="flex flex-col h-full">
+                                <div class="flex items-start justify-between gap-4 p-8 pb-0">
+                                    <span class="inline-block w-fit text-xs font-semibold tracking-wide uppercase text-[#152A4E] dark:text-white bg-[#152A4E]/8 dark:bg-[#152A4E]/30 rounded-full px-3 py-1.5"
+                                        x-text="selected.category"></span>
+
+                                    <button type="button" @click="selected = null" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 shrink-0">
+                                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <div class="flex-1 overflow-y-auto px-8 py-6">
+                                    <h3 class="text-2xl font-bold text-[#152A4E] dark:text-white mb-4 leading-snug" x-text="selected.title"></h3>
+
+                                    <p class="text-base text-gray-500 dark:text-gray-400 leading-relaxed" x-text="selected.description"></p>
+                                </div>
+
+                                <div class="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 px-8 py-5 border-t border-gray-100 dark:border-gray-700">
+                                    <svg class="w-5 h-5 text-[#E2762D]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span x-text="selected.hours"></span> {{ __('training hours') }}
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
             </div>
 
         </div>

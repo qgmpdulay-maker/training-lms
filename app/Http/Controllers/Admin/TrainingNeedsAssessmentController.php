@@ -43,6 +43,16 @@ class TrainingNeedsAssessmentController extends Controller
             ->withQueryString()
             ->fragment('tna-submissions');
 
+        // The submissions search box re-requests this same route and swaps in just
+        // the results, so typing (or paging) doesn't reload the whole page — see
+        // resources/views/admin/partials/live-search-script.blade.php.
+        if ($request->ajax() && $request->query('_section') === 'tna-submissions') {
+            return view('admin.partials.tna-submissions-results', [
+                'submissions' => $submissions,
+                'submissionSearch' => $search,
+            ]);
+        }
+
         return view('admin.training-needs-assessment', [
             'submissions' => $submissions,
             'submissionSearch' => $search,

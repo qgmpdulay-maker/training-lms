@@ -5,9 +5,6 @@
         </h2>
     </x-slot>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <div class="py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
@@ -158,9 +155,21 @@
 
             <!-- Certificates & ATAR -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Certificates & ATAR') }}</h2>
+                <div class="flex flex-wrap items-start justify-between gap-4 mb-1">
+                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">{{ __('Certificates & ATAR') }}</h2>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a href="{{ route('admin.tools.atar-template') }}" target="_blank"
+                            class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-md border border-gray-200 dark:border-gray-600 text-[#152A4E] dark:text-white px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
+                            {{ __('Download ATAR Template') }}
+                        </a>
+                        <a href="{{ route('admin.tools.certificate-template') }}" target="_blank"
+                            class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-md border border-gray-200 dark:border-gray-600 text-[#152A4E] dark:text-white px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
+                            {{ __('Download Certificate Template') }}
+                        </a>
+                    </div>
+                </div>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                    {{ __("Upload a certificate (shown on the participant's own dashboard) and/or the After Training Activity Report per record. No downloadable templates yet — those need OCD's actual template files — and files are stored on the app's own storage, not Google Drive.") }}
+                    {{ __("Download blank ATAR and certificate templates above (generic placeholders pending OCD's branded files), then upload a completed certificate (shown on the participant's own dashboard) and/or ATAR per record below. Files are stored on the app's own storage, not Google Drive.") }}
                 </p>
 
                 <div id="files-section">
@@ -194,7 +203,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                 <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Evaluation Computation (L1 / L2)') }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                    {{ __('Auto-computed from evaluations entered per training request — use "Add Evaluation" in the table above to enter results. Pick a training below, then expand a session to see its L1 and L2 results.') }}
+                    {{ __('Combines the admin-entered evaluation (use "Add Evaluation" in the table above) with what participants submitted themselves. Pick a training below, then expand a session to see its L1 and L2 results.') }}
                 </p>
 
                 @if (empty($evaluationsByTraining))
@@ -237,6 +246,12 @@
                                                     </div>
                                                 </div>
                                                 <div class="flex items-center gap-3 shrink-0">
+                                                    @if ($session['participant_total'] > 0)
+                                                        <span class="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400" title="{{ __('Participants who submitted their own evaluation') }}">
+                                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>
+                                                            {{ $session['participant_response_count'] }}/{{ $session['participant_total'] }} {{ __('evaluated') }}
+                                                        </span>
+                                                    @endif
                                                     @if ($session['overall_trainer_rating'])
                                                         <span class="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
                                                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.363 1.118l1.287 3.958c.3.922-.755 1.688-1.538 1.118l-3.367-2.447a1 1 0 00-1.176 0l-3.367 2.447c-.783.57-1.838-.196-1.538-1.118l1.287-3.958a1 1 0 00-.364-1.118L2.062 9.385c-.783-.57-.38-1.81.588-1.81h4.163a1 1 0 00.95-.69l1.286-3.958z" /></svg>
@@ -260,6 +275,7 @@
                                                                         <th class="py-2 pl-4 pr-4">{{ __('Module') }}</th>
                                                                         <th class="py-2 pr-4">{{ __('Module Rating') }}</th>
                                                                         <th class="py-2 pr-4">{{ __('Trainer Rating') }}</th>
+                                                                        <th class="py-2 pr-4">{{ __('Participant Avg') }}</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -268,6 +284,12 @@
                                                                             <td class="py-2 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $module['module'] }}</td>
                                                                             <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $module['module_rating'] ?? '—' }}</td>
                                                                             <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $module['trainer_rating'] ?? '—' }}</td>
+                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">
+                                                                                {{ $module['participant_rating'] ?? '—' }}
+                                                                                @if ($module['participant_responses'] > 0)
+                                                                                    <span class="text-gray-400">({{ trans_choice(':count response|:count responses', $module['participant_responses'], ['count' => $module['participant_responses']]) }})</span>
+                                                                                @endif
+                                                                            </td>
                                                                         </tr>
                                                                     @endforeach
                                                                 </tbody>
@@ -278,27 +300,157 @@
                                                             {{ __('(reflected on the Instructors tab when exactly one instructor teaches this training)') }}
                                                         </p>
                                                     </div>
+
+                                                    @if ($session['modules']->contains(fn ($module) => $module['participant_responses'] > 0))
+                                                        <div x-data="{ open: false }">
+                                                            <button type="button" @click="open = !open" class="text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D] inline-flex items-center gap-1">
+                                                                <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="open ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                                                                {{ __('Participant Module Ratings — Distribution & Comments') }}
+                                                            </button>
+                                                            <div x-show="open" x-cloak class="mt-2 overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                                <table class="min-w-full text-sm">
+                                                                    <thead>
+                                                                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                                            <th class="py-2 pl-4 pr-4">{{ __('Module') }}</th>
+                                                                            @foreach (range(1, 5) as $value)
+                                                                                <th class="py-2 pr-4 text-center">{{ $value }}</th>
+                                                                            @endforeach
+                                                                            <th class="py-2 pr-4">{{ __('Responses') }}</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                                        @foreach ($session['modules'] as $module)
+                                                                            <tr>
+                                                                                <td class="py-2 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $module['module'] }}</td>
+                                                                                @foreach (range(1, 5) as $value)
+                                                                                    <td class="py-2 pr-4 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $module['rating_distribution'][$value] }}</td>
+                                                                                @endforeach
+                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $module['participant_responses'] }}</td>
+                                                                            </tr>
+                                                                            @if (! empty($module['comments']))
+                                                                                <tr>
+                                                                                    <td colspan="7" class="py-2 pl-4 pr-4 bg-gray-50/60 dark:bg-gray-900/20">
+                                                                                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{{ __(':module — Comments (anonymous)', ['module' => $module['module']]) }}</p>
+                                                                                        <ul class="space-y-1">
+                                                                                            @foreach ($module['comments'] as $comment)
+                                                                                                <li class="text-xs text-gray-600 dark:text-gray-300">"{{ $comment }}"</li>
+                                                                                            @endforeach
+                                                                                        </ul>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            @endif
+                                                                        @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    @endif
+
+                                                    @if ($session['instructor_ratings']->isNotEmpty())
+                                                        <div>
+                                                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{{ __('Participant Trainer Ratings') }}</p>
+                                                            <div class="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                                <table class="min-w-full text-sm">
+                                                                    <thead>
+                                                                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                                            <th class="py-2 pl-4 pr-4">{{ __('Trainer') }}</th>
+                                                                            <th class="py-2 pr-4">{{ __('Organization') }}</th>
+                                                                            <th class="py-2 pr-4">{{ __('Avg') }}</th>
+                                                                            @foreach (range(1, 5) as $value)
+                                                                                <th class="py-2 pr-4 text-center">{{ $value }}</th>
+                                                                            @endforeach
+                                                                            <th class="py-2 pr-4">{{ __('Responses') }}</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                                        @foreach ($session['instructor_ratings'] as $instructorRating)
+                                                                            <tr>
+                                                                                <td class="py-2 pl-4 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $instructorRating['instructor'] }}</td>
+                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $instructorRating['agency_organization'] ?? '—' }}</td>
+                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $instructorRating['rating'] }}</td>
+                                                                                @foreach (range(1, 5) as $value)
+                                                                                    <td class="py-2 pr-4 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $instructorRating['rating_distribution'][$value] }}</td>
+                                                                                @endforeach
+                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $instructorRating['responses'] }}</td>
+                                                                            </tr>
+                                                                            @if (! empty($instructorRating['comments']))
+                                                                                <tr>
+                                                                                    <td colspan="8" class="py-2 pl-4 pr-4 bg-gray-50/60 dark:bg-gray-900/20">
+                                                                                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{{ __(':trainer — Comments (anonymous)', ['trainer' => $instructorRating['instructor']]) }}</p>
+                                                                                        <ul class="space-y-1">
+                                                                                            @foreach ($instructorRating['comments'] as $comment)
+                                                                                                <li class="text-xs text-gray-600 dark:text-gray-300">"{{ $comment }}"</li>
+                                                                                            @endforeach
+                                                                                        </ul>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            @endif
+                                                                        @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    @endif
                                                 @endif
 
-                                                @if ($session['pretest_score'] !== null || $session['posttest_score'] !== null)
-                                                    @php $change = ($session['pretest_score'] !== null && $session['posttest_score'] !== null) ? $session['posttest_score'] - $session['pretest_score'] : null; @endphp
+                                                @if (! empty($session['module_matrix_columns']))
+                                                    <div>
+                                                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{{ __('L1 — Per-Taker Module Ratings') }}</p>
+                                                        <div class="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                            <table class="min-w-full text-sm">
+                                                                <thead>
+                                                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                                        <th class="py-2 pl-4 pr-4">{{ __('Taker') }}</th>
+                                                                        @foreach ($session['module_matrix_columns'] as $moduleName)
+                                                                            <th class="py-2 pr-4">{{ $moduleName }}</th>
+                                                                        @endforeach
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                                    @foreach ($session['module_matrix'] as $takerRow)
+                                                                        <tr>
+                                                                            <td class="py-2 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $takerRow['participant'] }}</td>
+                                                                            @foreach ($session['module_matrix_columns'] as $moduleName)
+                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $takerRow['scores'][$moduleName] ?? '—' }}</td>
+                                                                            @endforeach
+                                                                        </tr>
+                                                                    @endforeach
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                @endif
+
+                                                @if ($session['pretest_stats']['count'] > 0 || $session['posttest_stats']['count'] > 0)
                                                     <div>
                                                         <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{{ __('L2 — Pre/Post Test') }}</p>
-                                                        <div class="flex flex-wrap gap-3">
-                                                            <div class="flex-1 min-w-[7rem] rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
-                                                                <p class="text-xs text-gray-400">{{ __('Pre-Test') }}</p>
-                                                                <p class="text-xl font-bold text-[#152A4E] dark:text-white">{{ $session['pretest_score'] ?? '—' }}</p>
-                                                            </div>
-                                                            <div class="flex-1 min-w-[7rem] rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
-                                                                <p class="text-xs text-gray-400">{{ __('Post-Test') }}</p>
-                                                                <p class="text-xl font-bold text-[#152A4E] dark:text-white">{{ $session['posttest_score'] ?? '—' }}</p>
-                                                            </div>
-                                                            <div class="flex-1 min-w-[7rem] rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
-                                                                <p class="text-xs text-gray-400">{{ __('Change') }}</p>
-                                                                <p class="text-xl font-bold {{ $change === null ? 'text-gray-400' : ($change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') }}">
-                                                                    {{ $change === null ? '—' : ($change >= 0 ? '+'.$change : $change) }}
-                                                                </p>
-                                                            </div>
+                                                        <div class="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                            <table class="min-w-full text-sm">
+                                                                <thead>
+                                                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                                        <th class="py-2 pl-4 pr-4"></th>
+                                                                        <th class="py-2 pr-4">{{ __('Mean') }}</th>
+                                                                        <th class="py-2 pr-4">{{ __('Median') }}</th>
+                                                                        <th class="py-2 pr-4">{{ __('Mode') }}</th>
+                                                                        <th class="py-2 pr-4">{{ __('Min') }}</th>
+                                                                        <th class="py-2 pr-4">{{ __('Max') }}</th>
+                                                                        <th class="py-2 pr-4">{{ __('Count') }}</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                                    @foreach (['Pre-Test' => $session['pretest_stats'], 'Post-Test' => $session['posttest_stats']] as $label => $stats)
+                                                                        <tr>
+                                                                            <td class="py-2 pl-4 pr-4 font-medium text-[#152A4E] dark:text-white">{{ __($label) }}</td>
+                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['mean'] ?? '—' }}</td>
+                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['median'] ?? '—' }}</td>
+                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['mode'] ?? '—' }}</td>
+                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['min'] ?? '—' }}</td>
+                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['max'] ?? '—' }}</td>
+                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['count'] }}</td>
+                                                                        </tr>
+                                                                    @endforeach
+                                                                </tbody>
+                                                            </table>
                                                         </div>
                                                     </div>
                                                 @endif
@@ -312,69 +464,13 @@
                 @endif
             </div>
 
-            <!-- Graduates by Region (map) -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Region') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                    {{ __('Regions with completed trainings glow in proportion to their graduate count. This traces the OCD regional office boundaries, not exact facility locations — hover an area to see its numbers.') }}
-                </p>
-
-                <div class="graduates-map-panel rounded-lg overflow-hidden">
-                    <div id="graduatesRegionMap"></div>
-                </div>
-
-                <div class="flex items-center gap-2 mt-4 text-xs text-gray-500 dark:text-gray-400">
-                    <span>{{ __('Fewer graduates') }}</span>
-                    <span class="flex h-2.5 w-24 rounded-full overflow-hidden">
-                        <span class="flex-1" style="background:#1e355c"></span>
-                        <span class="flex-1" style="background:#28518f"></span>
-                        <span class="flex-1" style="background:#2f6fc4"></span>
-                        <span class="flex-1" style="background:#3B82F6"></span>
-                    </span>
-                    <span>{{ __('More graduates') }}</span>
-                    <span class="inline-flex items-center gap-1.5 ml-3">
-                        <span class="w-2.5 h-2.5 rounded-full inline-block border border-gray-400" style="background:transparent"></span>
-                        {{ __('No completed trainings on file') }}
-                    </span>
-                </div>
-            </div>
-
-            <style>
-                .graduates-map-panel {
-                    background: radial-gradient(ellipse at 50% 40%, #f6f8fc 0%, #e7ecf5 70%);
-                }
-                #graduatesRegionMap {
-                    height: 460px;
-                    background: transparent;
-                }
-                .region-tooltip {
-                    background: rgba(255, 255, 255, 0.97) !important;
-                    border: 1px solid rgba(59, 130, 246, 0.35) !important;
-                    border-radius: 10px !important;
-                    box-shadow: 0 8px 24px rgba(21, 42, 78, 0.18) !important;
-                    color: #152A4E !important;
-                    padding: 10px 12px !important;
-                }
-                .region-tooltip::before {
-                    display: none !important;
-                }
-                .leaflet-container {
-                    background: transparent !important;
-                    outline: none;
-                }
-                .region-glow-dot {
-                    filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.9));
-                }
-                .region-hover-glow {
-                    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.85));
-                }
-            </style>
-
             <!-- Graduates by LGU -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                 <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by LGU') }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                    {{ __('Completed trainings grouped by the LGU recorded on Summary — the region-level breakdown is mapped above.') }}
+                    {{ __('Completed trainings grouped by the LGU recorded on Summary.') }}
+                    {{ __('For a point-level map of graduates by LGU / Volunteers / RDRRMC member agencies, see the') }}
+                    <a href="{{ route('admin.monitoring.map', $region ? ['regions' => [$region]] : []) }}" class="font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">{{ __('Graduates Map') }}</a>.
                 </p>
                 <p class="text-xs text-amber-700 dark:text-amber-400 mb-5">
                     {{ __('"Teams Organized" isn\'t shown here since there\'s no team data in the system yet.') }}
@@ -385,15 +481,38 @@
                         {{ __('No completed trainings with an LGU recorded yet.') }}
                     </div>
                 @else
-                    @php $maxTotal = max(array_column($graduatesByLgu, 'total')); @endphp
-                    <div class="space-y-3">
-                        @foreach ($graduatesByLgu as $row)
-                            <div class="flex items-center gap-3">
-                                <div class="w-48 shrink-0 text-xs font-medium text-gray-600 dark:text-gray-300 truncate">{{ $row['lgu'] }}</div>
-                                <div class="flex-1 h-5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                                    <div class="h-full rounded-full bg-[#152A4E] dark:bg-[#E2762D] transition-all" style="width: {{ round(($row['total'] / $maxTotal) * 100) }}%;"></div>
+                    <div x-data="{ activeLguRegion: @js(array_key_first($graduatesByLgu)) }">
+                        <div class="flex items-center gap-1 overflow-x-auto bg-gray-100 dark:bg-gray-900/40 rounded-xl p-1.5">
+                            @foreach ($graduatesByLgu as $regionName => $regionGroup)
+                                <button type="button" @click="activeLguRegion = @js($regionName)"
+                                    :class="activeLguRegion === @js($regionName)
+                                        ? 'bg-white dark:bg-gray-700 text-[#152A4E] dark:text-white shadow-sm'
+                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
+                                    class="shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition whitespace-nowrap">
+                                    {{ $regionName }}
+                                    <span :class="activeLguRegion === @js($regionName)
+                                            ? 'bg-[#152A4E]/10 text-[#152A4E] dark:bg-white/15 dark:text-white px-1.5 py-0.5 rounded-full text-xs font-semibold'
+                                            : 'text-gray-400 dark:text-gray-500 text-xs font-normal'">
+                                        {{ $regionGroup['total'] }}
+                                    </span>
+                                </button>
+                            @endforeach
+                        </div>
+
+                        @foreach ($graduatesByLgu as $regionName => $regionGroup)
+                            <div x-show="activeLguRegion === @js($regionName)" x-cloak class="mt-5">
+                                @php $regionMax = max(array_column($regionGroup['lgus'], 'total')); @endphp
+                                <div class="space-y-3">
+                                    @foreach ($regionGroup['lgus'] as $row)
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-48 shrink-0 text-xs font-medium text-gray-600 dark:text-gray-300 truncate">{{ $row['lgu'] }}</div>
+                                            <div class="flex-1 h-5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                                                <div class="h-full rounded-full bg-[#152A4E] dark:bg-[#E2762D] transition-all" style="width: {{ round(($row['total'] / $regionMax) * 100) }}%;"></div>
+                                            </div>
+                                            <div class="w-8 text-right text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $row['total'] }}</div>
+                                        </div>
+                                    @endforeach
                                 </div>
-                                <div class="w-8 text-right text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $row['total'] }}</div>
                             </div>
                         @endforeach
                     </div>
@@ -402,117 +521,4 @@
 
         </div>
     </div>
-
-    <script>
-        (function () {
-            const regionData = @json($graduatesByRegion);
-
-            // The public boundary dataset labels regions by their old/full
-            // names — map those to the region keys used throughout this app.
-            const regionNameMap = {
-                'Autonomous Region of Muslim Mindanao (ARMM)': 'BARMM',
-                'Bicol Region (Region V)': 'Region V',
-                'CALABARZON (Region IV-A)': 'Region IV-A',
-                'Cagayan Valley (Region II)': 'Region II',
-                'Caraga (Region XIII)': 'Region XIII',
-                'Central Luzon (Region III)': 'Region III',
-                'Central Visayas (Region VII)': 'Region VII',
-                'Cordillera Administrative Region (CAR)': 'CAR',
-                'Davao Region (Region XI)': 'Region XI',
-                'Eastern Visayas (Region VIII)': 'Region VIII',
-                'Ilocos Region (Region I)': 'Region I',
-                'MIMAROPA (Region IV-B)': 'MIMAROPA',
-                'Metropolitan Manila': 'NCR',
-                'Northern Mindanao (Region X)': 'Region X',
-                'SOCCSKSARGEN (Region XII)': 'Region XII',
-                'Western Visayas (Region VI)': 'Region VI',
-                'Zamboanga Peninsula (Region IX)': 'Region IX',
-            };
-
-            const ACCENT = '#3B82F6';
-            const BORDER_IDLE = 'rgba(21, 42, 78, 0.22)';
-            const opacityScale = [0.22, 0.4, 0.55, 0.75];
-
-            const maxGraduates = Math.max(1, ...Object.values(regionData).map((r) => r.graduates));
-
-            const opacityFor = (graduates) => {
-                if (!graduates) return 0;
-                const step = Math.min(opacityScale.length - 1, Math.floor((graduates / maxGraduates) * opacityScale.length));
-                return opacityScale[step];
-            };
-
-            // Scroll-to-zoom stays off so scrolling the page past the map
-            // doesn't get captured by it — everything else (drag, +/- controls,
-            // double-click, pinch) is enabled.
-            const map = L.map('graduatesRegionMap', {
-                attributionControl: false,
-                scrollWheelZoom: false,
-            }).setView([12.8797, 121.7740], 5);
-
-            fetch('https://cdn.jsdelivr.net/gh/macoymejia/geojsonph@master/Regions/Regions.bit.json')
-                .then((response) => response.json())
-                .then((geojson) => {
-                    const layer = L.geoJSON(geojson, {
-                        style: (feature) => {
-                            const key = regionNameMap[feature.properties.REGION];
-                            const data = regionData[key];
-                            const active = !!(data && data.graduates);
-
-                            return {
-                                fillColor: ACCENT,
-                                fillOpacity: opacityFor(data ? data.graduates : 0),
-                                color: active ? ACCENT : BORDER_IDLE,
-                                weight: active ? 1.5 : 1,
-                            };
-                        },
-                        onEachFeature: (feature, featureLayer) => {
-                            const key = regionNameMap[feature.properties.REGION] ?? feature.properties.REGION;
-                            const data = regionData[key] || { graduates: 0, trainings: 0 };
-                            const baseOpacity = opacityFor(data.graduates);
-                            const baseWeight = data.graduates ? 1.5 : 1;
-                            const baseColor = data.graduates ? ACCENT : BORDER_IDLE;
-
-                            featureLayer.bindTooltip(
-                                '<div style="font-size:12px;min-width:150px">' +
-                                '<div style="font-weight:700;color:#152A4E;letter-spacing:.02em;margin-bottom:3px">' + key + '</div>' +
-                                '<div style="color:#6b7280">Graduates: <strong style="color:' + ACCENT + '">' + data.graduates + '</strong></div>' +
-                                '<div style="color:#6b7280">Trainings: <strong style="color:' + ACCENT + '">' + data.trainings + '</strong></div>' +
-                                '</div>',
-                                { sticky: true, className: 'region-tooltip', direction: 'top' }
-                            );
-
-                            featureLayer.on('mouseover', function () {
-                                this.setStyle({ fillOpacity: Math.min(0.9, baseOpacity + 0.3), weight: 2.5, color: ACCENT });
-                                this.bringToFront();
-                                const el = this.getElement();
-                                if (el) el.classList.add('region-hover-glow');
-                            });
-                            featureLayer.on('mouseout', function () {
-                                this.setStyle({ fillOpacity: baseOpacity, weight: baseWeight, color: baseColor });
-                                const el = this.getElement();
-                                if (el) el.classList.remove('region-hover-glow');
-                            });
-
-                            // A soft glowing point at each active region's centroid,
-                            // echoing a pin without needing exact facility coordinates.
-                            if (data.graduates) {
-                                const center = featureLayer.getBounds().getCenter();
-                                L.circleMarker(center, {
-                                    radius: 4,
-                                    color: '#fff',
-                                    weight: 1,
-                                    fillColor: ACCENT,
-                                    fillOpacity: 1,
-                                    className: 'region-glow-dot',
-                                    interactive: false,
-                                }).addTo(map);
-                            }
-                        },
-                    }).addTo(map);
-
-                    map.fitBounds(layer.getBounds(), { padding: [16, 16] });
-                    setTimeout(() => map.invalidateSize(), 200);
-                });
-        })();
-    </script>
 </x-app-layout>

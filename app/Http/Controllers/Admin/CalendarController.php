@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CalendarEvent;
 use App\Models\TrainingRequest;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 
@@ -19,18 +21,23 @@ class CalendarController extends Controller
         CalendarEvent::TYPE_OTHER => 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600',
     ];
 
+    // TOR asks for APB/TA color-coding at both the Regional and Central level —
+    // one shared palette so a category reads the same everywhere it appears.
+    const CATEGORY_COLORS = [
+        TrainingRequest::CATEGORY_APB => 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
+        TrainingRequest::CATEGORY_TA => 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700',
+    ];
+
     public function index(Request $request): View
     {
         $user = $request->user();
 
-        $events = CalendarEvent::with('creator')
-            ->when($user->isAdmin(), fn ($query) => $query->where(function ($q) use ($user) {
-                $q->whereNull('region')->orWhere('region', $user->region);
-            }))
-            ->orderBy('date')
-            ->get();
-
         if ($user->isAdmin()) {
+            $events = CalendarEvent::with('creator')
+                ->where(fn ($q) => $q->whereNull('region')->orWhere('region', $user->region))
+                ->orderBy('date')
+                ->get();
+
             $requests = TrainingRequest::where('region', $user->region)
                 ->orderBy('preferred_date')
                 ->get();
@@ -39,34 +46,49 @@ class CalendarController extends Controller
 
             return view('admin.calendar', [
                 'groupedByMonth' => $groupedByMonth,
-                'colorBy' => 'category',
-                'categoryColors' => [
-                    TrainingRequest::CATEGORY_APB => 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
-                    TrainingRequest::CATEGORY_TA => 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700',
-                ],
+                'defaultMonth' => $this->defaultMonth($groupedByMonth),
+                'categoryColors' => self::CATEGORY_COLORS,
                 'eventTypeColors' => self::EVENT_TYPE_COLORS,
                 'eventTypeLabels' => CalendarEvent::$typeLabels,
                 'regions' => config('regions.list'),
+                'categoryLabels' => TrainingRequest::$categoryLabels,
+                'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
+                'filters' => null,
             ]);
         }
 
-        $requests = TrainingRequest::orderBy('preferred_date')->get();
+        // Super Admin (Central) sees every region — filterable by region, training
+        // type, and category so the whole-country agenda stays usable at scale.
+        $filters = [
+            'region' => $request->query('region') ?: null,
+            'category' => $request->query('category') ?: null,
+            'training_title' => $request->query('training_title') ?: null,
+        ];
+
+        $events = CalendarEvent::with('creator')
+            ->when($filters['region'], fn ($q) => $q->where(fn ($qq) => $qq->whereNull('region')->orWhere('region', $filters['region'])))
+            ->orderBy('date')
+            ->get();
+
+        $requests = TrainingRequest::query()
+            ->when($filters['region'], fn ($q) => $q->where('region', $filters['region']))
+            ->when($filters['category'], fn ($q) => $q->where('category', $filters['category']))
+            ->when($filters['training_title'], fn ($q) => $q->where('training_title', $filters['training_title']))
+            ->orderBy('preferred_date')
+            ->get();
 
         $groupedByMonth = $this->groupEntries($requests, $events);
 
         return view('admin.calendar', [
             'groupedByMonth' => $groupedByMonth,
-            'colorBy' => 'status',
-            'statusColors' => [
-                TrainingRequest::STATUS_SUBMITTED => 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600',
-                TrainingRequest::STATUS_UNDER_REVIEW => 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700',
-                TrainingRequest::STATUS_APPROVED => 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
-                TrainingRequest::STATUS_DECLINED => 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700',
-                TrainingRequest::STATUS_COMPLETED => 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700',
-            ],
+            'defaultMonth' => $this->defaultMonth($groupedByMonth),
+            'categoryColors' => self::CATEGORY_COLORS,
             'eventTypeColors' => self::EVENT_TYPE_COLORS,
             'eventTypeLabels' => CalendarEvent::$typeLabels,
             'regions' => config('regions.list'),
+            'categoryLabels' => TrainingRequest::$categoryLabels,
+            'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
+            'filters' => $filters,
         ]);
     }
 
@@ -93,6 +115,30 @@ class CalendarController extends Controller
         $calendarEvent->delete();
 
         return Redirect::route('admin.calendar')->with('status', "\"{$calendarEvent->title}\" was removed from the calendar.");
+    }
+
+    /**
+     * Which month tab opens by default: this month if it has anything on it,
+     * else the nearest upcoming month, else the most recent past one — so the
+     * calendar never opens on a stale, empty first tab. Relies on
+     * groupEntries() already returning months in chronological key order.
+     */
+    private function defaultMonth(Collection $groupedByMonth): ?string
+    {
+        if ($groupedByMonth->isEmpty()) {
+            return null;
+        }
+
+        $currentLabel = now()->format('F Y');
+        if ($groupedByMonth->has($currentLabel)) {
+            return $currentLabel;
+        }
+
+        $monthStart = now()->startOfMonth();
+        $upcoming = $groupedByMonth->keys()
+            ->first(fn (string $label) => Carbon::createFromFormat('F Y', $label)->startOfMonth()->gte($monthStart));
+
+        return $upcoming ?? $groupedByMonth->keys()->last();
     }
 
     /**

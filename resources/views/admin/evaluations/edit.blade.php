@@ -24,21 +24,39 @@
 
                     <!-- L2: Pre/Post Test -->
                     <div>
-                        <h3 class="font-bold text-[#152A4E] dark:text-white mb-3">{{ __('L2 Evaluation — Pre/Post Test') }}</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
-                            <div>
-                                <x-input-label for="pretest_score" :value="__('Pre-Test Score (0–100)')" />
-                                <x-text-input id="pretest_score" name="pretest_score" type="number" min="0" max="100" class="mt-1 block w-full"
-                                    value="{{ old('pretest_score', $trainingRequest->trainingEvaluation?->pretest_score) }}" />
-                                <x-input-error :messages="$errors->get('pretest_score')" class="mt-1" />
-                            </div>
-                            <div>
-                                <x-input-label for="posttest_score" :value="__('Post-Test Score (0–100)')" />
-                                <x-text-input id="posttest_score" name="posttest_score" type="number" min="0" max="100" class="mt-1 block w-full"
-                                    value="{{ old('posttest_score', $trainingRequest->trainingEvaluation?->posttest_score) }}" />
-                                <x-input-error :messages="$errors->get('posttest_score')" class="mt-1" />
-                            </div>
+                        <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('L2 Evaluation — Pre/Post Test') }}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">{{ __('One pair of scores per participant this session covers — leave both blank for a participant to skip them.') }}</p>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead>
+                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                        <th class="py-2 pr-3">{{ __('Participant') }}</th>
+                                        <th class="py-2 pr-3">{{ __('Pre-Test Score (0–100)') }}</th>
+                                        <th class="py-2 pr-3">{{ __('Post-Test Score (0–100)') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    @foreach ($participantScoreRows as $row)
+                                        <tr>
+                                            <td class="py-2 pr-3 text-gray-700 dark:text-gray-200">{{ $row['name'] }}</td>
+                                            <td class="py-2 pr-3">
+                                                <input type="number" min="0" max="100" name="pretest_score[{{ $row['user_id'] }}]"
+                                                    value="{{ old('pretest_score.'.$row['user_id'], $row['pretest_score']) }}"
+                                                    class="w-24 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                            </td>
+                                            <td class="py-2 pr-3">
+                                                <input type="number" min="0" max="100" name="posttest_score[{{ $row['user_id'] }}]"
+                                                    value="{{ old('posttest_score.'.$row['user_id'], $row['posttest_score']) }}"
+                                                    class="w-24 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
                         </div>
+                        <x-input-error :messages="$errors->get('pretest_score.*')" class="mt-1" />
+                        <x-input-error :messages="$errors->get('posttest_score.*')" class="mt-1" />
                     </div>
 
                     <!-- L1: Module & Trainer Ratings -->

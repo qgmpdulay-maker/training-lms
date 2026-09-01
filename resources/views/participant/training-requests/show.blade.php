@@ -76,6 +76,23 @@
                         </div>
                     @endif
                 </dl>
+
+                @if ($trainingRequest->status === \App\Models\TrainingRequest::STATUS_COMPLETED)
+                    <div class="no-print mt-8 pt-8 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3 flex-wrap">
+                        @if ($trainingRequest->participantEvaluations->where('user_id', Auth::id())->isNotEmpty())
+                            <p class="text-sm text-green-700 dark:text-green-300 font-semibold">{{ __("You've already submitted your evaluation for this training. Thank you!") }}</p>
+                        @else
+                            <div>
+                                <p class="text-sm font-semibold text-[#152A4E] dark:text-white">{{ __('How was this training?') }}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Your feedback helps improve future sessions.') }}</p>
+                            </div>
+                            <a href="{{ route('training-requests.evaluation.edit', $trainingRequest) }}"
+                                class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition">
+                                {{ __('Evaluate Training') }}
+                            </a>
+                        @endif
+                    </div>
+                @endif
             </div>
 
         </div>

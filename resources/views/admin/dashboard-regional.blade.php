@@ -32,16 +32,20 @@
                     ['title' => 'Tools', 'description' => 'Graduates list now available; charts, ATAR, evaluations, certificates, and maps still to come.', 'icon' => 'tools', 'route' => 'admin.tools'],
                     ['title' => 'Instructors', 'description' => 'Instructor roster, deployments, and certificate codes.', 'icon' => 'instructors', 'route' => 'admin.instructors.index'],
                     ['title' => 'Training Needs Assessment', 'description' => 'TNA submissions from participants and their recommendations.', 'icon' => 'tna', 'route' => 'admin.training-needs-assessment'],
+                    ['title' => 'TNA Submissions (Org.)', 'description' => 'Log formal TNA reports from LGUs and NGAs in your region; Super Admin reviews the aggregated copies.', 'icon' => 'tna', 'route' => 'admin.tna-submissions.index'],
                     ['title' => 'Calendar', 'description' => 'Your region\'s scheduled trainings, color-coded by APB / Technical Assistance.', 'icon' => 'calendar', 'route' => 'admin.calendar'],
                 ] as $module)
                     <a href="{{ route($module['route']) }}"
-                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-7 hover:border-[#152A4E]/40 dark:hover:border-white/30 transition">
+                        class="group bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-7 hover:border-[#E2762D]/50 hover:shadow-md transition">
                         <div class="flex items-start justify-between mb-4">
-                            <div class="h-11 w-11 rounded-lg bg-[#152A4E]/5 dark:bg-[#152A4E]/30 flex items-center justify-center text-[#152A4E] dark:text-white">
+                            <div class="h-11 w-11 rounded-lg bg-[#E2762D]/10 dark:bg-[#E2762D]/20 flex items-center justify-center text-[#E2762D]">
                                 @include('admin.partials.icon', ['name' => $module['icon']])
                             </div>
+                            <svg class="w-4 h-4 text-gray-300 dark:text-gray-600 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-[#E2762D] transition-all" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
                         </div>
-                        <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __($module['title']) }}</h3>
+                        <h3 class="font-bold text-[#152A4E] dark:text-white mb-1 group-hover:text-[#E2762D] transition-colors">{{ __($module['title']) }}</h3>
                         <p class="text-sm text-gray-500 dark:text-gray-400">{{ __($module['description']) }}</p>
                     </a>
                 @endforeach

@@ -75,6 +75,7 @@
                 font-size: var(--input-text-size);
                 height: var(--input-height);
             }
+            .file-input { font-size: var(--input-text-size); }
             .submit-btn {
                 font-size: var(--button-text-size);
                 height: var(--button-height);
@@ -109,7 +110,7 @@
                         {{ __('Create a Participant Account') }}
                     </h1>
 
-                    <form method="POST" action="{{ route('register') }}">
+                    <form method="POST" action="{{ route('register') }}" enctype="multipart/form-data">
                         @csrf
 
                         <!-- Personal Information -->
@@ -123,6 +124,25 @@
                                 <h2 class="section-label">{{ __('Personal Information') }}</h2>
                             </div>
                             <div class="space-y-5">
+                                <div>
+                                    <label class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Picture of Participant') }}</label>
+                                    <div class="flex items-center gap-5">
+                                        <div id="picture-preview-wrap" class="w-20 h-20 rounded-full bg-[#152A4E]/8 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
+                                            <svg id="picture-placeholder-icon" class="w-8 h-8 text-[#152A4E]/40" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                                            </svg>
+                                            <img id="picture-preview-img" src="" alt="" class="w-full h-full object-cover hidden">
+                                        </div>
+                                        <div class="flex-1">
+                                            <input id="picture" type="file" name="picture" accept="image/*" required
+                                                onchange="const f=this.files[0]; if(!f) return; const img=document.getElementById('picture-preview-img'); const icon=document.getElementById('picture-placeholder-icon'); const reader=new FileReader(); reader.onload=e => { img.src=e.target.result; img.classList.remove('hidden'); icon.classList.add('hidden'); }; reader.readAsDataURL(f);"
+                                                class="block w-full text-gray-600 file-input file:me-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-[#152A4E]/8 file:text-[#152A4E] hover:file:bg-[#152A4E]/15">
+                                            <x-input-error :messages="$errors->get('picture')" class="mt-1" />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label for="name" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Full Name of Participant') }}</label>
                                     <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus autocomplete="name"

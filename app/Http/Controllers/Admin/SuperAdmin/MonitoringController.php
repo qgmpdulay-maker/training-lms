@@ -15,6 +15,7 @@ class MonitoringController extends Controller
     public function regional(Request $request): View
     {
         $filters = $this->filtersFromRequest($request);
+        $regionalData = $this->regionalData($filters);
 
         return view('admin.super-admin.monitoring.regional', [
             'filters' => $filters,
@@ -22,25 +23,36 @@ class MonitoringController extends Controller
             'categoryLabels' => TrainingRequest::$categoryLabels,
             'periodLabel' => $this->periodLabel($filters),
             'summary' => $this->summary($this->completedTrainings($filters)->get()),
-            'regionalData' => $this->regionalData($filters),
+            'regionalData' => $regionalData,
+            'regionalHighlights' => $this->regionalHighlights($regionalData),
             'threeYearData' => $this->threeYearData($filters),
             'chartData' => $this->chartData($filters),
         ]);
     }
 
+    /**
+     * Reachable by both Regional Admins and Super Admin (see routes/web.php) —
+     * a Regional Admin's region filter is force-overridden below rather than
+     * merged, so it can't be widened by editing the `regions[]` query string.
+     */
     public function map(Request $request): View
     {
+        $user = $request->user();
         $filters = $this->filtersFromRequest($request);
+
+        if ($user->isAdmin()) {
+            $filters['regions'] = [$user->region];
+        }
 
         $trainings = $this->completedTrainings($filters)->get();
 
         return view('admin.super-admin.monitoring.map', [
             'filters' => $filters,
+            'regionLocked' => $user->isAdmin(),
             'regions' => config('regions.list'),
             'categoryLabels' => TrainingRequest::$categoryLabels,
             'summary' => $this->summary($trainings),
             'mapPoints' => $this->mapPoints($trainings),
-            'regionBreakdown' => $this->regionBreakdown($trainings),
         ]);
     }
 
@@ -111,6 +123,34 @@ class MonitoringController extends Controller
         return $rows->push($total)->all();
     }
 
+    /**
+     * Quick top-line callouts from the regional breakdown — which region leads
+     * on graduates, completion rate, and trainings conducted — so a Super Admin
+     * gets the headline without reading the whole table. Only real regions are
+     * considered, never the "Central (All OCDROs)" aggregate row.
+     */
+    private function regionalHighlights(array $regionalData): array
+    {
+        $regions = collect($regionalData)->reject(fn (array $row) => $row['label'] === 'Central (All OCDROs)');
+
+        if ($regions->isEmpty()) {
+            return [];
+        }
+
+        $topGraduates = $regions->sortByDesc('graduates')->first();
+        $topCompletion = $regions
+            ->filter(fn (array $row) => $row['participants'] > 0)
+            ->sortByDesc(fn (array $row) => (float) $row['completion_rate'])
+            ->first();
+        $mostTrainings = $regions->sortByDesc('trainings')->first();
+
+        return array_values(array_filter([
+            $topGraduates ? ['label' => 'Most Graduates', 'region' => $topGraduates['label'], 'value' => $topGraduates['graduates']] : null,
+            $topCompletion ? ['label' => 'Best Completion Rate', 'region' => $topCompletion['label'], 'value' => $topCompletion['completion_rate']] : null,
+            $mostTrainings ? ['label' => 'Most Trainings Conducted', 'region' => $mostTrainings['label'], 'value' => $mostTrainings['trainings']] : null,
+        ]));
+    }
+
     private function threeYearData(array $filters): array
     {
         $endYear = $filters['until'] ? Carbon::parse($filters['until'])->year : now()->year;
@@ -134,7 +174,6 @@ class MonitoringController extends Controller
 
         return [
             'trainingsConducted' => $this->trainingsConductedChart($trainings, $filters),
-            'graduatesPerRegion' => $this->graduatesPerRegionChart($trainings),
             'graduatesBySex' => [
                 'male' => $trainings->sum('graduates_male'),
                 'female' => $trainings->sum('graduates_female'),
@@ -163,25 +202,6 @@ class MonitoringController extends Controller
             'apb' => $rows->where('category', TrainingRequest::CATEGORY_APB)->count(),
             'ta' => $rows->where('category', TrainingRequest::CATEGORY_TA)->count(),
         ])->values()->all();
-    }
-
-    private function graduatesPerRegionChart(Collection $trainings): array
-    {
-        $regions = $trainings->pluck('region')->filter()->unique()->sort()->values();
-
-        if ($regions->isEmpty()) {
-            $regions = collect(config('regions.list'));
-        }
-
-        return $regions->map(function (string $region) use ($trainings) {
-            $regionTrainings = $trainings->where('region', $region);
-
-            return [
-                'region' => $region,
-                'graduates' => $regionTrainings->sum(fn (TrainingRequest $t) => $t->graduates),
-                'teams' => $regionTrainings->sum('teams_organized'),
-            ];
-        })->all();
     }
 
     /**
@@ -214,21 +234,4 @@ class MonitoringController extends Controller
             ->all();
     }
 
-    /**
-     * @param  Collection<int, TrainingRequest>  $trainings
-     */
-    private function regionBreakdown(Collection $trainings): array
-    {
-        return collect(config('regions.list'))
-            ->map(fn (string $region) => [
-                'region' => $region,
-                'trainings' => $trainings->where('region', $region)->count(),
-                'graduates' => $trainings->where('region', $region)->sum(fn (TrainingRequest $t) => $t->graduates),
-                'teams' => $trainings->where('region', $region)->sum('teams_organized'),
-            ])
-            ->filter(fn (array $row) => $row['trainings'] > 0)
-            ->sortByDesc('graduates')
-            ->values()
-            ->all();
-    }
 }

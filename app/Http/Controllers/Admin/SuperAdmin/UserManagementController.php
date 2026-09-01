@@ -38,6 +38,17 @@ class UserManagementController extends Controller
 
         $regions = config('regions.list');
 
+        // Each search box re-requests this same route and swaps in just its own
+        // results, so typing doesn't reload the whole page — see resources/views/
+        // admin/partials/live-search-script.blade.php.
+        if ($request->ajax() && $request->query('_section') === 'admins') {
+            return view('admin.partials.manage-admins-results', compact('admins', 'adminSearch'));
+        }
+
+        if ($request->ajax() && $request->query('_section') === 'participants') {
+            return view('admin.partials.manage-participants-results', compact('participants', 'participantSearch', 'regions'));
+        }
+
         return view('admin.super-admin.users.index', compact('participants', 'admins', 'regions', 'adminSearch', 'participantSearch'));
     }
 

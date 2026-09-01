@@ -128,6 +128,32 @@
                     </div>
                 </div>
 
+                <!-- Monitoring Data -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Monitoring Data') }}</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Feeds Regional Monitoring and the Graduates Map. Graduate counts by sex and age are calculated automatically from the participant list once this training is marked Completed — only these two fields need to be set by hand.') }}</p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <x-input-label for="agency_type" :value="__('Requesting Agency Type')" />
+                            <select id="agency_type" name="agency_type"
+                                class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                <option value="">{{ __('Not set') }}</option>
+                                @foreach ($agencyTypeLabels as $value => $label)
+                                    <option value="{{ $value }}" @selected(old('agency_type', $record->agency_type) === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('agency_type')" class="mt-1" />
+                        </div>
+                        <div>
+                            <x-input-label for="teams_organized" :value="__('Teams Organized')" />
+                            <x-text-input id="teams_organized" name="teams_organized" type="number" min="0" class="mt-1 block w-full"
+                                value="{{ old('teams_organized', $record->teams_organized) }}" />
+                            <x-input-error :messages="$errors->get('teams_organized')" class="mt-1" />
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Certificate Details -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                     <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Certificate Details') }}</h2>
@@ -157,6 +183,32 @@
                     <x-input-error :messages="$errors->get('certificate_remarks')" class="mt-1" />
                 </div>
 
+                <!-- Instructors -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Instructors') }}</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Who taught this training — shown by name to participants when they submit their evaluation.') }}</p>
+
+                    @if ($availableInstructors->isEmpty())
+                        <p class="text-sm text-gray-400">{{ __('No instructors on file for this region yet. Add one from the Instructors tab first.') }}</p>
+                    @else
+                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                            @php $selectedInstructorIds = old('instructor_ids', $record->instructors->pluck('id')->all()); @endphp
+                            @foreach ($availableInstructors as $instructor)
+                                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                                    <input type="checkbox" name="instructor_ids[]" value="{{ $instructor->id }}"
+                                        @checked(in_array($instructor->id, $selectedInstructorIds))
+                                        class="rounded border-gray-300 dark:border-gray-600 text-[#152A4E] focus:ring-[#152A4E]">
+                                    {{ $instructor->name }}
+                                    @if ($instructor->training_type)
+                                        <span class="text-xs text-gray-400">&middot; {{ $instructor->training_type }}</span>
+                                    @endif
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
+                    <x-input-error :messages="$errors->get('instructor_ids')" class="mt-1" />
+                </div>
+
                 <div class="flex justify-end">
                     <button type="submit"
                         class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-8 py-3 hover:bg-[#1E3A66] transition">
@@ -164,6 +216,80 @@
                     </button>
                 </div>
             </form>
+
+            <!-- Participant Evaluations -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Participant Evaluations') }}</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                    {{ trans_choice(':count of :total participant|:count of :total participants have submitted an evaluation.', $record->participantEvaluations->count(), ['count' => $record->participantEvaluations->count(), 'total' => $participants->count()]) }}
+                </p>
+
+                @if ($record->participantEvaluations->isEmpty())
+                    <p class="text-sm text-gray-400">{{ __('No evaluations submitted yet.') }}</p>
+                @else
+                    @php $instructorsById = $record->instructors->keyBy('id'); @endphp
+                    <div class="space-y-6">
+                        @foreach ($record->participantEvaluations as $evaluation)
+                            <div class="border border-gray-100 dark:border-gray-700 rounded-lg p-4 sm:p-5">
+                                <div class="flex items-center justify-between gap-3 mb-3">
+                                    <h3 class="font-semibold text-[#152A4E] dark:text-white">{{ $evaluation->user->name ?? __('Unknown participant') }}</h3>
+                                    <span class="text-xs text-gray-400">{{ $evaluation->updated_at->format('M j, Y') }}</span>
+                                </div>
+
+                                @if (! empty($evaluation->module_ratings))
+                                    <div class="overflow-x-auto mb-3">
+                                        <table class="min-w-full text-xs">
+                                            <thead>
+                                                <tr class="text-left font-semibold uppercase tracking-wide text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                    <th class="py-1.5 pr-3">{{ __('Module') }}</th>
+                                                    <th class="py-1.5 pr-3">{{ __('Rating') }}</th>
+                                                    <th class="py-1.5 pr-3">{{ __('Comment') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                @foreach ($evaluation->module_ratings as $row)
+                                                    <tr>
+                                                        <td class="py-1.5 pr-3 text-gray-700 dark:text-gray-200">{{ $row['module'] ?? '—' }}</td>
+                                                        <td class="py-1.5 pr-3 text-gray-700 dark:text-gray-200">{{ $row['module_rating'] ?? '—' }}</td>
+                                                        <td class="py-1.5 pr-3 text-gray-500 dark:text-gray-400">{{ $row['comment'] ?? '' }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @endif
+
+                                @if (! empty($evaluation->instructor_ratings))
+                                    <div class="overflow-x-auto mb-3">
+                                        <table class="min-w-full text-xs">
+                                            <thead>
+                                                <tr class="text-left font-semibold uppercase tracking-wide text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                    <th class="py-1.5 pr-3">{{ __('Instructor') }}</th>
+                                                    <th class="py-1.5 pr-3">{{ __('Rating') }}</th>
+                                                    <th class="py-1.5 pr-3">{{ __('Comment') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                @foreach ($evaluation->instructor_ratings as $row)
+                                                    <tr>
+                                                        <td class="py-1.5 pr-3 text-gray-700 dark:text-gray-200">{{ $instructorsById->get($row['instructor_id'])?->name ?? __('Unknown instructor') }}</td>
+                                                        <td class="py-1.5 pr-3 text-gray-700 dark:text-gray-200">{{ $row['rating'] ?? '—' }}</td>
+                                                        <td class="py-1.5 pr-3 text-gray-500 dark:text-gray-400">{{ $row['comment'] ?? '' }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @endif
+
+                                @if ($evaluation->overall_comments)
+                                    <p class="text-sm text-gray-600 dark:text-gray-300"><span class="font-semibold text-gray-700 dark:text-gray-200">{{ __('Overall:') }}</span> {{ $evaluation->overall_comments }}</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
 
         </div>
     </div>

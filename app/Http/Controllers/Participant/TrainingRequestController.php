@@ -16,13 +16,21 @@ class TrainingRequestController extends Controller
      */
     public function index()
     {
-        $upcomingTrainings = TrainingRequest::involvingUser(Auth::user())
+        $user = Auth::user();
+
+        $upcomingTrainings = TrainingRequest::involvingUser($user)
             ->where('status', TrainingRequest::STATUS_APPROVED)
             ->where('preferred_date', '>=', now()->toDateString())
             ->orderBy('preferred_date')
             ->get();
 
-        return view('participant.training-requests.index', compact('upcomingTrainings'));
+        $completedTrainings = TrainingRequest::involvingUser($user)
+            ->where('status', TrainingRequest::STATUS_COMPLETED)
+            ->with(['participantEvaluations' => fn ($query) => $query->where('user_id', $user->id)])
+            ->orderByDesc('preferred_date')
+            ->get();
+
+        return view('participant.training-requests.index', compact('upcomingTrainings', 'completedTrainings'));
     }
 
     public function show(TrainingRequest $trainingRequest)

@@ -104,6 +104,79 @@
                 </div>
             </div>
 
+            <!-- Training Sessions -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Training Sessions — Category, Module, Rate & Comments') }}</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                    {{ __('Completed sessions this instructor is formally attached to (via instructor selection on Summary), with participant feedback per session.') }}
+                </p>
+
+                @if ($sessions->isEmpty())
+                    <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
+                        {{ __('No completed sessions linked to this instructor yet — attach them via Summary → instructor selection.') }}
+                    </div>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                    <th class="py-2 pr-4">{{ __('Training') }}</th>
+                                    <th class="py-2 pr-4">{{ __('Category') }}</th>
+                                    <th class="py-2 pr-4">{{ __('Date') }}</th>
+                                    <th class="py-2 pr-4">{{ __('Module(s)') }}</th>
+                                    <th class="py-2 pr-4">{{ __('Rate') }}</th>
+                                    <th class="py-2 pr-4">{{ __('Comments') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                @foreach ($sessions as $session)
+                                    <tr>
+                                        <td class="py-3 pr-4">
+                                            <div class="font-medium text-[#152A4E] dark:text-white">{{ $session['training_title'] }}</div>
+                                            <div class="text-xs text-gray-400">{{ $session['venue'] }}</div>
+                                        </td>
+                                        <td class="py-3 pr-4">
+                                            @if ($session['category'])
+                                                <span class="inline-flex items-center text-xs font-semibold rounded-full border px-2 py-0.5 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600">
+                                                    {{ $session['category'] }}
+                                                </span>
+                                            @else
+                                                <span class="text-gray-400">—</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $session['preferred_date']->format('M j, Y') }}</td>
+                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ ! empty($session['modules']) ? implode(', ', $session['modules']) : '—' }}</td>
+                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
+                                            {{ $session['rate'] ?? '—' }}
+                                            @if ($session['responses'] > 0)
+                                                <span class="text-gray-400">({{ trans_choice(':count response|:count responses', $session['responses'], ['count' => $session['responses']]) }})</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-3 pr-4">
+                                            @if (! empty($session['comments']))
+                                                <div x-data="{ open: false }">
+                                                    <button type="button" @click="open = !open" class="text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D] inline-flex items-center gap-1">
+                                                        <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="open ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                                                        {{ trans_choice(':count comment|:count comments', count($session['comments']), ['count' => count($session['comments'])]) }}
+                                                    </button>
+                                                    <ul x-show="open" x-cloak class="mt-2 space-y-1">
+                                                        @foreach ($session['comments'] as $comment)
+                                                            <li class="text-xs text-gray-600 dark:text-gray-300">"{{ $comment }}"</li>
+                                                        @endforeach
+                                                    </ul>
+                                                </div>
+                                            @else
+                                                <span class="text-gray-400">—</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+
             <!-- Deployment Details -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                 <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Deployment Details') }}</h2>

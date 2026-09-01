@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Instructor;
+use App\Models\ParticipantEvaluation;
 use App\Models\TrainingRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -77,6 +78,19 @@ class SummaryController extends Controller
                 ->fragment('registered-participants')
             : null;
 
+        // A participant can be tied to more than one TrainingRequest (their own
+        // submissions plus any bulk request an admin filed them under), so the
+        // row shows their most recent one — same "involved" definition already
+        // used for a participant's own dashboard — rather than trying to fit an
+        // unbounded list of trainings/LGUs/certificates into one table row.
+        $participants?->getCollection()->transform(function (User $participant) {
+            $participant->latestTrainingRequest = TrainingRequest::involvingUser($participant)
+                ->orderByDesc('preferred_date')
+                ->first();
+
+            return $participant;
+        });
+
         $instructorSearch = trim((string) $request->query('instructors_q'));
 
         $instructors = $user->isSuperAdmin()
@@ -97,7 +111,27 @@ class SummaryController extends Controller
                 ->fragment('instructors')
             : null;
 
-        return view('admin.summary', [
+        $evaluationSearch = trim((string) $request->query('evaluations_q'));
+
+        $evaluations = ($user->isAdmin() || $user->isSuperAdmin())
+            ? ParticipantEvaluation::with(['user', 'trainingRequest'])
+                ->whereHas('trainingRequest', function ($query) use ($user, $region) {
+                    $query->when($user->isAdmin(), fn ($q) => $q->where('region', $user->region))
+                        ->when($region, fn ($q) => $q->where('region', $region));
+                })
+                ->when($evaluationSearch !== '', function ($query) use ($evaluationSearch) {
+                    $query->where(function ($q) use ($evaluationSearch) {
+                        $q->whereHas('user', fn ($u) => $u->where('name', 'like', "%{$evaluationSearch}%"))
+                            ->orWhereHas('trainingRequest', fn ($t) => $t->where('training_title', 'like', "%{$evaluationSearch}%"));
+                    });
+                })
+                ->orderByDesc('updated_at')
+                ->paginate(10, ['*'], 'evaluations')
+                ->withQueryString()
+                ->fragment('evaluations')
+            : null;
+
+        $payload = [
             'records' => $records,
             'statusLabels' => TrainingRequest::$statusLabels,
             'statusColors' => self::STATUS_COLORS,
@@ -108,9 +142,28 @@ class SummaryController extends Controller
             'participantSearch' => $participantSearch,
             'instructors' => $instructors,
             'instructorSearch' => $instructorSearch,
+            'evaluations' => $evaluations,
+            'evaluationSearch' => $evaluationSearch,
+            'certificateRemarksLabels' => TrainingRequest::$certificateRemarksLabels,
             'regions' => config('regions.list'),
             'selectedRegion' => $region,
-        ]);
+        ];
+
+        // Each search/filter form submits here via fetch() tagged with the
+        // section it belongs to, so typing updates just that section's table
+        // in place instead of reloading the whole page.
+        $sectionPartials = [
+            'training-requests' => 'admin.partials.summary-training-requests',
+            'participants' => 'admin.partials.summary-participants',
+            'instructors' => 'admin.partials.summary-instructors',
+            'evaluations' => 'admin.partials.summary-evaluations',
+        ];
+
+        if ($request->ajax() && isset($sectionPartials[$request->query('_section')])) {
+            return view($sectionPartials[$request->query('_section')], $payload);
+        }
+
+        return view('admin.summary', $payload);
     }
 
     public function edit(Request $request, TrainingRequest $trainingRequest): View
@@ -118,7 +171,16 @@ class SummaryController extends Controller
         // Regional admins may only manage training requests tagged to their own region.
         abort_if($request->user()->isAdmin() && $trainingRequest->region !== $request->user()->region, 403);
 
-        $trainingRequest->load('participants');
+        $trainingRequest->load('participants', 'instructors', 'participantEvaluations.user');
+
+        // Regional admins pick from their own roster; Super Admin sees the
+        // roster for whatever region this request is tagged to (or everyone,
+        // for a request with no region yet).
+        $instructorRegion = $request->user()->isAdmin() ? $request->user()->region : $trainingRequest->region;
+
+        $availableInstructors = Instructor::when($instructorRegion, fn ($query) => $query->where('region', $instructorRegion))
+            ->orderBy('name')
+            ->get();
 
         return view('admin.summary-edit', [
             'record' => $trainingRequest,
@@ -126,7 +188,9 @@ class SummaryController extends Controller
             'statusLabels' => TrainingRequest::$statusLabels,
             'certificateRemarksLabels' => TrainingRequest::$certificateRemarksLabels,
             'categoryLabels' => TrainingRequest::$categoryLabels,
+            'agencyTypeLabels' => TrainingRequest::$agencyTypeLabels,
             'regions' => config('regions.list'),
+            'availableInstructors' => $availableInstructors,
         ]);
     }
 
@@ -141,8 +205,12 @@ class SummaryController extends Controller
             'lgu' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'in:'.implode(',', config('regions.list'))],
             'category' => ['nullable', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$categoryLabels))],
+            'agency_type' => ['nullable', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$agencyTypeLabels))],
+            'teams_organized' => ['nullable', 'integer', 'min:0'],
             'certificate_code' => ['nullable', 'string', 'max:255'],
             'certificate_remarks' => ['nullable', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$certificateRemarksLabels))],
+            'instructor_ids' => ['nullable', 'array'],
+            'instructor_ids.*' => ['integer', 'exists:instructors,id'],
         ]);
 
         // Regional admins can only tag training requests as belonging to their own region.
@@ -150,7 +218,14 @@ class SummaryController extends Controller
             $validated['region'] = $request->user()->region;
         }
 
-        $trainingRequest->update($validated);
+        $trainingRequest->update(collect($validated)->except('instructor_ids')->all());
+        $trainingRequest->instructors()->sync($validated['instructor_ids'] ?? []);
+
+        // Graduate sex/age counts always reflect the actual participant roster
+        // for a completed training — never hand-typed, never out of sync.
+        if ($trainingRequest->status === TrainingRequest::STATUS_COMPLETED) {
+            $trainingRequest->syncGraduateCountsFromParticipants();
+        }
 
         return Redirect::route('admin.summary')->with('status', "Changes saved for {$trainingRequest->training_title}.");
     }

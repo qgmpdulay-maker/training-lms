@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrainingRequest;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class ToolsController extends Controller
@@ -61,7 +63,6 @@ class ToolsController extends Controller
             'statusBars' => $this->statusBars($region),
             'evaluationsByTraining' => $this->evaluationSummaries($region),
             'graduatesByLgu' => $this->graduatesByLgu($region),
-            'graduatesByRegion' => $this->graduatesByRegion($region),
         ]);
     }
 
@@ -86,6 +87,20 @@ class ToolsController extends Controller
         $trainingRequest->save();
 
         return back()->with('status', "Files updated for {$trainingRequest->training_title}.");
+    }
+
+    public function downloadAtarTemplate(): \Symfony\Component\HttpFoundation\Response
+    {
+        return Pdf::loadView('pdf.atar-template')
+            ->setPaper('a4', 'portrait')
+            ->download('after-training-activity-report-template.pdf');
+    }
+
+    public function downloadCertificateTemplate(): \Symfony\Component\HttpFoundation\Response
+    {
+        return Pdf::loadView('pdf.certificate-template')
+            ->setPaper('a4', 'landscape')
+            ->download('training-certificate-template.pdf');
     }
 
     private function statusDonut(?string $region): array
@@ -149,46 +164,114 @@ class ToolsController extends Controller
     /**
      * Evaluated sessions grouped by training title (one tab per title on the
      * Tools page), each session listed separately underneath — every session
-     * gets exactly one evaluation entered via "Add Evaluation", so pooling
-     * several sessions of the same title into shared stats mixed unrelated
-     * runs' pre/post-test scores into meaningless combined figures.
+     * gets exactly one admin-entered evaluation via "Add Evaluation", so
+     * pooling several sessions of the same title into shared stats mixed
+     * unrelated runs' pre/post-test scores into meaningless combined
+     * figures. A session appears here if it has an admin evaluation, one or
+     * more participant evaluations, or both — module and instructor ratings
+     * are shown side by side from each source rather than merged into one
+     * number, since they measure different things (the admin's own
+     * assessment vs. what participants reported).
      *
      * @return array<string, \Illuminate\Support\Collection>
      */
     private function evaluationSummaries(?string $region): array
     {
-        return TrainingRequest::whereHas('trainingEvaluation')
+        return TrainingRequest::where(fn ($query) => $query->whereHas('trainingEvaluation')->orWhereHas('participantEvaluations'))
             ->when($region, fn ($query) => $query->where('region', $region))
-            ->with('trainingEvaluation')
+            ->with(['trainingEvaluation', 'participantEvaluations.user', 'instructors', 'participants'])
             ->orderByDesc('preferred_date')
             ->get()
             ->map(function (TrainingRequest $trainingRequest) {
                 $evaluation = $trainingRequest->trainingEvaluation;
                 $moduleRatings = collect($evaluation->module_ratings ?? []);
+                $participantModuleRatings = $trainingRequest->participantEvaluations->pluck('module_ratings')->filter()->flatten(1);
+                $participantInstructorRatings = $trainingRequest->participantEvaluations->pluck('instructor_ratings')->filter()->flatten(1);
 
-                $modules = $moduleRatings->groupBy('module')->map(function ($rows, $module) {
-                    $moduleScores = $rows->pluck('module_rating')->filter(fn ($r) => is_numeric($r));
-                    $trainerScores = $rows->pluck('trainer_rating')->filter(fn ($r) => is_numeric($r));
+                $modules = $moduleRatings->pluck('module')
+                    ->merge($participantModuleRatings->pluck('module'))
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->map(function ($moduleName) use ($moduleRatings, $participantModuleRatings) {
+                        $adminRows = $moduleRatings->where('module', $moduleName);
+                        $participantRows = $participantModuleRatings->where('module', $moduleName);
 
-                    return [
-                        'module' => $module,
-                        'module_rating' => $moduleScores->isNotEmpty() ? round($moduleScores->avg(), 2) : null,
-                        'trainer_rating' => $trainerScores->isNotEmpty() ? round($trainerScores->avg(), 2) : null,
-                    ];
-                })->values();
+                        $moduleScores = $adminRows->pluck('module_rating')->filter(fn ($r) => is_numeric($r));
+                        $trainerScores = $adminRows->pluck('trainer_rating')->filter(fn ($r) => is_numeric($r));
+                        $participantScores = $participantRows->pluck('module_rating')->filter(fn ($r) => is_numeric($r));
+
+                        return [
+                            'module' => $moduleName,
+                            'module_rating' => $moduleScores->isNotEmpty() ? round($moduleScores->avg(), 2) : null,
+                            'trainer_rating' => $trainerScores->isNotEmpty() ? round($trainerScores->avg(), 2) : null,
+                            'participant_rating' => $participantScores->isNotEmpty() ? round($participantScores->avg(), 2) : null,
+                            'participant_responses' => $participantScores->count(),
+                            'rating_distribution' => $this->ratingDistribution($participantScores),
+                            'comments' => $participantRows->pluck('comment')->filter(fn ($c) => filled(trim((string) $c)))->values()->all(),
+                        ];
+                    });
 
                 $trainerScores = $moduleRatings->pluck('trainer_rating')->filter(fn ($r) => is_numeric($r));
+
+                $instructorRatings = $participantInstructorRatings
+                    ->groupBy('instructor_id')
+                    ->map(function ($rows, $instructorId) use ($trainingRequest) {
+                        $scores = $rows->pluck('rating')->filter(fn ($r) => is_numeric($r));
+                        $instructor = $trainingRequest->instructors->firstWhere('id', (int) $instructorId);
+
+                        return [
+                            'instructor' => $instructor?->name ?? 'Unknown instructor',
+                            'agency_organization' => $instructor?->agency_organization,
+                            'rating' => $scores->isNotEmpty() ? round($scores->avg(), 2) : null,
+                            'responses' => $scores->count(),
+                            'rating_distribution' => $this->ratingDistribution($scores),
+                            'comments' => $rows->pluck('comment')->filter(fn ($c) => filled(trim((string) $c)))->values()->all(),
+                        ];
+                    })
+                    ->filter(fn ($row) => $row['rating'] !== null)
+                    ->values();
+
+                // Per-taker pretest/posttest pairs live in participant_scores once an
+                // evaluation has been saved through the per-participant form; older
+                // evaluations only ever recorded one session-wide pair, so those are
+                // treated as a single-person sample rather than silently dropped.
+                $participantScores = collect($evaluation?->participant_scores ?? []);
+                $pretestScores = $participantScores->isNotEmpty()
+                    ? $participantScores->pluck('pretest_score')->filter(fn ($s) => is_numeric($s))
+                    : collect([$evaluation?->pretest_score])->filter(fn ($s) => is_numeric($s));
+                $posttestScores = $participantScores->isNotEmpty()
+                    ? $participantScores->pluck('posttest_score')->filter(fn ($s) => is_numeric($s))
+                    : collect([$evaluation?->posttest_score])->filter(fn ($s) => is_numeric($s));
+
+                $moduleMatrixModules = $trainingRequest->participantEvaluations
+                    ->pluck('module_ratings')->filter()->flatten(1)
+                    ->pluck('module')->filter()->unique()->values();
+
+                $moduleMatrix = $trainingRequest->participantEvaluations->map(function ($participantEvaluation) use ($moduleMatrixModules) {
+                    $ratingsByModule = collect($participantEvaluation->module_ratings ?? [])->keyBy('module');
+
+                    return [
+                        'participant' => $participantEvaluation->user?->name ?? 'Unknown participant',
+                        'scores' => $moduleMatrixModules->mapWithKeys(fn ($module) => [$module => $ratingsByModule[$module]['module_rating'] ?? null])->all(),
+                    ];
+                })->values();
 
                 return [
                     'training_request_id' => $trainingRequest->id,
                     'training_title' => $trainingRequest->training_title,
                     'preferred_date' => $trainingRequest->preferred_date,
                     'venue' => $trainingRequest->venue,
-                    'updated_at' => $evaluation->updated_at,
+                    'updated_at' => collect([$evaluation?->updated_at, $trainingRequest->participantEvaluations->max('updated_at')])->filter()->max(),
                     'modules' => $modules,
                     'overall_trainer_rating' => $trainerScores->isNotEmpty() ? round($trainerScores->avg(), 2) : null,
-                    'pretest_score' => $evaluation->pretest_score,
-                    'posttest_score' => $evaluation->posttest_score,
+                    'pretest_stats' => $this->scoreStatistics($pretestScores),
+                    'posttest_stats' => $this->scoreStatistics($posttestScores),
+                    'instructor_ratings' => $instructorRatings,
+                    'participant_response_count' => $trainingRequest->participantEvaluations->count(),
+                    'participant_total' => $trainingRequest->effectiveParticipants()->count(),
+                    'module_matrix_columns' => $moduleMatrixModules->all(),
+                    'module_matrix' => $moduleMatrix,
                 ];
             })
             ->groupBy('training_title')
@@ -196,6 +279,65 @@ class ToolsController extends Controller
             ->all();
     }
 
+    /**
+     * Count of 1-5 ratings among the given scores, for the distribution
+     * tables on the L1 evaluation section — comments are shown anonymously
+     * alongside these, matching how evaluation feedback is typically handled.
+     *
+     * @return array<int, int>
+     */
+    private function ratingDistribution(Collection $scores): array
+    {
+        return collect(range(1, 5))
+            ->mapWithKeys(fn ($value) => [$value => $scores->filter(fn ($r) => (int) $r === $value)->count()])
+            ->all();
+    }
+
+    /**
+     * Mean/median/mode/min/max/count for a set of numeric scores — used for
+     * the L2 pretest/posttest stats table. Mode ties break toward the
+     * smallest value for determinism.
+     *
+     * @return array{count: int, mean: ?float, median: ?float, mode: ?float, min: ?float, max: ?float}
+     */
+    private function scoreStatistics(Collection $scores): array
+    {
+        $scores = $scores->filter(fn ($s) => is_numeric($s))->map(fn ($s) => (float) $s)->values();
+        $count = $scores->count();
+
+        if ($count === 0) {
+            return ['count' => 0, 'mean' => null, 'median' => null, 'mode' => null, 'min' => null, 'max' => null];
+        }
+
+        $sorted = $scores->sort()->values();
+        $middle = intdiv($count, 2);
+        $median = $count % 2 === 0
+            ? round(($sorted[$middle - 1] + $sorted[$middle]) / 2, 2)
+            : $sorted[$middle];
+
+        $frequencies = array_count_values($scores->map(fn ($s) => (string) $s)->all());
+        ksort($frequencies, SORT_NUMERIC);
+        arsort($frequencies);
+
+        return [
+            'count' => $count,
+            'mean' => round($scores->avg(), 2),
+            'median' => $median,
+            'mode' => (float) array_key_first($frequencies),
+            'min' => $scores->min(),
+            'max' => $scores->max(),
+        ];
+    }
+
+    /**
+     * Graduates by LGU, grouped by OCD region — when a super admin isn't
+     * scoped to one region, LGUs from different regions can share a name,
+     * so a single flat ranking would blur them together. Keyed by region
+     * title to match evaluationsByTraining's shape, since the Tools view
+     * uses the same tab-switcher pattern for both.
+     *
+     * @return array<string, array{total: int, lgus: array}>
+     */
     private function graduatesByLgu(?string $region): array
     {
         return TrainingRequest::where('status', TrainingRequest::STATUS_COMPLETED)
@@ -203,30 +345,23 @@ class ToolsController extends Controller
             ->when($region, fn ($query) => $query->where('region', $region))
             ->with('participants')
             ->get()
-            ->groupBy('lgu')
-            ->map(fn ($records, $lgu) => ['lgu' => $lgu, 'total' => $records->sum(fn (TrainingRequest $r) => max($r->participants->count(), 1))])
-            ->sortByDesc('total')
-            ->values()
-            ->all();
-    }
+            ->groupBy(fn (TrainingRequest $r) => $r->region ?: __('Unspecified Region'))
+            ->map(function ($records) {
+                $lgus = $records->groupBy('lgu')
+                    ->map(fn ($lguRecords, $lgu) => [
+                        'lgu' => $lgu,
+                        'total' => $lguRecords->sum(fn (TrainingRequest $r) => max($r->participants->count(), 1)),
+                    ])
+                    ->sortByDesc('total')
+                    ->values()
+                    ->all();
 
-    /**
-     * Graduates and trainings per OCD region, keyed by region name, for the
-     * choropleth map on the Graduates by LGU card. Regions with no completed
-     * trainings are simply absent from the result.
-     */
-    private function graduatesByRegion(?string $region): array
-    {
-        return TrainingRequest::where('status', TrainingRequest::STATUS_COMPLETED)
-            ->whereNotNull('region')
-            ->when($region, fn ($query) => $query->where('region', $region))
-            ->with('participants')
-            ->get()
-            ->groupBy('region')
-            ->map(fn ($records) => [
-                'graduates' => $records->sum(fn (TrainingRequest $r) => max($r->participants->count(), 1)),
-                'trainings' => $records->count(),
-            ])
+                return [
+                    'total' => array_sum(array_column($lgus, 'total')),
+                    'lgus' => $lgus,
+                ];
+            })
+            ->sortByDesc('total')
             ->all();
     }
 }

@@ -109,7 +109,9 @@
                         </label>
                     </form>
 
-                    <form method="GET" action="{{ route('admin.instructors.index') }}#instructor-roster" class="flex items-center gap-2">
+                    <form data-live-form data-live-section="instructor-roster" data-live-target="instructor-roster-results"
+                        method="GET" action="{{ route('admin.instructors.index') }}#instructor-roster" class="flex items-center gap-2">
+                        <input type="hidden" name="_section" value="instructor-roster">
                         @if ($selectedRegion)
                             <input type="hidden" name="region" value="{{ $selectedRegion }}">
                         @endif
@@ -132,61 +134,13 @@
                     @endif
                 </div>
 
-                @if ($instructorsByRegion->isEmpty())
-                    <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
-                        {{ $complaintsOnly || $selectedRegion || $instructorSearch !== '' ? __('No instructors match the selected filters.') : __('No instructors on file yet.') }}
-                    </div>
-                @else
-                    <div class="space-y-8">
-                        @foreach ($instructorsByRegion as $region => $instructors)
-                            <div>
-                                <h3 class="text-sm font-bold uppercase tracking-wide text-[#152A4E] dark:text-white mb-3">{{ $region }}</h3>
-                                <div class="overflow-x-auto">
-                                    <table class="min-w-full text-sm">
-                                        <thead>
-                                            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                                <th class="py-2 pr-4">{{ __('Name') }}</th>
-                                                <th class="py-2 pr-4">{{ __('Type of Training') }}</th>
-                                                <th class="py-2 pr-4">{{ __('Certificate Code') }}</th>
-                                                <th class="py-2 pr-4">{{ __('Deployment') }}</th>
-                                                <th class="py-2 pr-4">{{ __('Agency / LGU') }}</th>
-                                                <th class="py-2 pr-4">{{ __('Rating') }}</th>
-                                                <th class="py-2 pr-4">{{ __('Complaints') }}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                            @foreach ($instructors as $instructor)
-                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                                    <td class="py-3 pr-4 font-medium">
-                                                        <a href="{{ route('admin.instructors.show', $instructor) }}" class="text-[#152A4E] dark:text-white hover:text-[#E2762D] dark:hover:text-[#E2762D] hover:underline">
-                                                            {{ $instructor->name }}
-                                                        </a>
-                                                    </td>
-                                                    <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructor->training_type }}</td>
-                                                    <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructor->certificate_code ?? '—' }}</td>
-                                                    <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructor->deployment ?? '—' }}</td>
-                                                    <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructor->agency_organization ?? $instructor->lgu ?? '—' }}</td>
-                                                    <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructor->rating ?? '—' }}</td>
-                                                    <td class="py-3 pr-4">
-                                                        @if (filled($instructor->complaints))
-                                                            <span title="{{ $instructor->complaints }}" class="inline-flex items-center text-xs font-semibold rounded-full border px-2.5 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700">
-                                                                {{ __('On record') }}
-                                                            </span>
-                                                        @else
-                                                            <span class="text-gray-400">{{ __('None') }}</span>
-                                                        @endif
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
+                <div id="instructor-roster-results">
+                    @include('admin.partials.instructor-roster-results')
+                </div>
             </div>
 
         </div>
     </div>
+
+    @include('admin.partials.live-search-script')
 </x-app-layout>

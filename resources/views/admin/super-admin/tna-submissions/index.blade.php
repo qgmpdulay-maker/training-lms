@@ -6,19 +6,10 @@
     </x-slot>
 
     <div class="py-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-
-            @if (session('status'))
-                <div class="flex items-start gap-3 text-sm text-green-800 dark:text-green-300 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3">
-                    <svg class="w-5 h-5 shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>{{ session('status') }}</span>
-                </div>
-            @endif
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Formal TNA reports submitted by LGUs and NGAs, separate from participant self-assessments.') }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Read-only copies of the formal TNA reports regional admins have logged for LGUs and NGAs in their region.') }}</p>
                 <div class="flex items-center gap-2">
                     <a href="{{ route('admin.tna-submissions.form') }}" target="_blank"
                         class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-md border border-gray-200 dark:border-gray-600 text-[#152A4E] dark:text-white px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
@@ -32,133 +23,68 @@
             </div>
 
             <!-- Filters -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div>
-                        <x-input-label for="agency_type" :value="__('LGU / NGA')" />
-                        <select id="agency_type" name="agency_type" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
-                            <option value="">{{ __('All') }}</option>
-                            @foreach ($agencyTypeLabels as $value => $label)
-                                <option value="{{ $value }}" @selected(($filters['agency_type'] ?? null) === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <x-input-label for="status" :value="__('Status')" />
-                        <select id="status" name="status" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
-                            <option value="">{{ __('All') }}</option>
-                            @foreach ($statusLabels as $value => $label)
-                                <option value="{{ $value }}" @selected(($filters['status'] ?? null) === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <x-input-label for="from" :value="__('From')" />
-                        <x-text-input id="from" name="from" type="date" class="mt-1 block w-full text-sm" value="{{ $filters['from'] ?? '' }}" />
-                    </div>
-                    <div>
-                        <x-input-label for="until" :value="__('Until')" />
-                        <x-text-input id="until" name="until" type="date" class="mt-1 block w-full text-sm" value="{{ $filters['until'] ?? '' }}" />
-                    </div>
-                    <div class="flex items-end">
-                        <button type="submit" class="w-full inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-4 py-2 hover:bg-[#1E3A66] transition">
-                            {{ __('Apply Filters') }}
-                        </button>
-                    </div>
+            <div class="flex items-center flex-wrap gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm px-5 py-3">
+                <span class="text-sm font-semibold text-[#152A4E] dark:text-white">{{ __('Region') }}</span>
+                <form method="GET" action="{{ route('admin.tna-submissions.index') }}" class="flex items-center gap-2">
+                    @foreach (['agency_type', 'status', 'from', 'until'] as $carry)
+                        @if (($filters[$carry] ?? null))
+                            <input type="hidden" name="{{ $carry }}" value="{{ $filters[$carry] }}">
+                        @endif
+                    @endforeach
+                    <select name="region" onchange="this.form.submit()"
+                        class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                        <option value="">{{ __('All Regions (Philippines)') }}</option>
+                        @foreach ($regions as $regionOption)
+                            <option value="{{ $regionOption }}" @selected($selectedRegion === $regionOption)>{{ $regionOption }}</option>
+                        @endforeach
+                    </select>
                 </form>
+
+                <form method="GET" action="{{ route('admin.tna-submissions.index') }}" class="flex items-center gap-2">
+                    @if ($selectedRegion)
+                        <input type="hidden" name="region" value="{{ $selectedRegion }}">
+                    @endif
+                    <select name="agency_type" onchange="this.form.submit()" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5">
+                        <option value="">{{ __('LGU / NGA') }}</option>
+                        @foreach ($agencyTypeLabels as $value => $label)
+                            <option value="{{ $value }}" @selected(($filters['agency_type'] ?? null) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <select name="status" onchange="this.form.submit()" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5">
+                        <option value="">{{ __('Any Status') }}</option>
+                        @foreach ($statusLabels as $value => $label)
+                            <option value="{{ $value }}" @selected(($filters['status'] ?? null) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </form>
+
+                @if ($selectedRegion || ($filters['agency_type'] ?? null) || ($filters['status'] ?? null))
+                    <a href="{{ route('admin.tna-submissions.index') }}"
+                        class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                        {{ __('Reset filters') }}
+                    </a>
+                @endif
             </div>
 
-            <!-- Record a Submission -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Record a TNA Submission') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Log a formal Training Needs Assessment report received from an LGU or NGA.') }}</p>
-
-                <form method="POST" action="{{ route('admin.tna-submissions.store') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    @csrf
-
-                    <div>
-                        <x-input-label for="region" :value="__('Region')" />
-                        <select id="region" name="region" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
-                            <option value="" disabled selected>{{ __('Select region') }}</option>
-                            @foreach ($regions as $region)
-                                <option value="{{ $region }}" @selected(old('region') === $region)>{{ $region }}</option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('region')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="agency_type_new" :value="__('Type of Organization')" />
-                        <select id="agency_type_new" name="agency_type" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
-                            <option value="">{{ __('Unspecified') }}</option>
-                            @foreach ($agencyTypeLabels as $value => $label)
-                                <option value="{{ $value }}" @selected(old('agency_type') === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('agency_type')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="organization" :value="__('Organization Name')" />
-                        <x-text-input id="organization" name="organization" type="text" class="mt-1 block w-full" placeholder="e.g. City Government of Baguio" value="{{ old('organization') }}" />
-                        <x-input-error :messages="$errors->get('organization')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="training_topic" :value="__('Training Topic')" />
-                        <x-text-input id="training_topic" name="training_topic" type="text" class="mt-1 block w-full" required value="{{ old('training_topic') }}" />
-                        <x-input-error :messages="$errors->get('training_topic')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="personnel_assessed" :value="__('Personnel Assessed')" />
-                        <x-text-input id="personnel_assessed" name="personnel_assessed" type="number" min="0" class="mt-1 block w-full" value="{{ old('personnel_assessed', 0) }}" />
-                        <x-input-error :messages="$errors->get('personnel_assessed')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="date_assessed" :value="__('Date Assessed')" />
-                        <x-text-input id="date_assessed" name="date_assessed" type="date" class="mt-1 block w-full" required value="{{ old('date_assessed', now()->toDateString()) }}" />
-                        <x-input-error :messages="$errors->get('date_assessed')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="submitted_by" :value="__('Submitted By')" />
-                        <x-text-input id="submitted_by" name="submitted_by" type="text" class="mt-1 block w-full" required value="{{ old('submitted_by', Auth::user()->name) }}" />
-                        <x-input-error :messages="$errors->get('submitted_by')" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="status" :value="__('Status')" />
-                        <select id="status" name="status" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
-                            @foreach ($statusLabels as $value => $label)
-                                <option value="{{ $value }}" @selected(old('status', 'pending') === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('status')" class="mt-1" />
-                    </div>
-
-                    <div class="sm:col-span-2 lg:col-span-3">
-                        <x-input-label for="notes" :value="__('Notes')" />
-                        <textarea id="notes" name="notes" rows="2" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">{{ old('notes') }}</textarea>
-                        <x-input-error :messages="$errors->get('notes')" class="mt-1" />
-                    </div>
-
-                    <div class="sm:col-span-2 lg:col-span-3 flex justify-end">
-                        <button type="submit" class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition">
-                            {{ __('Record Submission') }}
-                        </button>
-                    </div>
-                </form>
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-[#152A4E] dark:text-white mb-3">{{ __('TNA Submissions per Region') }}</h3>
+                    <div class="h-64"><canvas id="submissionsByRegionChart"></canvas></div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                    <h3 class="text-sm font-bold text-[#152A4E] dark:text-white mb-3">{{ __('Review Status') }}</h3>
+                    <div class="h-64"><canvas id="statusChart"></canvas></div>
+                </div>
             </div>
 
             <!-- Submissions -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-5">{{ __('Submissions') }}</h2>
+                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-5">{{ __('Submitted Copies') }}</h2>
 
                 @if ($submissions->isEmpty())
                     <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
-                        {{ __('No TNA submissions on file yet.') }}
+                        {{ __('No TNA submissions match the current filters.') }}
                     </div>
                 @else
                     <div class="overflow-x-auto">
@@ -169,8 +95,9 @@
                                     <th class="py-2 pr-4">{{ __('LGU / Organization') }}</th>
                                     <th class="py-2 pr-4">{{ __('Topic') }}</th>
                                     <th class="py-2 pr-4">{{ __('Personnel') }}</th>
+                                    <th class="py-2 pr-4">{{ __('Submitted By') }}</th>
                                     <th class="py-2 pr-4">{{ __('Date Assessed') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Results PDF') }}</th>
+                                    <th class="py-2 pr-4">{{ __('Copy') }}</th>
                                     <th class="py-2 pr-4">{{ __('Status') }}</th>
                                 </tr>
                             </thead>
@@ -190,41 +117,24 @@
                                         </td>
                                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $submission->training_topic }}</td>
                                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $submission->personnel_assessed }}</td>
+                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $submission->submitted_by }}</td>
                                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $submission->date_assessed->format('M j, Y') }}</td>
                                         <td class="py-3 pr-4">
                                             @if ($submission->hasResultsPdf())
-                                                <a href="{{ Illuminate\Support\Facades\Storage::disk('public')->url($submission->results_pdf_path) }}" target="_blank"
+                                                <a href="{{ asset('storage/'.$submission->results_pdf_path) }}" target="_blank"
                                                     class="text-xs font-semibold text-green-700 dark:text-green-400 hover:underline">{{ __('View PDF') }}</a>
                                             @else
-                                                <form method="POST" action="{{ route('admin.tna-submissions.results', $submission) }}" enctype="multipart/form-data" class="flex items-center gap-1.5">
-                                                    @csrf
-                                                    <input type="file" name="results_pdf" accept="application/pdf" required class="text-xs w-32">
-                                                    <button type="submit" class="text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">{{ __('Upload') }}</button>
-                                                </form>
+                                                <span class="text-xs text-gray-400">{{ __('Not uploaded yet') }}</span>
                                             @endif
                                         </td>
                                         <td class="py-3 pr-4">
-                                            <form method="POST" action="{{ route('admin.tna-submissions.update', $submission) }}" x-data>
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="region" value="{{ $submission->region }}">
-                                                <input type="hidden" name="agency_type" value="{{ $submission->agency_type }}">
-                                                <input type="hidden" name="organization" value="{{ $submission->organization }}">
-                                                <input type="hidden" name="training_topic" value="{{ $submission->training_topic }}">
-                                                <input type="hidden" name="personnel_assessed" value="{{ $submission->personnel_assessed }}">
-                                                <input type="hidden" name="date_assessed" value="{{ $submission->date_assessed->toDateString() }}">
-                                                <input type="hidden" name="submitted_by" value="{{ $submission->submitted_by }}">
-                                                <input type="hidden" name="notes" value="{{ $submission->notes }}">
-                                                <select name="status" onchange="this.form.submit()"
-                                                    class="text-xs rounded-full border px-2 py-1 @class([
-                                                        'bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600' => $submission->status === \App\Models\TnaSubmission::STATUS_PENDING,
-                                                        'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700' => $submission->status === \App\Models\TnaSubmission::STATUS_REVIEWED,
-                                                    ])">
-                                                    @foreach ($statusLabels as $value => $label)
-                                                        <option value="{{ $value }}" @selected($submission->status === $value)>{{ $label }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </form>
+                                            <span @class([
+                                                'inline-flex items-center text-xs font-semibold rounded-full border px-2.5 py-1',
+                                                'bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600' => $submission->status === \App\Models\TnaSubmission::STATUS_PENDING,
+                                                'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700' => $submission->status === \App\Models\TnaSubmission::STATUS_REVIEWED,
+                                            ])>
+                                                {{ $submission->statusLabel() }}
+                                            </span>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -240,4 +150,30 @@
 
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script>
+        const brandNavy = '#03055A';
+        const brandOrange = '#E2762D';
+
+        const byRegion = @json($chartData['byRegion']);
+        new Chart(document.getElementById('submissionsByRegionChart'), {
+            type: 'bar',
+            data: {
+                labels: byRegion.map(row => row.region),
+                datasets: [{ label: 'Submissions', data: byRegion.map(row => row.count), backgroundColor: brandNavy }],
+            },
+            options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } },
+        });
+
+        const byStatus = @json($chartData['byStatus']);
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Pending', 'Reviewed'],
+                datasets: [{ data: [byStatus.pending, byStatus.reviewed], backgroundColor: [brandOrange, brandNavy] }],
+            },
+            options: { maintainAspectRatio: false, cutout: '55%', plugins: { legend: { position: 'bottom' } } },
+        });
+    </script>
 </x-app-layout>

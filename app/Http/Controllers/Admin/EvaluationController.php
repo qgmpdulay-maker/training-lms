@@ -35,6 +35,7 @@ class EvaluationController extends Controller
             'trainingRequest' => $trainingRequest,
             'moduleRows' => $moduleRows,
             'ratingScale' => self::RATING_SCALE,
+            'participantScoreRows' => $this->participantScoreRows($trainingRequest),
         ]);
     }
 
@@ -43,8 +44,10 @@ class EvaluationController extends Controller
         $this->authorizeRegion($request, $trainingRequest);
 
         $validated = $request->validate([
-            'pretest_score' => ['nullable', 'integer', 'min:0', 'max:100'],
-            'posttest_score' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'pretest_score' => ['nullable', 'array'],
+            'pretest_score.*' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'posttest_score' => ['nullable', 'array'],
+            'posttest_score.*' => ['nullable', 'integer', 'min:0', 'max:100'],
             'module' => ['nullable', 'array'],
             'module.*' => ['nullable', 'string', 'max:255'],
             'module_rating' => ['nullable', 'array'],
@@ -77,15 +80,52 @@ class EvaluationController extends Controller
             ->map(fn ($row, $i) => [...$row, 'module' => $row['module'] ?: 'Module '.($i + 1)])
             ->all();
 
+        $participantScores = $trainingRequest->effectiveParticipants()
+            ->map(fn ($participant) => [
+                'user_id' => $participant->id,
+                'pretest_score' => $validated['pretest_score'][$participant->id] ?? null,
+                'posttest_score' => $validated['posttest_score'][$participant->id] ?? null,
+            ])
+            ->filter(fn ($row) => $row['pretest_score'] !== null || $row['posttest_score'] !== null)
+            ->values()
+            ->all();
+
         $trainingRequest->trainingEvaluation()->updateOrCreate([], [
             'module_ratings' => $moduleRatings,
-            'pretest_score' => $validated['pretest_score'] ?? null,
-            'posttest_score' => $validated['posttest_score'] ?? null,
+            'participant_scores' => $participantScores,
         ]);
 
         $this->reflectTrainerRating($trainingRequest->training_title);
 
         return Redirect::route('admin.tools')->with('status', "Evaluation saved for {$trainingRequest->training_title}.");
+    }
+
+    /**
+     * One row per participant this session actually covers, for the pretest/
+     * posttest score table. Prefilled from participant_scores when the
+     * evaluation has already been saved in the new per-taker shape; falls
+     * back to the old single session-wide score (same value on every row)
+     * when only the legacy scalar pretest_score/posttest_score exist, so an
+     * evaluation entered before this feature existed can just be re-saved to
+     * pick up the new shape.
+     *
+     * @return \Illuminate\Support\Collection<int, array{user_id: int, name: string, pretest_score: ?int, posttest_score: ?int}>
+     */
+    private function participantScoreRows(TrainingRequest $trainingRequest): \Illuminate\Support\Collection
+    {
+        $evaluation = $trainingRequest->trainingEvaluation;
+        $scoresByParticipant = collect($evaluation?->participant_scores ?? [])->keyBy('user_id');
+
+        return $trainingRequest->effectiveParticipants()->map(function ($participant) use ($evaluation, $scoresByParticipant) {
+            $existing = $scoresByParticipant->get($participant->id);
+
+            return [
+                'user_id' => $participant->id,
+                'name' => $participant->name,
+                'pretest_score' => $existing['pretest_score'] ?? $evaluation?->pretest_score,
+                'posttest_score' => $existing['posttest_score'] ?? $evaluation?->posttest_score,
+            ];
+        });
     }
 
     /**
