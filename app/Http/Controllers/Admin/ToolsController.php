@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Instructor;
 use App\Models\TrainingRequest;
+use App\Models\TrainingTarget;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +27,16 @@ class ToolsController extends Controller
 
     public function index(Request $request): View
     {
+        // This page pulls every training request (plus their participants,
+        // evaluations, and instructors) into memory to build the charts and
+        // summaries below — with a large dataset that legitimately needs
+        // more than PHP's common 128M default. Never lower an already-higher
+        // or unlimited (-1) limit set by the host.
+        $currentLimit = self::iniMemoryLimitBytes(ini_get('memory_limit'));
+        if ($currentLimit !== -1 && $currentLimit < 512 * 1024 * 1024) {
+            ini_set('memory_limit', '512M');
+        }
+
         $user = $request->user();
         $region = $user->isAdmin() ? $user->region : ($user->isSuperAdmin() ? $request->query('region') : null);
 
@@ -60,7 +72,7 @@ class ToolsController extends Controller
             'graduatesByTraining' => $graduatesByTraining,
             'filesRecords' => $filesRecords,
             'statusDonut' => $this->statusDonut($region),
-            'statusBars' => $this->statusBars($region),
+            'taAccomplishment' => $this->taAccomplishment($region),
             'evaluationsByTraining' => $this->evaluationSummaries($region),
             'graduatesByLgu' => $this->graduatesByLgu($region),
         ]);
@@ -103,6 +115,27 @@ class ToolsController extends Controller
             ->download('training-certificate-template.pdf');
     }
 
+    /**
+     * Super Admin sets the planning target for a Technical Assistance
+     * training type — everything else on the accomplishment chart
+     * (Accomplished) is derived from actual completed requests, but Target
+     * is an externally set planning number with no other source of truth.
+     */
+    public function updateTarget(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'training_title' => ['required', 'string', 'max:255'],
+            'target' => ['required', 'integer', 'min:0'],
+        ]);
+
+        TrainingTarget::updateOrCreate(
+            ['training_title' => $validated['training_title'], 'category' => TrainingRequest::CATEGORY_TA],
+            ['target' => $validated['target']],
+        );
+
+        return back()->with('status', "Target updated for {$validated['training_title']}.");
+    }
+
     private function statusDonut(?string $region): array
     {
         $total = TrainingRequest::when($region, fn ($query) => $query->where('region', $region))->count();
@@ -141,24 +174,39 @@ class ToolsController extends Controller
         ];
     }
 
-    private function statusBars(?string $region): array
+    /**
+     * Target vs. Accomplished per Technical Assistance training type.
+     * Accomplished is the graduate count from completed TA requests of that
+     * title; Target comes from the separately maintained TrainingTarget
+     * table, since it's a planning figure with no other source of truth.
+     * Every title that has either a completed TA request or a target on
+     * file gets a row, so a target can be set ahead of the first request.
+     *
+     * @return array<int, array{title: string, target: int, accomplished: int, percent: int}>
+     */
+    private function taAccomplishment(?string $region): array
     {
-        $counts = TrainingRequest::selectRaw('status, count(*) as count')
+        $accomplished = TrainingRequest::where('category', TrainingRequest::CATEGORY_TA)
+            ->where('status', TrainingRequest::STATUS_COMPLETED)
             ->when($region, fn ($query) => $query->where('region', $region))
-            ->groupBy('status')
-            ->pluck('count', 'status');
+            ->with('participants')
+            ->get()
+            ->groupBy('training_title')
+            ->map(fn ($records) => $records->sum(fn (TrainingRequest $r) => max($r->participants->count(), 1)));
 
-        $maxCount = max($counts->max(), 1);
+        $targets = TrainingTarget::where('category', TrainingRequest::CATEGORY_TA)->pluck('target', 'training_title');
 
-        return collect(TrainingRequest::$statusLabels)
-            ->map(fn ($label, $status) => [
-                'label' => $label,
-                'value' => $counts[$status] ?? 0,
-                'percent' => round((($counts[$status] ?? 0) / $maxCount) * 100),
-                'color' => self::STATUS_COLORS[$status],
-            ])
-            ->values()
-            ->all();
+        $titles = $accomplished->keys()->merge($targets->keys())->unique()->sort()->values();
+
+        $maxValue = max($accomplished->max() ?? 0, $targets->max() ?? 0, 1);
+
+        return $titles->map(fn ($title) => [
+            'title' => $title,
+            'target' => $targets[$title] ?? 0,
+            'accomplished' => $accomplished[$title] ?? 0,
+            'target_percent' => round((($targets[$title] ?? 0) / $maxValue) * 100),
+            'accomplished_percent' => round((($accomplished[$title] ?? 0) / $maxValue) * 100),
+        ])->keyBy('title')->all();
     }
 
     /**
@@ -187,12 +235,15 @@ class ToolsController extends Controller
                 $moduleRatings = collect($evaluation->module_ratings ?? []);
                 $participantModuleRatings = $trainingRequest->participantEvaluations->pluck('module_ratings')->filter()->flatten(1);
                 $participantInstructorRatings = $trainingRequest->participantEvaluations->pluck('instructor_ratings')->filter()->flatten(1);
+                $trainerLabel = $this->trainerLabelFor($trainingRequest->instructors);
 
-                $modules = $moduleRatings->pluck('module')
+                $moduleNames = $moduleRatings->pluck('module')
                     ->merge($participantModuleRatings->pluck('module'))
                     ->filter()
                     ->unique()
-                    ->values()
+                    ->values();
+
+                $modules = $moduleNames
                     ->map(function ($moduleName) use ($moduleRatings, $participantModuleRatings) {
                         $adminRows = $moduleRatings->where('module', $moduleName);
                         $participantRows = $participantModuleRatings->where('module', $moduleName);
@@ -200,19 +251,47 @@ class ToolsController extends Controller
                         $moduleScores = $adminRows->pluck('module_rating')->filter(fn ($r) => is_numeric($r));
                         $trainerScores = $adminRows->pluck('trainer_rating')->filter(fn ($r) => is_numeric($r));
                         $participantScores = $participantRows->pluck('module_rating')->filter(fn ($r) => is_numeric($r));
+                        $participantTrainerScores = $participantRows->pluck('trainer_rating')->filter(fn ($r) => is_numeric($r));
 
                         return [
                             'module' => $moduleName,
                             'module_rating' => $moduleScores->isNotEmpty() ? round($moduleScores->avg(), 2) : null,
                             'trainer_rating' => $trainerScores->isNotEmpty() ? round($trainerScores->avg(), 2) : null,
                             'participant_rating' => $participantScores->isNotEmpty() ? round($participantScores->avg(), 2) : null,
+                            'participant_trainer_rating' => $participantTrainerScores->isNotEmpty() ? round($participantTrainerScores->avg(), 2) : null,
                             'participant_responses' => $participantScores->count(),
                             'rating_distribution' => $this->ratingDistribution($participantScores),
                             'comments' => $participantRows->pluck('comment')->filter(fn ($c) => filled(trim((string) $c)))->values()->all(),
                         ];
                     });
 
-                $trainerScores = $moduleRatings->pluck('trainer_rating')->filter(fn ($r) => is_numeric($r));
+                // Per-module Trainer's Rating summary — pools trainer_rating from
+                // both the admin's own module_ratings and every participant's
+                // per-module trainer rating, matching the TOR's "Summary of
+                // Trainers Rating per Module" table (grouped by module, not by
+                // instructor — see the separate whole-training instructorRatings
+                // below for the per-instructor view).
+                $trainerRatingsByModule = $moduleNames
+                    ->map(function ($moduleName) use ($moduleRatings, $participantModuleRatings, $trainerLabel) {
+                        $pooledScores = $moduleRatings->where('module', $moduleName)->pluck('trainer_rating')
+                            ->merge($participantModuleRatings->where('module', $moduleName)->pluck('trainer_rating'))
+                            ->filter(fn ($r) => is_numeric($r));
+
+                        return [
+                            'module' => $moduleName,
+                            'trainer' => $trainerLabel['name'],
+                            'organization' => $trainerLabel['organization'],
+                            'rating' => $pooledScores->isNotEmpty() ? round($pooledScores->avg(), 2) : null,
+                            'responses' => $pooledScores->count(),
+                            'rating_distribution' => $this->ratingDistribution($pooledScores),
+                        ];
+                    })
+                    ->filter(fn ($row) => $row['rating'] !== null)
+                    ->values();
+
+                $trainerScores = $moduleRatings->pluck('trainer_rating')
+                    ->merge($participantModuleRatings->pluck('trainer_rating'))
+                    ->filter(fn ($r) => is_numeric($r));
 
                 $instructorRatings = $participantInstructorRatings
                     ->groupBy('instructor_id')
@@ -251,9 +330,20 @@ class ToolsController extends Controller
                 $moduleMatrix = $trainingRequest->participantEvaluations->map(function ($participantEvaluation) use ($moduleMatrixModules) {
                     $ratingsByModule = collect($participantEvaluation->module_ratings ?? [])->keyBy('module');
 
+                    $scores = $moduleMatrixModules->mapWithKeys(fn ($module) => [
+                        $module => [
+                            'module_rating' => $ratingsByModule[$module]['module_rating'] ?? null,
+                            'trainer_rating' => $ratingsByModule[$module]['trainer_rating'] ?? null,
+                        ],
+                    ]);
+
+                    $allCells = $scores->flatMap(fn ($cell) => [$cell['module_rating'], $cell['trainer_rating']])
+                        ->filter(fn ($r) => is_numeric($r));
+
                     return [
                         'participant' => $participantEvaluation->user?->name ?? 'Unknown participant',
-                        'scores' => $moduleMatrixModules->mapWithKeys(fn ($module) => [$module => $ratingsByModule[$module]['module_rating'] ?? null])->all(),
+                        'scores' => $scores->all(),
+                        'overall' => $allCells->isNotEmpty() ? round($allCells->avg(), 2) : null,
                     ];
                 })->values();
 
@@ -268,6 +358,7 @@ class ToolsController extends Controller
                     'pretest_stats' => $this->scoreStatistics($pretestScores),
                     'posttest_stats' => $this->scoreStatistics($posttestScores),
                     'instructor_ratings' => $instructorRatings,
+                    'trainer_ratings_by_module' => $trainerRatingsByModule,
                     'participant_response_count' => $trainingRequest->participantEvaluations->count(),
                     'participant_total' => $trainingRequest->effectiveParticipants()->count(),
                     'module_matrix_columns' => $moduleMatrixModules->all(),
@@ -277,6 +368,53 @@ class ToolsController extends Controller
             ->groupBy('training_title')
             ->sortKeys()
             ->all();
+    }
+
+    /**
+     * Parses a php.ini-style memory value ("128M", "1G", "-1") into bytes.
+     */
+    private static function iniMemoryLimitBytes(string $value): int
+    {
+        $value = trim($value);
+
+        if ($value === '-1' || $value === '') {
+            return -1;
+        }
+
+        $unit = strtolower(substr($value, -1));
+        $number = (int) $value;
+
+        return match ($unit) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => $number,
+        };
+    }
+
+    /**
+     * Display label for the "Trainer Name / Organization" columns on the
+     * per-module trainer summary — nothing in the schema links a specific
+     * module to a specific co-instructor, so this names whoever is on file
+     * for the training as a whole (matching the convention already used by
+     * EvaluationController::reflectTrainerRating for the single-instructor
+     * case).
+     *
+     * @return array{name: ?string, organization: ?string}
+     */
+    private function trainerLabelFor(Collection $instructors): array
+    {
+        if ($instructors->count() === 1) {
+            $instructor = $instructors->first();
+
+            return ['name' => $instructor->name, 'organization' => $instructor->agency_organization ?? $instructor->lgu];
+        }
+
+        if ($instructors->count() > 1) {
+            return ['name' => $instructors->pluck('name')->implode(', '), 'organization' => null];
+        }
+
+        return ['name' => null, 'organization' => null];
     }
 
     /**

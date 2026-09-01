@@ -69,6 +69,7 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
 
     Route::get('/instructors', [InstructorController::class, 'index'])->name('instructors.index');
     Route::post('/instructors', [InstructorController::class, 'store'])->name('instructors.store');
+    Route::patch('/instructors/{instructor}', [InstructorController::class, 'update'])->name('instructors.update');
 
     Route::get('/tna-submissions', [TnaSubmissionController::class, 'index'])->name('tna-submissions.index');
     Route::get('/tna-submissions/form', [TnaSubmissionController::class, 'downloadForm'])->name('tna-submissions.form');
@@ -84,6 +85,8 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
     Route::post('/users/{user}/demote', [UserManagementController::class, 'demote'])->name('users.demote');
 
     Route::get('/instructors/{instructor}', [InstructorController::class, 'show'])->name('instructors.show');
+
+    Route::post('/tools/ta-targets', [ToolsController::class, 'updateTarget'])->name('tools.ta-targets');
 
     Route::get('/tna-submissions/per-organization', [TnaSubmissionController::class, 'perOrganization'])->name('tna-submissions.per-organization');
 

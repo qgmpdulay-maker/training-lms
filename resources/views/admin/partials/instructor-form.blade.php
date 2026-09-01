@@ -67,8 +67,20 @@
 
         <div>
             <x-input-label for="deployment" :value="__('Deployment (if applicable)')" />
-            <x-text-input id="deployment" name="deployment" type="text" class="mt-1 block w-full" value="{{ old('deployment') }}" />
+            <x-text-input id="deployment" name="deployment" type="text" class="mt-1 block w-full" placeholder="{{ __('e.g. RDANA, PDNA, EOC') }}" value="{{ old('deployment') }}" />
             <x-input-error :messages="$errors->get('deployment')" class="mt-1" />
+        </div>
+
+        <div>
+            <x-input-label for="deployment_date" :value="__('Deployment Date')" />
+            <x-text-input id="deployment_date" name="deployment_date" type="date" class="mt-1 block w-full" value="{{ old('deployment_date') }}" />
+            <x-input-error :messages="$errors->get('deployment_date')" class="mt-1" />
+        </div>
+
+        <div>
+            <x-input-label for="deployment_role" :value="__('Deployment Role')" />
+            <x-text-input id="deployment_role" name="deployment_role" type="text" class="mt-1 block w-full" placeholder="{{ __('e.g. Team Leader') }}" value="{{ old('deployment_role') }}" />
+            <x-input-error :messages="$errors->get('deployment_role')" class="mt-1" />
         </div>
 
         <div>

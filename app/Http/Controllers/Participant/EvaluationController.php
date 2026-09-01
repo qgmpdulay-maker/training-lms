@@ -32,9 +32,9 @@ class EvaluationController extends Controller
         $existing = $trainingRequest->participantEvaluations()->where('user_id', $user->id)->first();
 
         $moduleRows = $existing?->module_ratings ?? collect($trainingRequest->trainingEvaluation?->module_ratings ?? [])
-            ->map(fn ($row) => ['module' => $row['module'] ?? '', 'module_rating' => '', 'comment' => ''])
+            ->map(fn ($row) => ['module' => $row['module'] ?? '', 'module_rating' => '', 'trainer_rating' => '', 'comment' => ''])
             ->all();
-        $moduleRows = array_pad($moduleRows, self::MAX_MODULE_ROWS, ['module' => '', 'module_rating' => '', 'comment' => '']);
+        $moduleRows = array_pad($moduleRows, self::MAX_MODULE_ROWS, ['module' => '', 'module_rating' => '', 'trainer_rating' => '', 'comment' => '']);
 
         $existingInstructorRatings = collect($existing?->instructor_ratings ?? [])->keyBy('instructor_id');
 
@@ -58,6 +58,8 @@ class EvaluationController extends Controller
             'module.*' => ['nullable', 'string', 'max:255'],
             'module_rating' => ['nullable', 'array'],
             'module_rating.*' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'trainer_rating' => ['nullable', 'array'],
+            'trainer_rating.*' => ['nullable', 'integer', 'min:1', 'max:5'],
             'comment' => ['nullable', 'array'],
             'comment.*' => ['nullable', 'string', 'max:1000'],
             'instructor_rating' => ['nullable', 'array'],
@@ -70,6 +72,7 @@ class EvaluationController extends Controller
         $rowCount = max(
             count($validated['module'] ?? []),
             count($validated['module_rating'] ?? []),
+            count($validated['trainer_rating'] ?? []),
             count($validated['comment'] ?? []),
         );
 
@@ -77,9 +80,10 @@ class EvaluationController extends Controller
             ->map(fn ($i) => [
                 'module' => $validated['module'][$i] ?? null,
                 'module_rating' => $validated['module_rating'][$i] ?? null,
+                'trainer_rating' => $validated['trainer_rating'][$i] ?? null,
                 'comment' => $validated['comment'][$i] ?? null,
             ])
-            ->filter(fn ($row) => filled($row['module']) || filled($row['module_rating']) || filled($row['comment']))
+            ->filter(fn ($row) => filled($row['module']) || filled($row['module_rating']) || filled($row['trainer_rating']) || filled($row['comment']))
             ->values()
             ->map(fn ($row, $i) => [...$row, 'module' => $row['module'] ?: 'Module '.($i + 1)])
             ->all();
@@ -104,6 +108,7 @@ class EvaluationController extends Controller
         );
 
         $this->reflectInstructorRatings($assignedInstructorIds);
+        Instructor::reflectRatingForTraining($trainingRequest->training_title);
 
         return Redirect::route('training-requests.show', $trainingRequest)->with('status', 'Thanks — your evaluation has been submitted.');
     }

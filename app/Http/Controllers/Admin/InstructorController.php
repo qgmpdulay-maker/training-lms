@@ -89,6 +89,8 @@ class InstructorController extends Controller
             'certification' => ['nullable', 'string', 'max:255'],
             'certificate_code' => ['nullable', 'string', 'max:255'],
             'deployment' => ['nullable', 'string', 'max:255'],
+            'deployment_date' => ['nullable', 'date'],
+            'deployment_role' => ['nullable', 'string', 'max:255'],
             'agency_organization' => ['nullable', 'string', 'max:255'],
             'lgu' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'in:'.implode(',', config('regions.list'))],
@@ -102,6 +104,27 @@ class InstructorController extends Controller
         Instructor::create($validated);
 
         return Redirect::back()->with('status', "{$validated['name']} was added to the instructor roster.");
+    }
+
+    /**
+     * Correct a roster row's deployment record — the only fields an
+     * instructor row can be edited on after creation.
+     */
+    public function update(Request $request, Instructor $instructor): RedirectResponse
+    {
+        abort_if($request->user()->isAdmin() && $instructor->region !== $request->user()->region, 403);
+
+        $validated = $request->validate([
+            'deployment' => ['nullable', 'string', 'max:255'],
+            'deployment_date' => ['nullable', 'date'],
+            'deployment_role' => ['nullable', 'string', 'max:255'],
+            'agency_organization' => ['nullable', 'string', 'max:255'],
+            'lgu' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $instructor->update($validated);
+
+        return Redirect::back()->with('status', "Deployment details updated for {$instructor->name}.");
     }
 
     public function show(Instructor $instructor): View

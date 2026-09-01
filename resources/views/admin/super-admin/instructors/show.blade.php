@@ -197,15 +197,53 @@
                                     <th class="py-2 pr-4">{{ __('Date') }}</th>
                                     <th class="py-2 pr-4">{{ __('Area') }}</th>
                                     <th class="py-2 pr-4">{{ __('Role') }}</th>
+                                    <th class="py-2 pr-4"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach ($deployments as $record)
-                                    <tr>
+                                    <tr x-data="{ editing: false }">
                                         <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $record->deployment }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->created_at->format('M j, Y') }}</td>
+                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->deployment_date?->format('M j, Y') ?? '—' }}</td>
                                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->agency_organization ?? $record->lgu ?? '—' }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->training_type }}</td>
+                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->deployment_role ?? '—' }}</td>
+                                        <td class="py-3 pr-4 text-right">
+                                            <button type="button" @click="editing = !editing" class="text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">
+                                                {{ __('Edit') }}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr x-show="editing" x-cloak>
+                                        <td colspan="5" class="py-3 pl-0 pr-4 bg-gray-50/60 dark:bg-gray-900/20">
+                                            <form method="POST" action="{{ route('admin.instructors.update', $record) }}" class="flex flex-wrap items-end gap-3">
+                                                @csrf
+                                                @method('PATCH')
+                                                <div>
+                                                    <x-input-label :value="__('Deployment')" class="text-xs" />
+                                                    <input type="text" name="deployment" value="{{ $record->deployment }}"
+                                                        class="mt-1 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                                </div>
+                                                <div>
+                                                    <x-input-label :value="__('Date')" class="text-xs" />
+                                                    <input type="date" name="deployment_date" value="{{ $record->deployment_date?->format('Y-m-d') }}"
+                                                        class="mt-1 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                                </div>
+                                                <div>
+                                                    <x-input-label :value="__('Area (Agency / Organization)')" class="text-xs" />
+                                                    <input type="text" name="agency_organization" value="{{ $record->agency_organization }}"
+                                                        class="mt-1 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                                </div>
+                                                <div>
+                                                    <x-input-label :value="__('Role')" class="text-xs" />
+                                                    <input type="text" name="deployment_role" value="{{ $record->deployment_role }}"
+                                                        class="mt-1 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                                </div>
+                                                <button type="submit"
+                                                    class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition">
+                                                    {{ __('Save') }}
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>

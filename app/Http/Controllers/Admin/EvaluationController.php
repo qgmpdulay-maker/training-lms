@@ -95,7 +95,7 @@ class EvaluationController extends Controller
             'participant_scores' => $participantScores,
         ]);
 
-        $this->reflectTrainerRating($trainingRequest->training_title);
+        Instructor::reflectRatingForTraining($trainingRequest->training_title);
 
         return Redirect::route('admin.tools')->with('status', "Evaluation saved for {$trainingRequest->training_title}.");
     }
@@ -137,33 +137,5 @@ class EvaluationController extends Controller
         $user = $request->user();
 
         abort_if($user->isAdmin() && $trainingRequest->region !== $user->region, 403);
-    }
-
-    /**
-     * Best-effort: if exactly one instructor teaches this training, roll the
-     * average trainer rating across all evaluations for it into their profile.
-     */
-    private function reflectTrainerRating(string $trainingTitle): void
-    {
-        $instructors = Instructor::where('training_type', $trainingTitle)->get();
-
-        if ($instructors->count() !== 1) {
-            return;
-        }
-
-        $ratings = TrainingRequest::where('training_title', $trainingTitle)
-            ->with('trainingEvaluation')
-            ->get()
-            ->pluck('trainingEvaluation.module_ratings')
-            ->filter()
-            ->flatten(1)
-            ->pluck('trainer_rating')
-            ->filter(fn ($r) => is_numeric($r));
-
-        if ($ratings->isEmpty()) {
-            return;
-        }
-
-        $instructors->first()->update(['rating' => round($ratings->avg(), 2)]);
     }
 }

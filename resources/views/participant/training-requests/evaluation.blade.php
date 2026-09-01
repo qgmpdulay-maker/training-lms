@@ -24,14 +24,15 @@
 
                     <div>
                         <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Module Ratings') }}</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">{{ __('Rate each module you attended. Leave a row empty to skip it.') }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">{{ __('Rate each module you attended, and the trainer who taught it. Leave a row empty to skip it.') }}</p>
 
                         <div class="overflow-x-auto">
                             <table class="min-w-full text-sm">
                                 <thead>
                                     <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
                                         <th class="py-2 pr-3">{{ __('Module') }}</th>
-                                        <th class="py-2 pr-3">{{ __('Rating') }}</th>
+                                        <th class="py-2 pr-3">{{ __('Module Rating') }}</th>
+                                        <th class="py-2 pr-3">{{ __('Trainer Rating') }}</th>
                                         <th class="py-2 pr-3">{{ __('Comments') }}</th>
                                     </tr>
                                 </thead>
@@ -47,6 +48,14 @@
                                                     <option value="">—</option>
                                                     @foreach ($ratingScale as $value => $label)
                                                         <option value="{{ $value }}" @selected(old('module_rating.'.$i, $row['module_rating'] ?? '') == $value)>{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </td>
+                                            <td class="py-2 pr-3">
+                                                <select name="trainer_rating[]" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                                    <option value="">—</option>
+                                                    @foreach ($ratingScale as $value => $label)
+                                                        <option value="{{ $value }}" @selected(old('trainer_rating.'.$i, $row['trainer_rating'] ?? '') == $value)>{{ $label }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>
