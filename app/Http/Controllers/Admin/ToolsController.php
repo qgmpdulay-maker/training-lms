@@ -10,6 +10,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ToolsController extends Controller
@@ -23,6 +24,14 @@ class ToolsController extends Controller
         TrainingRequest::STATUS_APPROVED => '#2a78d6',
         TrainingRequest::STATUS_DECLINED => '#d03b3b',
         TrainingRequest::STATUS_COMPLETED => '#0ca30c',
+    ];
+
+    // Matches the APB/Technical Assistance legend colors already used on the
+    // Calendar tab (bg-blue-400 / bg-orange-400), so the category is
+    // recognizable across pages.
+    private const CATEGORY_COLORS = [
+        TrainingRequest::CATEGORY_APB => '#60a5fa',
+        TrainingRequest::CATEGORY_TA => '#fb923c',
     ];
 
     public function index(Request $request): View
@@ -72,6 +81,7 @@ class ToolsController extends Controller
             'graduatesByTraining' => $graduatesByTraining,
             'filesRecords' => $filesRecords,
             'statusDonut' => $this->statusDonut($region),
+            'categoryDonut' => $this->categoryDonut($region),
             'taAccomplishment' => $this->taAccomplishment($region),
             'evaluationsByTraining' => $this->evaluationSummaries($region),
             'graduatesByLgu' => $this->graduatesByLgu($region),
@@ -120,20 +130,30 @@ class ToolsController extends Controller
      * training type — everything else on the accomplishment chart
      * (Accomplished) is derived from actual completed requests, but Target
      * is an externally set planning number with no other source of truth.
+     * Targets are per-region (e.g. NCR's target for a title differs from
+     * Region III's); a null region is the nationwide "All Regions" target,
+     * set the same way while that filter is selected on the Tools page.
      */
     public function updateTarget(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'training_title' => ['required', 'string', 'max:255'],
+            'region' => ['nullable', 'string', Rule::in(config('regions.list'))],
             'target' => ['required', 'integer', 'min:0'],
         ]);
 
         TrainingTarget::updateOrCreate(
-            ['training_title' => $validated['training_title'], 'category' => TrainingRequest::CATEGORY_TA],
+            [
+                'training_title' => $validated['training_title'],
+                'category' => TrainingRequest::CATEGORY_TA,
+                'region' => $validated['region'] ?? null,
+            ],
             ['target' => $validated['target']],
         );
 
-        return back()->with('status', "Target updated for {$validated['training_title']}.");
+        $regionLabel = $validated['region'] ?? 'All Regions';
+
+        return back()->with('status', "Target updated for {$validated['training_title']} ({$regionLabel}).");
     }
 
     private function statusDonut(?string $region): array
@@ -175,10 +195,57 @@ class ToolsController extends Controller
     }
 
     /**
+     * Requests split by category (APB vs. Technical Assistance) — sits next
+     * to the status donut as the other natural cut of the same request
+     * volume, colored to match the APB/TA legend already used on Calendar.
+     */
+    private function categoryDonut(?string $region): array
+    {
+        $total = TrainingRequest::when($region, fn ($query) => $query->where('region', $region))->count();
+        $apb = TrainingRequest::where('category', TrainingRequest::CATEGORY_APB)
+            ->when($region, fn ($query) => $query->where('region', $region))
+            ->count();
+        $ta = $total - $apb;
+
+        $radius = 40;
+        $circumference = 2 * M_PI * $radius;
+        $apbFraction = $total > 0 ? $apb / $total : 0;
+        $apbArc = $apbFraction * $circumference;
+
+        return [
+            'total' => $total,
+            'circumference' => $circumference,
+            'radius' => $radius,
+            'segments' => [
+                [
+                    'label' => TrainingRequest::$categoryLabels[TrainingRequest::CATEGORY_APB],
+                    'value' => $apb,
+                    'percent' => $total > 0 ? round($apbFraction * 100) : 0,
+                    'color' => self::CATEGORY_COLORS[TrainingRequest::CATEGORY_APB],
+                    'dasharray' => "{$apbArc} {$circumference}",
+                    'dashoffset' => 0,
+                ],
+                [
+                    'label' => TrainingRequest::$categoryLabels[TrainingRequest::CATEGORY_TA],
+                    'value' => $ta,
+                    'percent' => $total > 0 ? 100 - round($apbFraction * 100) : 0,
+                    'color' => self::CATEGORY_COLORS[TrainingRequest::CATEGORY_TA],
+                    'dasharray' => ($circumference - $apbArc).' '.$circumference,
+                    'dashoffset' => -$apbArc,
+                ],
+            ],
+        ];
+    }
+
+    /**
      * Target vs. Accomplished per Technical Assistance training type.
      * Accomplished is the graduate count from completed TA requests of that
      * title; Target comes from the separately maintained TrainingTarget
      * table, since it's a planning figure with no other source of truth.
+     * Both are scoped to the same region as the rest of the page — a null
+     * $region reads/writes the nationwide "All Regions" target, not a sum
+     * of every region's target, so switching the region filter shows that
+     * region's own target rather than a blended figure.
      * Every title that has either a completed TA request or a target on
      * file gets a row, so a target can be set ahead of the first request.
      *
@@ -194,7 +261,9 @@ class ToolsController extends Controller
             ->groupBy('training_title')
             ->map(fn ($records) => $records->sum(fn (TrainingRequest $r) => max($r->participants->count(), 1)));
 
-        $targets = TrainingTarget::where('category', TrainingRequest::CATEGORY_TA)->pluck('target', 'training_title');
+        $targets = TrainingTarget::where('category', TrainingRequest::CATEGORY_TA)
+            ->where('region', $region)
+            ->pluck('target', 'training_title');
 
         $titles = $accomplished->keys()->merge($targets->keys())->unique()->sort()->values();
 

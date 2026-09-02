@@ -94,8 +94,54 @@
                     </div>
                 </div>
 
-                <!-- Technical Assistance Accomplishment -->
+                <!-- Requests by Category (APB vs Technical Assistance) -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Requests by Category') }}</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Share of training requests that are APB vs. Technical Assistance.') }}</p>
+
+                    <div class="flex items-center gap-8">
+                        <div class="relative w-40 h-40 shrink-0">
+                            <svg viewBox="0 0 100 100" class="w-40 h-40 -rotate-90">
+                                @if ($categoryDonut['total'] === 0)
+                                    <circle cx="50" cy="50" r="{{ $categoryDonut['radius'] }}" fill="none" stroke="#e1e0d9" stroke-width="14" />
+                                @else
+                                    @foreach ($categoryDonut['segments'] as $segment)
+                                        @if ($segment['value'] > 0)
+                                            <circle cx="50" cy="50" r="{{ $categoryDonut['radius'] }}" fill="none"
+                                                stroke="{{ $segment['color'] }}" stroke-width="14"
+                                                stroke-dasharray="{{ $segment['dasharray'] }}"
+                                                stroke-dashoffset="{{ $segment['dashoffset'] }}">
+                                                <title>{{ $segment['label'] }}: {{ $segment['value'] }} ({{ $segment['percent'] }}%)</title>
+                                            </circle>
+                                        @endif
+                                    @endforeach
+                                @endif
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span class="text-2xl font-bold text-[#152A4E] dark:text-white">{{ $categoryDonut['total'] }}</span>
+                                <span class="text-[11px] text-gray-400 uppercase tracking-wide">{{ __('Total') }}</span>
+                            </div>
+                        </div>
+
+                        <ul class="space-y-2.5 text-sm">
+                            @if ($categoryDonut['total'] === 0)
+                                <li class="text-gray-400">{{ __('No training requests on record yet.') }}</li>
+                            @else
+                                @foreach ($categoryDonut['segments'] as $segment)
+                                    <li class="flex items-center gap-2">
+                                        <span class="h-2.5 w-2.5 rounded-full shrink-0" style="background-color: {{ $segment['color'] }};"></span>
+                                        <span class="text-gray-600 dark:text-gray-300">{{ $segment['label'] }}</span>
+                                        <span class="font-semibold text-[#152A4E] dark:text-white tabular-nums">{{ $segment['value'] }}</span>
+                                        <span class="text-gray-400 text-xs">({{ $segment['percent'] }}%)</span>
+                                    </li>
+                                @endforeach
+                            @endif
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Technical Assistance Accomplishment -->
+                <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                     <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Technical Assistance Accomplishment') }}</h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Target vs. graduates accomplished, per Technical Assistance training type.') }}</p>
 
@@ -135,7 +181,10 @@
                                             <form method="POST" action="{{ route('admin.tools.ta-targets') }}" class="flex items-center gap-2">
                                                 @csrf
                                                 <input type="hidden" name="training_title" value="{{ $title }}">
-                                                <label class="text-xs text-gray-400" for="target-{{ Str::slug($title) }}">{{ __('Target:') }}</label>
+                                                <input type="hidden" name="region" value="{{ $region }}">
+                                                <label class="text-xs text-gray-400" for="target-{{ Str::slug($title) }}">
+                                                    {{ __('Target (:region):', ['region' => $region ?: __('All Regions')]) }}
+                                                </label>
                                                 <input id="target-{{ Str::slug($title) }}" type="number" name="target" min="0" value="{{ $row['target'] }}"
                                                     class="w-24 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
                                                 <button type="submit"
@@ -284,7 +333,7 @@
                             <div x-show="activeTraining === @js($trainingTitle)" x-cloak class="mt-5">
                                 <div class="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
                                     @foreach ($sessions as $session)
-                                        <div x-data="{ open: {{ $loop->first ? 'true' : 'false' }} }">
+                                        <div x-data="{ open: false }">
                                             <button type="button" @click="open = !open"
                                                 class="w-full flex items-center justify-between gap-4 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                                                 <div class="flex items-center gap-3 min-w-0">

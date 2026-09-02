@@ -6,7 +6,10 @@
     </x-slot>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
     <div class="py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -97,7 +100,7 @@
                     ['label' => 'Regions Covered', 'value' => collect($mapPoints)->pluck('region')->filter()->unique()->count().' / '.count($regions), 'accent' => '#0ca30c'],
                 ] as $card)
                     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 border-l-4" style="border-left-color: {{ $card['accent'] }};">
-                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __($card['label']) }}</div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-400 min-h-[2rem]">{{ __($card['label']) }}</div>
                         <div class="text-2xl font-bold text-[#152A4E] dark:text-white mt-1">{{ $card['value'] }}</div>
                     </div>
                 @endforeach
@@ -189,6 +192,12 @@
     <style>
         .graduates-map-panel {
             background: radial-gradient(ellipse at 50% 40%, #f6f8fc 0%, #e7ecf5 70%);
+            /* Leaflet's own panes/controls use z-index up to 1000, which otherwise
+               escapes this panel and renders on top of the app header/sidebar
+               (both z-40/z-50) since this panel doesn't form its own stacking
+               context by default. Isolating it keeps Leaflet's stack contained. */
+            position: relative;
+            isolation: isolate;
         }
         .dark .graduates-map-panel {
             background: radial-gradient(ellipse at 50% 40%, #1c2740 0%, #131b2e 70%);
@@ -231,6 +240,21 @@
         .region-hover-glow {
             filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.85));
         }
+        .graduates-cluster-icon {
+            background: transparent !important;
+            border: none !important;
+        }
+        .graduates-cluster-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            background: rgba(21, 42, 78, 0.88);
+            color: #fff;
+            font-weight: 700;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(21, 42, 78, 0.35), 0 0 0 3px rgba(255, 255, 255, 0.85);
+        }
     </style>
 
     <script>
@@ -248,6 +272,25 @@
 
             const bounds = [];
 
+            // Nearby LGU/NGA points are grouped into a single cluster badge until
+            // the map is zoomed in enough to tell them apart — with hundreds of
+            // points, showing every marker (and its popup) at once made dense
+            // areas like Metro Manila unreadable.
+            const clusterGroup = L.markerClusterGroup({
+                maxClusterRadius: 45,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                iconCreateFunction: (cluster) => {
+                    const count = cluster.getChildCount();
+                    const size = count < 10 ? 32 : (count < 50 ? 40 : 48);
+                    return L.divIcon({
+                        html: '<div class="graduates-cluster-badge" style="width:' + size + 'px;height:' + size + 'px;line-height:' + size + 'px;">' + count + '</div>',
+                        className: 'graduates-cluster-icon',
+                        iconSize: L.point(size, size),
+                    });
+                },
+            });
+
             points.forEach((point) => {
                 const radius = Math.max(6, Math.min(30, 5 + Math.sqrt(point.graduates)));
                 const marker = L.circleMarker([point.latitude, point.longitude], {
@@ -257,6 +300,11 @@
                     fillColor: colorFor(point.agency_type),
                     fillOpacity: 0.85,
                     className: 'graduates-glow-dot',
+                    // Region polygons live in the default overlayPane and jump to
+                    // its front on hover (see bringToFront() below) — pinning
+                    // markers to markerPane keeps them above that shuffle so a
+                    // region hover can never steal the marker's own hover.
+                    pane: 'markerPane',
                 });
 
                 const subtitle = [point.agency_type, point.region].filter(Boolean).join(' · ');
@@ -272,9 +320,11 @@
                 marker.on('mouseover', function () { this.openPopup(); });
                 marker.on('mouseout', function () { this.closePopup(); });
 
-                marker.addTo(map);
+                clusterGroup.addLayer(marker);
                 bounds.push([point.latitude, point.longitude]);
             });
+
+            map.addLayer(clusterGroup);
 
             if (bounds.length > 0) {
                 map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });

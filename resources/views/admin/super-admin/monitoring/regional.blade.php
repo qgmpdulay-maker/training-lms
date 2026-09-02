@@ -87,7 +87,7 @@
                     ['label' => 'NGAs Covered', 'value' => $summary['ngas'], 'hint' => null, 'accent' => '#E2762D'],
                 ] as $card)
                     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 border-l-4" style="border-left-color: {{ $card['accent'] }};">
-                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __($card['label']) }}</div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-400 min-h-[2rem]">{{ __($card['label']) }}</div>
                         <div class="text-2xl font-bold text-[#152A4E] dark:text-white mt-1">{{ $card['value'] }}</div>
                         @if ($card['hint'])
                             <div class="text-xs text-gray-400 mt-0.5">{{ $card['hint'] }}</div>

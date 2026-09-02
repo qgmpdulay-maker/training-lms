@@ -21,7 +21,7 @@
             <!-- ID Card -->
             <div class="rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-white">
                 <div class="bg-gradient-to-br from-[#152A4E] via-[#1E3A66] to-[#0D1B33] px-6 pt-6 pb-12 text-center">
-                    <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase">{{ __('OCD Training LMS') }}</p>
+                    <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase">{{ __('OCD Training IMS') }}</p>
                     <p class="text-white font-bold">{{ __('Participant ID') }}</p>
                 </div>
 
@@ -60,7 +60,7 @@
                     </dl>
 
                     <p class="text-xs text-gray-400 text-center mt-6">
-                        {{ __('This ID identifies a registered participant of the OCD Training LMS and is valid while the account remains active.') }}
+                        {{ __('This ID identifies a registered participant of the OCD Training IMS and is valid while the account remains active.') }}
                     </p>
                 </div>
 

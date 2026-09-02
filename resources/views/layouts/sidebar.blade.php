@@ -12,8 +12,8 @@
 
     <div class="flex h-20 shrink-0 items-center gap-3 px-5 border-b border-white/10">
         <a href="{{ route(Auth::user()->isParticipant() ? 'dashboard' : 'admin.dashboard') }}" class="flex items-center gap-2.5 min-w-0">
-            <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training LMS Logo') }}" class="h-12 w-12 object-contain shrink-0">
-            <span class="text-sm font-semibold text-white truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ __('OCD Training LMS') }}</span>
+            <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training IMS Logo') }}" class="h-12 w-12 object-contain shrink-0">
+            <span class="text-sm font-semibold text-white truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ __('OCD Training IMS') }}</span>
         </a>
 
         <button @click="sidebarCollapsed = ! sidebarCollapsed" class="ms-auto hidden lg:flex text-white/60 hover:text-white shrink-0">

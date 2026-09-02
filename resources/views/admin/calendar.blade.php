@@ -153,6 +153,7 @@
                     <div class="flex items-center gap-1 overflow-x-auto bg-gray-100 dark:bg-gray-900/40 rounded-xl p-1.5">
                         @foreach ($groupedByMonth as $month => $entries)
                             <button type="button" @click="activeMonth = @js($month)"
+                                x-init="@js($month) === @js($defaultMonth) && $nextTick(() => $el.scrollIntoView({ block: 'nearest', inline: 'center' }))"
                                 :class="activeMonth === @js($month)
                                     ? 'bg-white dark:bg-gray-700 text-[#152A4E] dark:text-white shadow-sm'
                                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"

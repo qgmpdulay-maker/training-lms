@@ -87,7 +87,7 @@
         <div class="min-h-screen flex flex-col lg:flex-row">
 
             <!-- Left: Form (scrollable) -->
-            <div class="flex-1 lg:h-screen lg:overflow-y-auto px-6 sm:px-12 lg:px-20 py-10 bg-white">
+            <div class="flex-1 lg:flex-none lg:w-[45%] lg:h-screen lg:overflow-y-auto px-6 sm:px-12 lg:px-20 py-10 bg-white">
 
                 <!-- Back -->
                 <a href="{{ url()->previous() }}" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-8 footer-text">
@@ -99,7 +99,7 @@
 
                 <!-- Logo -->
                 <div class="flex items-center gap-3 mb-10">
-                    <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training LMS Logo') }}" class="app-logo-img">
+                    <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training IMS Logo') }}" class="app-logo-img">
                     <span class="font-semibold text-[#152A4E] tracking-tight text-lg">
                         {{ __('OCD Training IMS') }}
                     </span>

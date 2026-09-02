@@ -14,7 +14,7 @@
                     class="absolute -right-10 -bottom-16 w-64 h-64 object-contain opacity-[0.08] pointer-events-none">
                 <div class="relative z-10">
                     <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase mb-2">
-                        {{ __('OCD Training LMS') }}
+                        {{ __('OCD Training IMS') }}
                     </p>
                     <h1 class="text-2xl sm:text-3xl font-bold text-white mb-2">
                         {{ __('Welcome back, :name', ['name' => explode(' ', Auth::user()->name)[0]]) }}
