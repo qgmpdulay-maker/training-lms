@@ -110,6 +110,7 @@ class TrainingController extends Controller
         // Every training scheduled through this form is Technical Assistance —
         // OCD doesn't run APB trainings, so there's nothing to choose here.
         $trainingRequest->category = TrainingRequest::CATEGORY_TA;
+        $trainingRequest->source = TrainingRequest::SOURCE_ADMIN_SCHEDULED;
         $trainingRequest->signature_name = $user->name;
         // Super Admin is scheduling this directly — it doesn't go through the
         // regional-office review pipeline (submitted -> under_review -> approved).

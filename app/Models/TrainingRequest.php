@@ -49,6 +49,16 @@ class TrainingRequest extends Model
     const AGENCY_TYPE_NGA = 'nga';
 
     /**
+     * Where this request originated — shown as a badge in the admin Summary
+     * list and edit page so two similarly-named requests from different
+     * regions/dates (one filed publicly by an LGU/NGA, one scheduled
+     * directly by Super Admin) never get mistaken for each other.
+     */
+    const SOURCE_PUBLIC_PORTAL = 'public_portal';
+
+    const SOURCE_ADMIN_SCHEDULED = 'admin_scheduled';
+
+    /**
      * Fallback map marker location (geographic centre of the Philippines)
      * for a completed training with no region and no encoded coordinates.
      */
@@ -74,6 +84,11 @@ class TrainingRequest extends Model
     public static array $agencyTypeLabels = [
         self::AGENCY_TYPE_LGU => 'LGU',
         self::AGENCY_TYPE_NGA => 'NGA',
+    ];
+
+    public static array $sourceLabels = [
+        self::SOURCE_PUBLIC_PORTAL => 'Public Portal',
+        self::SOURCE_ADMIN_SCHEDULED => 'Scheduled by Admin',
     ];
 
     protected function casts(): array
@@ -155,6 +170,11 @@ class TrainingRequest extends Model
     public function statusLabel(): string
     {
         return self::$statusLabels[$this->status] ?? ucfirst($this->status);
+    }
+
+    public function sourceLabel(): string
+    {
+        return self::$sourceLabels[$this->source] ?? ucfirst($this->source);
     }
 
     public function categoryLabel(): ?string

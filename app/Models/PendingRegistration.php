@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-#[Fillable(['name', 'age', 'sex', 'participant_type', 'agency', 'city', 'email', 'password'])]
+#[Fillable(['name', 'age', 'sex', 'participant_type', 'agency', 'city', 'region', 'email', 'password'])]
 #[Hidden(['password', 'otp_code'])]
 class PendingRegistration extends Model
 {
@@ -77,6 +77,19 @@ class PendingRegistration extends Model
     }
 
     /**
+     * The OCD region this registration will be scoped to once approved.
+     * Everyone except OCD Personnel picks this directly at registration
+     * (`region`); OCD Personnel instead pick a specific OCD Regional Office
+     * as their "agency", which maps to a region via config/regions.php's
+     * agency_map. Null only for registrations that predate the `region`
+     * field — see UserManagementController's "Unspecified Region" bucket.
+     */
+    public function regionLabel(): ?string
+    {
+        return $this->region ?: ($this->agency ? config('regions.agency_map')[$this->agency] ?? null : null);
+    }
+
+    /**
      * Creates the real account from this registration's stored details and
      * links the two records together for an audit trail. Nothing lives in
      * `users` until this runs — see UserManagementController::approve().
@@ -92,7 +105,7 @@ class PendingRegistration extends Model
             'city' => $this->city,
             // Derived the same way RegisteredUserController does it, so OCD
             // Personnel end up scoped to a region the same way admins are.
-            'region' => $this->agency ? (config('regions.agency_map')[$this->agency] ?? null) : null,
+            'region' => $this->regionLabel(),
             'email' => $this->email,
             'password' => $this->password,
         ]);

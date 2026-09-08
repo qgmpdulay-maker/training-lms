@@ -12,6 +12,7 @@ use App\Services\CertificateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SummaryController extends Controller
@@ -216,6 +217,15 @@ class SummaryController extends Controller
             'certificate_remarks' => ['nullable', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$certificateRemarksLabels))],
             'instructor_ids' => ['nullable', 'array'],
             'instructor_ids.*' => ['integer', 'exists:instructors,id'],
+            // Only Super Admin can staff a request with participants (see the
+            // Participants section in summary-edit.blade.php, hidden for regular
+            // admins) — regional admins can't file requests themselves, so they
+            // don't get a say in who attends one either.
+            'participant_ids' => ['nullable', 'array'],
+            'participant_ids.*' => [
+                'integer',
+                Rule::exists('users', 'id')->where(fn ($q) => $q->whereIn('role', [User::ROLE_PARTICIPANT, User::ROLE_ADMIN])),
+            ],
         ]);
 
         // Regional admins can only tag training requests as belonging to their own region.
@@ -223,8 +233,12 @@ class SummaryController extends Controller
             $validated['region'] = $request->user()->region;
         }
 
-        $trainingRequest->update(collect($validated)->except('instructor_ids')->all());
+        $trainingRequest->update(collect($validated)->except(['instructor_ids', 'participant_ids'])->all());
         $trainingRequest->instructors()->sync($validated['instructor_ids'] ?? []);
+
+        if ($request->user()->isSuperAdmin() && array_key_exists('participant_ids', $validated)) {
+            $trainingRequest->participants()->sync($validated['participant_ids'] ?? []);
+        }
 
         // Graduate sex/age counts always reflect the actual participant roster
         // for a completed training — never hand-typed, never out of sync.

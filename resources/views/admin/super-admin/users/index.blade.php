@@ -76,49 +76,72 @@
                             {{ $pendingAccounts->count() }}
                         </span>
                     </div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('These accounts have verified their email and are waiting for a decision before they can log in.') }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                        {{ __('These accounts have verified their email and are waiting for a decision before they can log in. Grouped by region — only OCD Personnel have a known region at this stage, so everyone else falls under "Unspecified Region" for now.') }}
+                    </p>
 
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-sm">
-                            <thead>
-                                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                    <th class="py-2 pr-4">{{ __('Name') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Email') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Participant Type') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Agency / City') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Registered') }}</th>
-                                    <th class="py-2 pr-4"></th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                @foreach ($pendingAccounts as $account)
-                                    <tr>
-                                        <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $account->name }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->email }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->participant_type ?? '—' }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->agency ?? $account->city ?? '—' }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->created_at->format('M j, Y') }}</td>
-                                        <td class="py-3 pr-4 text-right whitespace-nowrap">
-                                            <form method="POST" action="{{ route('admin.users.reject', $account) }}" class="inline"
-                                                onsubmit="return confirm('{{ __('Reject the account for :name?', ['name' => $account->name]) }}');">
-                                                @csrf
-                                                <button type="submit"
-                                                    class="inline-flex items-center justify-center border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold rounded-md px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 transition whitespace-nowrap">
-                                                    {{ __('Reject') }}
-                                                </button>
-                                            </form>
-                                            <form method="POST" action="{{ route('admin.users.approve', $account) }}" class="inline">
-                                                @csrf
-                                                <button type="submit"
-                                                    class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-3 py-1.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
-                                                    {{ __('Approve') }}
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                    <div x-data="{ activeRegion: @js($pendingAccountsByRegion->keys()->first()) }">
+                        <div class="flex items-center gap-1 overflow-x-auto bg-gray-100 dark:bg-gray-900/40 rounded-xl p-1.5">
+                            @foreach ($pendingAccountsByRegion as $region => $accounts)
+                                <button type="button" @click="activeRegion = @js($region)"
+                                    :class="activeRegion === @js($region)
+                                        ? 'bg-white dark:bg-gray-700 text-[#152A4E] dark:text-white shadow-sm'
+                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
+                                    class="shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition whitespace-nowrap">
+                                    {{ $region }}
+                                    <span :class="activeRegion === @js($region)
+                                            ? 'bg-[#152A4E]/10 text-[#152A4E] dark:bg-white/15 dark:text-white px-1.5 py-0.5 rounded-full text-xs font-semibold'
+                                            : 'text-gray-400 dark:text-gray-500 text-xs font-normal'">
+                                        {{ $accounts->count() }}
+                                    </span>
+                                </button>
+                            @endforeach
+                        </div>
+
+                        @foreach ($pendingAccountsByRegion as $region => $accounts)
+                            <div x-show="activeRegion === @js($region)" x-cloak class="mt-5 overflow-x-auto">
+                                <table class="min-w-full text-sm">
+                                    <thead>
+                                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                            <th class="py-2 pr-4">{{ __('Name') }}</th>
+                                            <th class="py-2 pr-4">{{ __('Email') }}</th>
+                                            <th class="py-2 pr-4">{{ __('Participant Type') }}</th>
+                                            <th class="py-2 pr-4">{{ __('Agency / City') }}</th>
+                                            <th class="py-2 pr-4">{{ __('Registered') }}</th>
+                                            <th class="py-2 pr-4"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                        @foreach ($accounts as $account)
+                                            <tr>
+                                                <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $account->name }}</td>
+                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->email }}</td>
+                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->participant_type ?? '—' }}</td>
+                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->agency ?? $account->city ?? '—' }}</td>
+                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->created_at->format('M j, Y') }}</td>
+                                                <td class="py-3 pr-4 text-right whitespace-nowrap">
+                                                    <form method="POST" action="{{ route('admin.users.reject', $account) }}" class="inline"
+                                                        onsubmit="return confirm('{{ __('Reject the account for :name?', ['name' => $account->name]) }}');">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="inline-flex items-center justify-center border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold rounded-md px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 transition whitespace-nowrap">
+                                                            {{ __('Reject') }}
+                                                        </button>
+                                                    </form>
+                                                    <form method="POST" action="{{ route('admin.users.approve', $account) }}" class="inline">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-3 py-1.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                                                            {{ __('Approve') }}
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             @endif

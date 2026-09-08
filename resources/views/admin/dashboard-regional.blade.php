@@ -324,6 +324,7 @@
     <script>
         const brandNavy = '#03055A';
         const brandOrange = '#E2762D';
+        const brandBlue = '#3B4FA8';
         const statusColors = ['#94A3B8', '#3B4FA8', '#03055A', '#DC2626', '#E2762D'];
 
         const statusBreakdown = @json($chartData['statusBreakdown']);
@@ -387,7 +388,7 @@
                 type: 'bar',
                 data: {
                     labels: mostNeededTrainings.map(row => row.training),
-                    datasets: [{ label: 'Recommended', data: mostNeededTrainings.map(row => row.count), backgroundColor: brandOrange, borderRadius: 4 }],
+                    datasets: [{ label: 'Recommended', data: mostNeededTrainings.map(row => row.count), backgroundColor: brandBlue, borderRadius: 4 }],
                 },
                 options: {
                     indexAxis: 'y',

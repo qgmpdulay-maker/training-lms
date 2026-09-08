@@ -26,8 +26,21 @@
 
             <!-- Overview -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h1 class="text-xl font-bold text-[#152A4E] dark:text-white mb-1">{{ $record->training_title }}</h1>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ $record->reference_number ?? __('No reference number yet') }}</p>
+                <div class="flex items-start justify-between gap-3 mb-1">
+                    <h1 class="text-xl font-bold text-[#152A4E] dark:text-white">{{ $record->training_title }}</h1>
+                    <span class="shrink-0 inline-flex items-center text-[10px] font-semibold uppercase tracking-wide rounded-full border px-2 py-1
+                        {{ $record->source === \App\Models\TrainingRequest::SOURCE_PUBLIC_PORTAL
+                            ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700'
+                            : 'bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600' }}">
+                        {{ $record->sourceLabel() }}
+                    </span>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                    {{ $record->reference_number ?? __('No reference number yet') }}
+                    @if ($record->region)
+                        &middot; {{ $record->region }}
+                    @endif
+                </p>
 
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                     <div>
@@ -199,6 +212,68 @@
                         </div>
                     @endif
                 </div>
+
+                @if (Auth::user()->isSuperAdmin())
+                    <!-- Participants -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8"
+                        x-data="{
+                            participantSearch: '',
+                            searchResults: [],
+                            selectedParticipants: @js($participants->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'organization' => $p->organization])->values()),
+                            isSelected(id) {
+                                return this.selectedParticipants.some(p => p.id === id);
+                            },
+                            toggleParticipant(participant) {
+                                const index = this.selectedParticipants.findIndex(p => p.id === participant.id);
+                                index === -1 ? this.selectedParticipants.push(participant) : this.selectedParticipants.splice(index, 1);
+                            },
+                            searchParticipants() {
+                                if (this.participantSearch.trim() === '') {
+                                    this.searchResults = [];
+                                    return;
+                                }
+                                const params = new URLSearchParams({ region: '{{ $record->region }}', q: this.participantSearch });
+                                fetch('{{ route('admin.trainings.participants') }}?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                                    .then(response => response.json())
+                                    .then(data => this.searchResults = data);
+                            },
+                        }">
+                        <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Participants') }}</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __("Who's actually attending — feeds graduate counts and certificates once this training is marked Completed.") }}</p>
+
+                        <template x-for="participant in selectedParticipants" :key="participant.id">
+                            <input type="hidden" name="participant_ids[]" :value="participant.id">
+                        </template>
+
+                        <div class="flex flex-wrap gap-2 mb-4" x-show="selectedParticipants.length" x-cloak>
+                            <template x-for="participant in selectedParticipants" :key="participant.id">
+                                <span class="inline-flex items-center gap-1.5 bg-[#152A4E]/8 dark:bg-[#152A4E]/30 text-[#152A4E] dark:text-white text-xs font-medium rounded-full pl-3 pr-2 py-1.5">
+                                    <span x-text="participant.name"></span>
+                                    <button type="button" @click="toggleParticipant(participant)" class="hover:text-red-600">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+                        <p class="text-sm text-gray-400 mb-4" x-show="!selectedParticipants.length" x-cloak>{{ __('No participants attached yet.') }}</p>
+
+                        <input type="text" x-model="participantSearch" @input.debounce.300ms="searchParticipants()"
+                            placeholder="{{ __('Search participants by name...') }}"
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-sm py-2.5 mb-2">
+
+                        <div class="max-h-56 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 divide-y divide-gray-100 dark:divide-gray-700" x-show="searchResults.length" x-cloak>
+                            <template x-for="result in searchResults" :key="result.id">
+                                <button type="button" x-show="!isSelected(result.id)"
+                                    @click="toggleParticipant(result); participantSearch = ''; searchResults = []"
+                                    class="flex items-center w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <span class="text-sm">
+                                        <span class="font-medium text-gray-800 dark:text-gray-100" x-text="result.name"></span>
+                                        <span class="text-gray-400" x-text="result.organization ? ' — ' + result.organization : ''"></span>
+                                    </span>
+                                </button>
+                            </template>
+                        </div>
+                        <x-input-error :messages="$errors->get('participant_ids')" class="mt-1" />
+                    </div>
+                @endif
 
                 <!-- Instructors -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">

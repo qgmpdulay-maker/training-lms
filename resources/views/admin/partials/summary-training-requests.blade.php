@@ -19,7 +19,20 @@
                 @foreach ($records as $record)
                     @php $recordParticipants = $record->effectiveParticipants(); @endphp
                     <tr>
-                        <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $record->training_title }}</td>
+                        <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">
+                            {{ $record->training_title }}
+                            <div class="flex items-center gap-1.5 mt-1 font-normal">
+                                @if ($record->region)
+                                    <span class="text-xs text-gray-400">{{ $record->region }}</span>
+                                @endif
+                                <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide rounded-full border px-1.5 py-0.5
+                                    {{ $record->source === \App\Models\TrainingRequest::SOURCE_PUBLIC_PORTAL
+                                        ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700'
+                                        : 'bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600' }}">
+                                    {{ $record->sourceLabel() }}
+                                </span>
+                            </div>
+                        </td>
                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->requesting_agency }}</td>
                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
                             @if ($recordParticipants->isEmpty())

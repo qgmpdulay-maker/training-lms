@@ -86,6 +86,7 @@ class PublicTrainingRequestController extends Controller
         // Every training requested through this portal is Technical Assistance —
         // OCD doesn't run APB trainings, so there's nothing to choose here.
         $trainingRequest->category = TrainingRequest::CATEGORY_TA;
+        $trainingRequest->source = TrainingRequest::SOURCE_PUBLIC_PORTAL;
         $trainingRequest->tna_completed = $request->boolean('tna_completed');
         $trainingRequest->logistics_acknowledged = $request->boolean('logistics_acknowledged');
 

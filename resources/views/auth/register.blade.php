@@ -252,6 +252,21 @@
                                     </ul>
                                     <x-input-error :messages="$errors->get('city')" class="mt-1" />
                                 </div>
+
+                                <!-- Everyone else: plain region select (OCD Personnel get theirs from the Regional Office above) -->
+                                <div x-show="participantType !== '' && participantType !== 'OCD Personnel'" x-cloak>
+                                    <label for="region" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Region') }}</label>
+                                    <select id="region" name="region" :required="participantType !== '' && participantType !== 'OCD Personnel'"
+                                        class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] px-4 field-input">
+                                        <option value="" disabled {{ old('region') ? '' : 'selected' }}>{{ __('Select your region') }}</option>
+                                        @foreach (config('regions.list') as $regionOption)
+                                            <option value="{{ $regionOption }}" {{ old('region') == $regionOption ? 'selected' : '' }}>
+                                                {{ $regionOption }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <x-input-error :messages="$errors->get('region')" class="mt-1" />
+                                </div>
                             </div>
                             <hr class="section-divider">
                         </div>

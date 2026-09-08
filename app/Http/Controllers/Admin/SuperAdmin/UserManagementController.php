@@ -21,11 +21,18 @@ class UserManagementController extends Controller
     public function index(Request $request): View
     {
         // Only registrations that have finished OTP verification belong here —
-        // nothing for a Super Admin to act on until then.
+        // nothing for a Super Admin to act on until then. Grouped by region
+        // (like the Evaluation Computation tabs on the Tools page) so a long
+        // nationwide queue doesn't read as one undifferentiated list — see
+        // PendingRegistration::regionLabel() for how region is derived (only
+        // known for OCD Personnel; everyone else lands in "Unspecified Region").
         $pendingAccounts = PendingRegistration::where('status', PendingRegistration::STATUS_PENDING)
             ->whereNotNull('email_verified_at')
             ->orderBy('created_at')
             ->get();
+
+        $pendingAccountsByRegion = $pendingAccounts->groupBy(fn (PendingRegistration $account) => $account->regionLabel() ?? 'Unspecified Region')
+            ->sortBy(fn ($accounts, $region) => array_search($region, [...config('regions.list'), 'Unspecified Region']));
 
         $adminSearch = trim((string) $request->query('admins_q'));
         $participantSearch = trim((string) $request->query('participants_q'));
@@ -63,7 +70,7 @@ class UserManagementController extends Controller
             return view('admin.partials.manage-participants-results', compact('participants', 'participantSearch', 'regions'));
         }
 
-        return view('admin.super-admin.users.index', compact('pendingAccounts', 'participants', 'admins', 'regions', 'adminSearch', 'participantSearch'));
+        return view('admin.super-admin.users.index', compact('pendingAccounts', 'pendingAccountsByRegion', 'participants', 'admins', 'regions', 'adminSearch', 'participantSearch'));
     }
 
     public function approve(PendingRegistration $registration): RedirectResponse

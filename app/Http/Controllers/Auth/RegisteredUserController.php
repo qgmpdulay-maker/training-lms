@@ -46,6 +46,10 @@ class RegisteredUserController extends Controller
             'participant_type' => ['required', 'string', 'max:255'],
             'agency' => [$isOcdPersonnel ? 'required' : 'nullable', 'string', 'max:255'],
             'city' => [$isOcdPersonnel ? 'nullable' : 'required', 'string', 'max:255'],
+            // Everyone except OCD Personnel picks their region directly here —
+            // OCD Personnel get theirs from the OCD Regional Office they pick
+            // as their agency instead (see PendingRegistration::regionLabel()).
+            'region' => [$isOcdPersonnel ? 'nullable' : 'required', 'string', 'in:'.implode(',', config('regions.list'))],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
@@ -63,6 +67,7 @@ class RegisteredUserController extends Controller
                 'participant_type' => $validated['participant_type'],
                 'agency' => $validated['agency'] ?? null,
                 'city' => $validated['city'] ?? null,
+                'region' => $validated['region'] ?? null,
                 'password' => Hash::make($validated['password']),
             ]
         );
