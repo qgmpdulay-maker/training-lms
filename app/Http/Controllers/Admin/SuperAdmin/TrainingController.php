@@ -39,13 +39,15 @@ class TrainingController extends Controller
      * Backs the participant picker on the create form. The participant roster
      * runs into the thousands nationwide, so it's searched on demand (scoped
      * to the chosen region) rather than shipped to the browser in one go.
+     * Regional admins are eligible to attend too — only Super Admins are
+     * excluded, since they're purely administrative.
      */
     public function participants(Request $request): JsonResponse
     {
         $region = $request->query('region');
         $search = trim((string) $request->query('q', ''));
 
-        $participants = User::where('role', User::ROLE_PARTICIPANT)
+        $participants = User::whereIn('role', [User::ROLE_PARTICIPANT, User::ROLE_ADMIN])
             ->when($region, fn ($query) => $query->where('region', $region))
             ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
             ->orderBy('name')
@@ -96,7 +98,7 @@ class TrainingController extends Controller
             'participant_ids' => ['nullable', 'array'],
             'participant_ids.*' => [
                 'integer',
-                Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', User::ROLE_PARTICIPANT)),
+                Rule::exists('users', 'id')->where(fn ($q) => $q->whereIn('role', [User::ROLE_PARTICIPANT, User::ROLE_ADMIN])),
             ],
         ]);
 

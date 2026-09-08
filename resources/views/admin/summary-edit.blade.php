@@ -163,22 +163,15 @@
                 <!-- Certificate Details -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                     <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Certificate Details') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Applies to every participant listed above.') }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Saving this as Completed automatically issues a certificate to every participant listed above — each with its own code — using the type chosen below.') }}</p>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <x-input-label for="lgu" :value="__('LGU')" />
-                            <x-text-input id="lgu" name="lgu" type="text" class="mt-1 block w-full" value="{{ old('lgu', $record->lgu) }}" />
-                            <x-input-error :messages="$errors->get('lgu')" class="mt-1" />
-                        </div>
-                        <div>
-                            <x-input-label for="certificate_code" :value="__('Certificate Code')" />
-                            <x-text-input id="certificate_code" name="certificate_code" type="text" class="mt-1 block w-full" value="{{ old('certificate_code', $record->certificate_code) }}" />
-                            <x-input-error :messages="$errors->get('certificate_code')" class="mt-1" />
-                        </div>
+                    <div class="mb-4 sm:w-72">
+                        <x-input-label for="lgu" :value="__('LGU')" />
+                        <x-text-input id="lgu" name="lgu" type="text" class="mt-1 block w-full" value="{{ old('lgu', $record->lgu) }}" />
+                        <x-input-error :messages="$errors->get('lgu')" class="mt-1" />
                     </div>
 
-                    <x-input-label for="certificate_remarks" :value="__('Certificate Remarks')" />
+                    <x-input-label for="certificate_remarks" :value="__('Certificate Type')" />
                     <select id="certificate_remarks" name="certificate_remarks"
                         class="mt-1 block w-full sm:w-72 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#152A4E] focus:ring-[#152A4E]">
                         <option value="">{{ __('No remarks') }}</option>
@@ -187,6 +180,24 @@
                         @endforeach
                     </select>
                     <x-input-error :messages="$errors->get('certificate_remarks')" class="mt-1" />
+
+                    @if ($record->certificates->isNotEmpty())
+                        <div class="mt-6 border-t border-gray-100 dark:border-gray-700 pt-4">
+                            <h3 class="text-sm font-semibold text-[#152A4E] dark:text-white mb-3">{{ __('Issued Certificates') }}</h3>
+                            <ul class="space-y-2">
+                                @foreach ($record->certificates as $certificate)
+                                    <li class="flex items-center justify-between gap-3 text-sm">
+                                        <span class="text-gray-700 dark:text-gray-300 truncate">
+                                            {{ $certificate->user->name }}
+                                            <span class="text-gray-400 text-xs">{{ $certificate->code }}</span>
+                                        </span>
+                                        <a href="{{ asset('storage/'.$certificate->file_path) }}" target="_blank"
+                                            class="shrink-0 text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">{{ __('Download') }}</a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Instructors -->

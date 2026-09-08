@@ -18,10 +18,17 @@ use App\Http\Controllers\Participant\TrainingCatalogController;
 use App\Http\Controllers\Participant\TrainingNeedsAssessmentController;
 use App\Http\Controllers\Participant\TrainingRequestController;
 use App\Http\Controllers\PublicTrainingCatalogController;
+use App\Http\Controllers\PublicTrainingRequestController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicTrainingCatalogController::class, 'index'])->name('home');
+
+// Public, unauthenticated Technical Assistance request portal for LGUs/NGAs —
+// no login required. See PublicTrainingRequestController for the full flow.
+Route::get('/request-technical-assistance', [PublicTrainingRequestController::class, 'create'])->name('public.training-requests.create');
+Route::post('/request-technical-assistance', [PublicTrainingRequestController::class, 'store'])->name('public.training-requests.store');
+Route::get('/request-technical-assistance/submitted', [PublicTrainingRequestController::class, 'submitted'])->name('public.training-requests.submitted');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])

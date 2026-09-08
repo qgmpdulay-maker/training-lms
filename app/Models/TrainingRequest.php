@@ -14,7 +14,7 @@ use Illuminate\Support\Collection;
     'training_slug', 'training_title', 'category', 'requesting_agency', 'contact_person',
     'contact_number', 'contact_email', 'number_of_participants', 'preferred_date',
     'venue', 'purpose', 'tna_completed', 'tna_file_path', 'logistics_acknowledged',
-    'signature_name', 'signed_letter_path', 'lgu', 'region', 'certificate_code', 'certificate_remarks',
+    'signature_name', 'signed_letter_path', 'lgu', 'region', 'certificate_remarks',
     'status', 'agency_type', 'latitude', 'longitude', 'teams_organized',
     'graduates_male', 'graduates_female',
     'graduates_age_18_30', 'graduates_age_31_45', 'graduates_age_46_59', 'graduates_age_60_up',
@@ -128,6 +128,15 @@ class TrainingRequest extends Model
     public function instructors(): BelongsToMany
     {
         return $this->belongsToMany(Instructor::class)->withTimestamps();
+    }
+
+    /**
+     * Per-participant certificates issued once this training is marked
+     * Completed — see CertificateService::generateForTrainingRequest().
+     */
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(Certificate::class);
     }
 
     /**

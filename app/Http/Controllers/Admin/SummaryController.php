@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Certificate;
 use App\Models\Instructor;
 use App\Models\ParticipantEvaluation;
 use App\Models\TrainingRequest;
 use App\Models\User;
+use App\Services\CertificateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -79,14 +81,14 @@ class SummaryController extends Controller
             : null;
 
         $participants?->getCollection()->transform(function (User $participant) {
-            // Every training that left this participant with a certificate —
+            // Every certificate this participant has ever earned —
             // deliberately not region-scoped: a participant who transferred
             // regions (e.g. trained in Region III, now registered under NCR)
             // keeps every certificate they've earned, and their new region's
             // admin should still be able to view all of them here.
-            $participant->certificates = TrainingRequest::involvingUser($participant)
-                ->where(fn ($q) => $q->whereNotNull('certificate_file_path')->orWhereNotNull('certificate_remarks'))
-                ->orderByDesc('preferred_date')
+            $participant->certificates = Certificate::where('user_id', $participant->id)
+                ->with('trainingRequest')
+                ->orderByDesc('issued_on')
                 ->get();
 
             return $participant;
@@ -172,7 +174,7 @@ class SummaryController extends Controller
         // Regional admins may only manage training requests tagged to their own region.
         abort_if($request->user()->isAdmin() && $trainingRequest->region !== $request->user()->region, 403);
 
-        $trainingRequest->load('participants', 'instructors', 'participantEvaluations.user');
+        $trainingRequest->load('participants', 'instructors', 'participantEvaluations.user', 'certificates.user');
 
         // Regional admins pick from their own roster; Super Admin sees the
         // roster for whatever region this request is tagged to (or everyone,
@@ -211,7 +213,6 @@ class SummaryController extends Controller
             'category' => ['nullable', 'string', 'in:'.implode(',', array_unique(array_filter([...array_keys(TrainingRequest::$categoryLabels), $trainingRequest->category])))],
             'agency_type' => ['nullable', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$agencyTypeLabels))],
             'teams_organized' => ['nullable', 'integer', 'min:0'],
-            'certificate_code' => ['nullable', 'string', 'max:255'],
             'certificate_remarks' => ['nullable', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$certificateRemarksLabels))],
             'instructor_ids' => ['nullable', 'array'],
             'instructor_ids.*' => ['integer', 'exists:instructors,id'],
@@ -227,8 +228,12 @@ class SummaryController extends Controller
 
         // Graduate sex/age counts always reflect the actual participant roster
         // for a completed training — never hand-typed, never out of sync.
+        // Certificates are generated the same moment — one PDF per
+        // participant, each with its own code — and only for participants
+        // who don't already have one, so this stays safe to re-save.
         if ($trainingRequest->status === TrainingRequest::STATUS_COMPLETED) {
             $trainingRequest->syncGraduateCountsFromParticipants();
+            app(CertificateService::class)->generateForTrainingRequest($trainingRequest);
         }
 
         return Redirect::route('admin.summary')->with('status', "Changes saved for {$trainingRequest->training_title}.");

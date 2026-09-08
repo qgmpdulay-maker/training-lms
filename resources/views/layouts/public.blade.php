@@ -36,6 +36,10 @@
                                 class="inline-flex items-center rounded-2xl px-4 py-2 text-sm font-semibold text-[#152A4E] hover:bg-white/40 transition">
                                 {{ __('Browse Trainings') }}
                             </a>
+                            <a href="{{ route('public.training-requests.create') }}"
+                                class="inline-flex items-center rounded-2xl px-4 py-2 text-sm font-semibold text-[#152A4E] hover:bg-white/40 transition">
+                                {{ __('Request Technical Assistance') }}
+                            </a>
                             @auth
                                 <a href="{{ route(Auth::user()->isParticipant() ? 'dashboard' : 'admin.dashboard') }}"
                                     class="inline-flex items-center rounded-2xl bg-[#152A4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152A4E]/90 transition">

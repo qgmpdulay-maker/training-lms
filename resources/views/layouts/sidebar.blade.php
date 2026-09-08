@@ -82,6 +82,12 @@
                 </x-slot:icon>
                 {{ __('Calendar') }}
             </x-sidebar-nav-link>
+            <x-sidebar-nav-link :href="route('certificates.index')" :active="request()->routeIs('certificates.*')">
+                <x-slot:icon>
+                    <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </x-slot:icon>
+                {{ __('My Certificates') }}
+            </x-sidebar-nav-link>
 
             <p class="px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-white/40" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ __('Training') }}</p>
 

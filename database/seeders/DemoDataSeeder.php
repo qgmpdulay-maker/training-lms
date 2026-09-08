@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Instructor;
 use App\Models\TrainingRequest;
 use App\Models\User;
+use App\Services\CertificateService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -79,7 +80,6 @@ class DemoDataSeeder extends Seeder
         ];
 
         $password = Hash::make('password');
-        $certificateCodeSeq = 1;
 
         foreach (self::PARTICIPANTS as $i => $person) {
             $slug = str($person['name'])->slug();
@@ -127,11 +127,14 @@ class DemoDataSeeder extends Seeder
 
                 if ($status === TrainingRequest::STATUS_COMPLETED && random_int(1, 100) <= 65) {
                     $trainingRequest->lgu = self::REGION_III_LGUS[array_rand(self::REGION_III_LGUS)];
-                    $trainingRequest->certificate_code = 'OCD-CDTI-2026-'.str_pad((string) $certificateCodeSeq++, 4, '0', STR_PAD_LEFT);
                     $trainingRequest->certificate_remarks = self::CERTIFICATE_REMARKS[array_rand(self::CERTIFICATE_REMARKS)];
                 }
 
                 $trainingRequest->save();
+
+                if ($trainingRequest->status === TrainingRequest::STATUS_COMPLETED) {
+                    app(CertificateService::class)->generateForTrainingRequest($trainingRequest);
+                }
             }
 
             // About half the participants have taken the Training Needs Assessment.

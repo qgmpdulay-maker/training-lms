@@ -15,7 +15,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                 <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ $trainingRequest->training_title }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                    {{ $trainingRequest->user->name }} &middot; {{ $trainingRequest->preferred_date->format('F j, Y') }}
+                    {{ $trainingRequest->user->name ?? $trainingRequest->requesting_agency }} &middot; {{ $trainingRequest->preferred_date->format('F j, Y') }}
                 </p>
 
                 <form method="POST" action="{{ route('admin.evaluations.update', $trainingRequest) }}" class="space-y-8">

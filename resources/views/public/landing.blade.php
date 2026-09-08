@@ -28,8 +28,18 @@
                     {{ __('Disaster Risk Reduction & Management Trainings') }}
                 </h1>
                 <p class="text-sm text-white/70 max-w-2xl mx-auto mt-5">
-                    {{ __('Browse the trainings currently being offered. Log in or register as a participant to request a training and track your progress.') }}
+                    {{ __('Browse the trainings currently being offered. Log in or register as a participant to join a training and track your progress.') }}
                 </p>
+
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
+                    <a href="{{ route('public.training-requests.create') }}"
+                        class="inline-flex items-center justify-center gap-2 bg-[#E2762D] hover:bg-[#c9631f] text-white text-sm font-semibold rounded-lg px-6 py-3 transition">
+                        {{ __('LGU/NGA: Request Technical Assistance') }}
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </a>
+                </div>
             </div>
         </section>
 

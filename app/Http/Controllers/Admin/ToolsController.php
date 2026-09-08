@@ -69,13 +69,8 @@ class ToolsController extends Controller
         abort_if($user->isAdmin() && $trainingRequest->region !== $user->region, 403);
 
         $validated = $request->validate([
-            'certificate_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'atar_file' => ['nullable', 'file', 'mimes:pdf', 'max:5120'],
         ]);
-
-        if ($request->hasFile('certificate_file')) {
-            $trainingRequest->certificate_file_path = $validated['certificate_file']->store('certificates', 'public');
-        }
 
         if ($request->hasFile('atar_file')) {
             $trainingRequest->atar_file_path = $validated['atar_file']->store('atar', 'public');

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Instructor;
 use App\Models\TrainingRequest;
 use App\Models\User;
+use App\Services\CertificateService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -283,7 +284,6 @@ class DemoEnrichmentSeeder extends Seeder
 
         if ($data['cert']) {
             $trainingRequest->lgu = $data['agency'];
-            $trainingRequest->certificate_code = 'OCD-CDTI-2026-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
             $trainingRequest->certificate_remarks = TrainingRequest::CERTIFICATE_REMARKS_COMPLETION;
         }
 
@@ -292,6 +292,10 @@ class DemoEnrichmentSeeder extends Seeder
         $trainingRequest->save();
 
         $trainingRequest->participants()->sync($data['participants']->pluck('id'));
+
+        if ($data['cert']) {
+            app(CertificateService::class)->generateForTrainingRequest($trainingRequest);
+        }
 
         return $trainingRequest;
     }

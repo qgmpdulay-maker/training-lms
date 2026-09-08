@@ -267,7 +267,6 @@ class NationwideDemoSeeder extends Seeder
                 'logistics_acknowledged' => true,
                 'signature_name' => fake()->name(),
                 'status' => $status,
-                'certificate_code' => $isCompleted && fake()->boolean(60) ? 'OCD-CDTI-'.$date->year.'-'.str_pad((string) $nextId, 5, '0', STR_PAD_LEFT) : null,
                 'certificate_remarks' => $isCompleted && fake()->boolean(60) ? fake()->randomElement(['completion', 'participation']) : null,
                 'created_at' => now(),
                 'updated_at' => now(),
