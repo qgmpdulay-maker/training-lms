@@ -103,6 +103,12 @@
                             <select id="category" name="category"
                                 class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#152A4E] focus:ring-[#152A4E]">
                                 <option value="">{{ __('No category') }}</option>
+                                {{-- Preserves a legacy value (e.g. APB) that no longer appears in
+                                     $categoryLabels, so saving the form without touching this field
+                                     doesn't silently blank out historical categorization. --}}
+                                @if ($record->category && ! array_key_exists($record->category, $categoryLabels))
+                                    <option value="{{ $record->category }}" selected>{{ $record->categoryLabel() }} ({{ __('legacy') }})</option>
+                                @endif
                                 @foreach ($categoryLabels as $value => $label)
                                     <option value="{{ $value }}" @selected(old('category', $record->category) === $value)>{{ $label }}</option>
                                 @endforeach

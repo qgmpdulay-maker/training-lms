@@ -20,10 +20,7 @@
                     @php $recordParticipants = $record->effectiveParticipants(); @endphp
                     <tr>
                         <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $record->training_title }}</td>
-                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
-                            {{ $record->requesting_agency }}
-                            <div class="text-xs text-gray-400">{{ $record->contact_person }} &middot; {{ $record->contact_number }}</div>
-                        </td>
+                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $record->requesting_agency }}</td>
                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
                             @if ($recordParticipants->isEmpty())
                                 <span class="text-gray-400">{{ __('None on file') }}</span>

@@ -182,7 +182,7 @@
 
         <div class="flex items-center gap-4 pt-2">
             <button type="submit"
-                class="bg-[#152A4E] hover:bg-[#1E3A66] text-white text-sm font-semibold rounded-lg px-6 py-3 transition">
+                class="bg-[#152A4E]/70 hover:bg-[#152A4E]/85 backdrop-blur-xl backdrop-saturate-150 border border-white/10 text-white text-sm font-semibold rounded-lg px-6 py-3 shadow-lg transition">
                 {{ __('Save Changes') }}
             </button>
 

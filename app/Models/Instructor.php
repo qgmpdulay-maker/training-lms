@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['name', 'email', 'phone', 'sex', 'position', 'training_type', 'specialization', 'certification', 'certificate_code', 'deployment', 'deployment_date', 'deployment_role', 'agency_organization', 'lgu', 'region', 'rating', 'complaints'])]
+#[Fillable(['name', 'email', 'phone', 'sex', 'photo_path', 'position', 'training_type', 'specialization', 'certification', 'certificate_code', 'certificate_file_path', 'deployment', 'deployment_date', 'deployment_role', 'agency_organization', 'lgu', 'region', 'rating', 'complaints'])]
 class Instructor extends Model
 {
     protected function casts(): array

@@ -47,6 +47,14 @@
             function applyResponse(html, url) {
                 target.innerHTML = html;
                 window.history.replaceState({}, '', url);
+
+                // Content swapped in via innerHTML bypasses Alpine's mutation
+                // observer in some cases (e.g. the certificate dropdown on the
+                // Summary tab's participants table), so any x-data in the new
+                // markup needs to be initialized explicitly.
+                if (window.Alpine) {
+                    window.Alpine.initTree(target);
+                }
             }
 
             function request(url) {

@@ -17,76 +17,23 @@
             @endif
 
             @if (Auth::user()->isSuperAdmin())
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Add Holiday / Suspension') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Nationwide holidays and regional class/work suspensions you add here show up on every admin\'s calendar automatically.') }}</p>
-
-                    <form method="POST" action="{{ route('admin.calendar-events.store') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        @csrf
-
-                        <div class="sm:col-span-2 lg:col-span-2">
-                            <x-input-label for="title" :value="__('Title')" />
-                            <x-text-input id="title" name="title" type="text" class="mt-1 block w-full" required placeholder="{{ __('e.g. National Heroes Day') }}" value="{{ old('title') }}" />
-                            <x-input-error :messages="$errors->get('title')" class="mt-1" />
-                        </div>
-
-                        <div>
-                            <x-input-label for="type" :value="__('Type')" />
-                            <select id="type" name="type"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                @foreach ($eventTypeLabels as $value => $label)
-                                    <option value="{{ $value }}" @selected(old('type') === $value)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            <x-input-error :messages="$errors->get('type')" class="mt-1" />
-                        </div>
-
-                        <div>
-                            <x-input-label for="region" :value="__('Region')" />
-                            <select id="region" name="region"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                <option value="">{{ __('All Regions (Nationwide)') }}</option>
-                                @foreach ($regions as $regionOption)
-                                    <option value="{{ $regionOption }}" @selected(old('region') === $regionOption)>{{ $regionOption }}</option>
-                                @endforeach
-                            </select>
-                            <x-input-error :messages="$errors->get('region')" class="mt-1" />
-                        </div>
-
-                        <div>
-                            <x-input-label for="date" :value="__('Date')" />
-                            <x-text-input id="date" name="date" type="date" class="mt-1 block w-full" required value="{{ old('date') }}" />
-                            <x-input-error :messages="$errors->get('date')" class="mt-1" />
-                        </div>
-
-                        <div>
-                            <x-input-label for="end_date" :value="__('End Date (if multi-day)')" />
-                            <x-text-input id="end_date" name="end_date" type="date" class="mt-1 block w-full" value="{{ old('end_date') }}" />
-                            <x-input-error :messages="$errors->get('end_date')" class="mt-1" />
-                        </div>
-
-                        <div class="sm:col-span-2 lg:col-span-2">
-                            <x-input-label for="description" :value="__('Notes (optional)')" />
-                            <x-text-input id="description" name="description" type="text" class="mt-1 block w-full" value="{{ old('description') }}" />
-                            <x-input-error :messages="$errors->get('description')" class="mt-1" />
-                        </div>
-
-                        <div class="sm:col-span-2 lg:col-span-4 flex justify-end">
-                            <button type="submit"
-                                class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition">
-                                {{ __('Add to Calendar') }}
-                            </button>
-                        </div>
-                    </form>
+                <div class="flex justify-end">
+                    <a href="{{ route('admin.trainings.create') }}"
+                        class="inline-flex items-center gap-2 bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        {{ __('Schedule a Training') }}
+                    </a>
                 </div>
             @endif
 
             @if ($filters !== null)
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                     <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Filter') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Narrow the agenda below by region, training type, or category (APB/TA).') }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Narrow the agenda below by region or a search for a specific training/agency.') }}</p>
 
-                    <form method="GET" action="{{ route('admin.calendar') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <form method="GET" action="{{ route('admin.calendar') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
                             <x-input-label for="region" :value="__('Region')" />
                             <select id="region" name="region" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">
@@ -97,28 +44,14 @@
                             </select>
                         </div>
                         <div>
-                            <x-input-label for="training_title" :value="__('Training Type')" />
-                            <select id="training_title" name="training_title" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                <option value="">{{ __('All Training Types') }}</option>
-                                @foreach ($trainingTitles as $title)
-                                    <option value="{{ $title }}" @selected($filters['training_title'] === $title)>{{ $title }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <x-input-label for="category" :value="__('Category')" />
-                            <select id="category" name="category" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                <option value="">{{ __('APB and TA') }}</option>
-                                @foreach ($categoryLabels as $value => $label)
-                                    <option value="{{ $value }}" @selected($filters['category'] === $value)>{{ $label }}</option>
-                                @endforeach
-                            </select>
+                            <x-input-label for="search" :value="__('Search')" />
+                            <x-text-input id="search" name="search" type="text" class="mt-1 block w-full text-sm" placeholder="{{ __('e.g. PCO, TA for LGU/NGA') }}" value="{{ $search }}" />
                         </div>
                         <div class="flex items-end gap-3">
                             <button type="submit" class="w-full inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-4 py-2 hover:bg-[#1E3A66] transition">
                                 {{ __('Apply Filters') }}
                             </button>
-                            @if ($filters['region'] || $filters['category'] || $filters['training_title'])
+                            @if ($filters['region'] || $search !== '')
                                 <a href="{{ route('admin.calendar') }}" class="shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
                                     {{ __('Reset') }}
                                 </a>
@@ -127,17 +60,30 @@
                     </form>
                 </div>
             @else
-                <div class="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3">
-                    <svg class="w-5 h-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                    </svg>
-                    <span>{{ __('Showing training requests tagged to your region (:region), color-coded by category, plus nationwide holidays and any :region-specific suspensions set by Central Office. Tag a request\'s region and category from the Summary tab to have it appear here.', ['region' => Auth::user()->region]) }}</span>
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 sm:p-5">
+                    <form method="GET" action="{{ route('admin.calendar') }}" class="flex items-center gap-3">
+                        <x-input-label for="search" :value="__('Search')" class="sr-only" />
+                        <x-text-input id="search" name="search" type="text" class="block w-full text-sm" placeholder="{{ __('Search this region\'s trainings or agencies (e.g. PCO, TA for LGU/NGA)') }}" value="{{ $search }}" />
+                        <button type="submit" class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-4 py-2 hover:bg-[#1E3A66] transition">
+                            {{ __('Search') }}
+                        </button>
+                        @if ($search !== '')
+                            <a href="{{ route('admin.calendar') }}" class="shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                                {{ __('Reset') }}
+                            </a>
+                        @endif
+                    </form>
+                    <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-3">
+                        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                        </svg>
+                        <span>{{ __(':region agenda — trainings, holidays, and suspensions.', ['region' => Auth::user()->region]) }}</span>
+                    </div>
                 </div>
             @endif
 
             <div class="flex items-center gap-4 flex-wrap text-xs font-medium text-gray-500 dark:text-gray-400">
-                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-blue-400"></span>{{ __('APB') }}</span>
-                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-orange-400"></span>{{ __('Technical Assistance') }}</span>
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-orange-400"></span>{{ __('TA') }}</span>
                 <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-green-400"></span>{{ __('Holiday') }}</span>
                 <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>{{ __('Suspension') }}</span>
             </div>
@@ -174,16 +120,19 @@
                             <ul class="space-y-2">
                                 @foreach ($entries as $entry)
                                     @if ($entry->kind === 'training')
-                                        @php $request = $entry->model; @endphp
+                                        @php
+                                            $request = $entry->model;
+                                            $categoryShort = ['apb' => 'APB', 'ta' => 'TA'];
+                                        @endphp
                                         <li class="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2">
                                             <div class="min-w-0">
                                                 <p class="font-semibold text-[#152A4E] dark:text-white text-sm truncate">{{ $request->training_title }}</p>
                                                 <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                                    {{ $request->preferred_date->format('F j, Y') }} &middot; {{ $request->requesting_agency }} &middot; {{ $request->venue ?? __('Venue TBD') }}
+                                                    {{ $request->preferred_date->format('M j, Y') }} &middot; {{ $request->venue ?? __('Venue TBD') }}
                                                 </p>
                                             </div>
                                             <span class="shrink-0 inline-flex items-center text-xs font-semibold rounded-full border px-2.5 py-1 {{ $categoryColors[$request->category] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600' }}">
-                                                {{ $request->categoryLabel() ?? __('Uncategorized') }}
+                                                {{ $categoryShort[$request->category] ?? '—' }}
                                             </span>
                                         </li>
                                     @else
@@ -192,11 +141,13 @@
                                             <div class="min-w-0">
                                                 <p class="font-semibold text-[#152A4E] dark:text-white text-sm truncate">{{ $event->title }}</p>
                                                 <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                                    {{ $event->date->format('F j, Y') }}
+                                                    {{ $event->date->format('M j, Y') }}
                                                     @if ($event->spansMultipleDays())
-                                                        &ndash; {{ $event->end_date->format('F j, Y') }}
+                                                        &ndash; {{ $event->end_date->format('M j, Y') }}
                                                     @endif
-                                                    &middot; {{ $event->regionLabel() }}
+                                                    @if (Auth::user()->isSuperAdmin())
+                                                        &middot; {{ $event->regionLabel() }}
+                                                    @endif
                                                     @if ($event->description)
                                                         &middot; {{ $event->description }}
                                                     @endif

@@ -35,6 +35,11 @@ class TrainingRequest extends Model
 
     const CERTIFICATE_REMARKS_PARTICIPATION = 'participation';
 
+    // Kept only so historical records tagged APB (from before OCD confirmed
+    // every training they run is Technical Assistance) still display and
+    // validate correctly — it's deliberately left out of $categoryLabels
+    // below so nothing new can be tagged APB. See categoryLabel() and
+    // admin/summary-edit.blade.php for how legacy values are preserved.
     const CATEGORY_APB = 'apb';
 
     const CATEGORY_TA = 'ta';
@@ -63,7 +68,6 @@ class TrainingRequest extends Model
     ];
 
     public static array $categoryLabels = [
-        self::CATEGORY_APB => 'APB',
         self::CATEGORY_TA => 'Technical Assistance',
     ];
 
@@ -146,7 +150,10 @@ class TrainingRequest extends Model
 
     public function categoryLabel(): ?string
     {
-        return self::$categoryLabels[$this->category] ?? null;
+        // Falls back to the raw value (uppercased) for legacy categories like
+        // APB that no longer appear in $categoryLabels, so old records still
+        // display correctly instead of showing nothing.
+        return self::$categoryLabels[$this->category] ?? ($this->category ? strtoupper($this->category) : null);
     }
 
     public function getGraduatesAttribute(): int
@@ -177,7 +184,7 @@ class TrainingRequest extends Model
     }
 
     /**
-     * @param  array{regions?: array, category?: string, agency_type?: string, from?: string, until?: string}|null  $filters
+     * @param  array{regions?: array, category?: string, agency_type?: string, training_title?: string, from?: string, until?: string}|null  $filters
      */
     public function scopeFilteredBy($query, ?array $filters)
     {
@@ -187,6 +194,7 @@ class TrainingRequest extends Model
             ->when(! empty($filters['regions']), fn ($q) => $q->whereIn('region', $filters['regions']))
             ->when(! empty($filters['category']), fn ($q) => $q->where('category', $filters['category']))
             ->when(! empty($filters['agency_type']), fn ($q) => $q->where('agency_type', $filters['agency_type']))
+            ->when(! empty($filters['training_title']), fn ($q) => $q->where('training_title', $filters['training_title']))
             ->when(! empty($filters['from']), fn ($q) => $q->whereDate('preferred_date', '>=', $filters['from']))
             ->when(! empty($filters['until']), fn ($q) => $q->whereDate('preferred_date', '<=', $filters['until']));
     }

@@ -45,265 +45,65 @@
                 </div>
             @endif
 
-            <!-- Charts -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                <!-- Training Status (Accomplished vs Pending) -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Training Status') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Share of training requests completed vs. still in progress.') }}</p>
-
-                    <div class="flex items-center gap-8">
-                        <div class="relative w-40 h-40 shrink-0">
-                            <svg viewBox="0 0 100 100" class="w-40 h-40 -rotate-90">
-                                @if ($statusDonut['total'] === 0)
-                                    <circle cx="50" cy="50" r="{{ $statusDonut['radius'] }}" fill="none" stroke="#e1e0d9" stroke-width="14" />
-                                @else
-                                    @foreach ($statusDonut['segments'] as $segment)
-                                        @if ($segment['value'] > 0)
-                                            <circle cx="50" cy="50" r="{{ $statusDonut['radius'] }}" fill="none"
-                                                stroke="{{ $segment['color'] }}" stroke-width="14"
-                                                stroke-dasharray="{{ $segment['dasharray'] }}"
-                                                stroke-dashoffset="{{ $segment['dashoffset'] }}">
-                                                <title>{{ $segment['label'] }}: {{ $segment['value'] }} ({{ $segment['percent'] }}%)</title>
-                                            </circle>
-                                        @endif
-                                    @endforeach
-                                @endif
-                            </svg>
-                            <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                <span class="text-2xl font-bold text-[#152A4E] dark:text-white">{{ $statusDonut['total'] }}</span>
-                                <span class="text-[11px] text-gray-400 uppercase tracking-wide">{{ __('Total') }}</span>
-                            </div>
-                        </div>
-
-                        <ul class="space-y-2.5 text-sm">
-                            @if ($statusDonut['total'] === 0)
-                                <li class="text-gray-400">{{ __('No training requests on record yet.') }}</li>
-                            @else
-                                @foreach ($statusDonut['segments'] as $segment)
-                                    <li class="flex items-center gap-2">
-                                        <span class="h-2.5 w-2.5 rounded-full shrink-0" style="background-color: {{ $segment['color'] }};"></span>
-                                        <span class="text-gray-600 dark:text-gray-300">{{ $segment['label'] }}</span>
-                                        <span class="font-semibold text-[#152A4E] dark:text-white tabular-nums">{{ $segment['value'] }}</span>
-                                        <span class="text-gray-400 text-xs">({{ $segment['percent'] }}%)</span>
-                                    </li>
-                                @endforeach
-                            @endif
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Requests by Category (APB vs Technical Assistance) -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Requests by Category') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Share of training requests that are APB vs. Technical Assistance.') }}</p>
-
-                    <div class="flex items-center gap-8">
-                        <div class="relative w-40 h-40 shrink-0">
-                            <svg viewBox="0 0 100 100" class="w-40 h-40 -rotate-90">
-                                @if ($categoryDonut['total'] === 0)
-                                    <circle cx="50" cy="50" r="{{ $categoryDonut['radius'] }}" fill="none" stroke="#e1e0d9" stroke-width="14" />
-                                @else
-                                    @foreach ($categoryDonut['segments'] as $segment)
-                                        @if ($segment['value'] > 0)
-                                            <circle cx="50" cy="50" r="{{ $categoryDonut['radius'] }}" fill="none"
-                                                stroke="{{ $segment['color'] }}" stroke-width="14"
-                                                stroke-dasharray="{{ $segment['dasharray'] }}"
-                                                stroke-dashoffset="{{ $segment['dashoffset'] }}">
-                                                <title>{{ $segment['label'] }}: {{ $segment['value'] }} ({{ $segment['percent'] }}%)</title>
-                                            </circle>
-                                        @endif
-                                    @endforeach
-                                @endif
-                            </svg>
-                            <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                <span class="text-2xl font-bold text-[#152A4E] dark:text-white">{{ $categoryDonut['total'] }}</span>
-                                <span class="text-[11px] text-gray-400 uppercase tracking-wide">{{ __('Total') }}</span>
-                            </div>
-                        </div>
-
-                        <ul class="space-y-2.5 text-sm">
-                            @if ($categoryDonut['total'] === 0)
-                                <li class="text-gray-400">{{ __('No training requests on record yet.') }}</li>
-                            @else
-                                @foreach ($categoryDonut['segments'] as $segment)
-                                    <li class="flex items-center gap-2">
-                                        <span class="h-2.5 w-2.5 rounded-full shrink-0" style="background-color: {{ $segment['color'] }};"></span>
-                                        <span class="text-gray-600 dark:text-gray-300">{{ $segment['label'] }}</span>
-                                        <span class="font-semibold text-[#152A4E] dark:text-white tabular-nums">{{ $segment['value'] }}</span>
-                                        <span class="text-gray-400 text-xs">({{ $segment['percent'] }}%)</span>
-                                    </li>
-                                @endforeach
-                            @endif
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Technical Assistance Accomplishment -->
-                <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Technical Assistance Accomplishment') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Target vs. graduates accomplished, per Technical Assistance training type.') }}</p>
-
-                    @if (empty($taAccomplishment))
-                        <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
-                            {{ __('No Technical Assistance training types with a target or completed request yet.') }}
-                        </div>
-                    @else
-                        <div x-data="{ activeTa: @js(array_key_first($taAccomplishment)) }">
-                            <div class="flex items-center gap-1 overflow-x-auto bg-gray-100 dark:bg-gray-900/40 rounded-xl p-1.5">
-                                @foreach ($taAccomplishment as $title => $row)
-                                    <button type="button" @click="activeTa = @js($title)"
-                                        :class="activeTa === @js($title)
-                                            ? 'bg-white dark:bg-gray-700 text-[#152A4E] dark:text-white shadow-sm'
-                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
-                                        class="shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition whitespace-nowrap">
-                                        {{ $title }}
-                                        <span :class="activeTa === @js($title)
-                                                ? 'bg-[#152A4E]/10 text-[#152A4E] dark:bg-white/15 dark:text-white px-1.5 py-0.5 rounded-full text-xs font-semibold'
-                                                : 'text-gray-400 dark:text-gray-500 text-xs font-normal'">
-                                            {{ $row['accomplished'] }}
-                                        </span>
-                                    </button>
-                                @endforeach
-                            </div>
-
-                            @foreach ($taAccomplishment as $title => $row)
-                                <div x-show="activeTa === @js($title)" x-cloak class="mt-5">
-                                    <div class="flex items-center justify-between gap-3 flex-wrap">
-                                        <div>
-                                            <p class="text-2xl font-bold text-[#152A4E] dark:text-white tabular-nums">{{ $row['accomplished'] }}</p>
-                                            <p class="text-xs text-gray-400">
-                                                {{ $row['target'] > 0 ? __(':target target', ['target' => $row['target']]) : __('No target set') }}
-                                            </p>
-                                        </div>
-                                        @if (Auth::user()->isSuperAdmin())
-                                            <form method="POST" action="{{ route('admin.tools.ta-targets') }}" class="flex items-center gap-2">
-                                                @csrf
-                                                <input type="hidden" name="training_title" value="{{ $title }}">
-                                                <input type="hidden" name="region" value="{{ $region }}">
-                                                <label class="text-xs text-gray-400" for="target-{{ Str::slug($title) }}">
-                                                    {{ __('Target (:region):', ['region' => $region ?: __('All Regions')]) }}
-                                                </label>
-                                                <input id="target-{{ Str::slug($title) }}" type="number" name="target" min="0" value="{{ $row['target'] }}"
-                                                    class="w-24 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                                <button type="submit"
-                                                    class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition">
-                                                    {{ __('Save') }}
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                    <div class="relative h-4 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden mt-3">
-                                        <div class="h-full rounded-full bg-[#152A4E] dark:bg-[#E2762D]" style="width: {{ min($row['accomplished_percent'], 100) }}%;"></div>
-                                        @if ($row['target'] > 0)
-                                            <div class="absolute inset-y-0 w-0.5 bg-gray-500 dark:bg-gray-300" style="left: {{ min($row['target_percent'], 100) }}%;" title="{{ __('Target') }}: {{ $row['target'] }}"></div>
-                                        @endif
-                                    </div>
-                                    <div class="flex items-center gap-4 mt-2 text-[11px] text-gray-400">
-                                        <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-[#152A4E] dark:bg-[#E2762D]"></span>{{ __('Accomplished') }}</span>
-                                        @if ($row['target'] > 0)
-                                            <span class="inline-flex items-center gap-1.5"><span class="h-2 w-0.5 bg-gray-500 dark:bg-gray-300"></span>{{ __('Target') }}</span>
-                                        @endif
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-
-            </div>
-
-            <!-- Graduates per training -->
+            <!-- ATAR -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates per Training') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Auto-generated from completed training requests, broken down by year.') }}</p>
-
-                @if ($graduatesByTraining->isEmpty())
-                    <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
-                        {{ __('No completed trainings on record yet.') }}
+                <div class="flex flex-wrap items-start justify-between gap-4 mb-5">
+                    <div>
+                        <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('ATAR') }}</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            {{ __('Blank template, then upload each completed ATAR below.') }}
+                        </p>
                     </div>
-                @else
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-sm">
-                            <thead>
-                                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                    <th class="py-2 pr-4">{{ __('Training') }}</th>
-                                    <th class="py-2 pr-4">{{ __('Total Graduates') }}</th>
-                                    <th class="py-2 pr-4">{{ __('By Year') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                @foreach ($graduatesByTraining as $trainingTitle => $data)
-                                    <tr>
-                                        <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $trainingTitle }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $data['total'] }}</td>
-                                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
-                                            @foreach ($data['byYear'] as $year => $count)
-                                                <span class="inline-flex items-center text-xs font-semibold rounded-full border px-2 py-0.5 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 mr-1">
-                                                    {{ $year }}: {{ $count }}
-                                                </span>
-                                            @endforeach
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endif
-            </div>
-
-            <!-- Certificates & ATAR -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <div class="flex flex-wrap items-start justify-between gap-4 mb-1">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">{{ __('Certificates & ATAR') }}</h2>
                     <div class="flex items-center gap-2 shrink-0">
                         <a href="{{ route('admin.tools.atar-template') }}" target="_blank"
-                            class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-md border border-gray-200 dark:border-gray-600 text-[#152A4E] dark:text-white px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
-                            {{ __('Download ATAR Template') }}
-                        </a>
-                        <a href="{{ route('admin.tools.certificate-template') }}" target="_blank"
-                            class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-md border border-gray-200 dark:border-gray-600 text-[#152A4E] dark:text-white px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
-                            {{ __('Download Certificate Template') }}
+                            class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border border-gray-200 dark:border-gray-600 text-[#152A4E] dark:text-white px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
+                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 12m0 0l4.5-4.5M12 12V3" />
+                            </svg>
+                            {{ __('ATAR Template') }}
                         </a>
                     </div>
                 </div>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                    {{ __("Download blank ATAR and certificate templates above (generic placeholders pending OCD's branded files), then upload a completed certificate (shown on the participant's own dashboard) and/or ATAR per record below. Files are stored on the app's own storage, not Google Drive.") }}
-                </p>
+
+                <div class="mb-5">
+                    <form data-live-form data-live-section="files" data-live-target="files-section"
+                        method="GET" action="{{ route('admin.tools') }}#files-section" class="w-full">
+                        <input type="hidden" name="_section" value="files">
+                        @if ($region)
+                            <input type="hidden" name="region" value="{{ $region }}">
+                        @endif
+                        <div class="flex items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
+                            <div class="relative flex-1">
+                                <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                                <input type="text" name="files_q" value="{{ $filesSearch }}" placeholder="{{ __('Search training, venue, LGU, or participant…') }}"
+                                    class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
+                            </div>
+                            <button type="submit"
+                                class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                                {{ __('Search') }}
+                            </button>
+                        </div>
+                    </form>
+                    @if ($filesSearch !== '')
+                        <a href="{{ route('admin.tools', $region ? ['region' => $region] : []) }}#files-section"
+                            class="inline-block mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                            {{ __('Reset search') }}
+                        </a>
+                    @endif
+                </div>
 
                 <div id="files-section">
                     @include('admin.partials.files-table')
                 </div>
             </div>
 
-            <script>
-                document.addEventListener('DOMContentLoaded', function () {
-                    const container = document.getElementById('files-section');
-
-                    container.addEventListener('click', function (event) {
-                        const link = event.target.closest('.files-pagination a');
-                        if (!link || !link.href) {
-                            return;
-                        }
-
-                        event.preventDefault();
-
-                        fetch(link.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                            .then((response) => response.text())
-                            .then((html) => {
-                                container.innerHTML = html;
-                                window.history.replaceState({}, '', link.href);
-                            });
-                    });
-                });
-            </script>
-
             <!-- Evaluation Computation (L1 / L2) -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                 <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Evaluation Computation (L1 / L2)') }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                    {{ __('Combines the admin-entered evaluation (use "Add Evaluation" in the table above) with what participants submitted themselves. Pick a training below, then expand a session to see its L1 and L2 results.') }}
+                    {{ __('Combines the admin-entered evaluation with what participants submitted themselves. Pick a training below, then expand a session to see its L1 and L2 results.') }}
                 </p>
 
                 @if (empty($evaluationsByTraining))
@@ -364,76 +164,105 @@
                                                 </div>
                                             </button>
 
-                                            <div x-show="open" x-cloak class="px-4 pb-4 space-y-5 bg-gray-50/60 dark:bg-gray-900/20">
-                                                @if ($session['modules']->isNotEmpty())
-                                                    <div>
-                                                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2 pt-1">{{ __('L1 — Module & Trainer Ratings') }}</p>
-                                                        <div class="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                                            <table class="min-w-full text-sm">
-                                                                <thead>
-                                                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                                                        <th class="py-2 pl-4 pr-4">{{ __('Module') }}</th>
-                                                                        <th class="py-2 pr-4">{{ __('Module Rating') }}</th>
-                                                                        <th class="py-2 pr-4">{{ __('Trainer Rating') }}</th>
-                                                                        <th class="py-2 pr-4">{{ __('Participant Avg') }}</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                                                    @foreach ($session['modules'] as $module)
-                                                                        <tr>
-                                                                            <td class="py-2 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $module['module'] }}</td>
-                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $module['module_rating'] ?? '—' }}</td>
-                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $module['trainer_rating'] ?? '—' }}</td>
-                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">
-                                                                                {{ $module['participant_rating'] ?? '—' }}
-                                                                                @if ($module['participant_responses'] > 0)
-                                                                                    <span class="text-gray-400">({{ trans_choice(':count response|:count responses', $module['participant_responses'], ['count' => $module['participant_responses']]) }})</span>
-                                                                                @endif
-                                                                            </td>
-                                                                        </tr>
-                                                                    @endforeach
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                                            {{ __('Overall Trainer Rating:') }} <span class="font-semibold text-[#152A4E] dark:text-white">{{ $session['overall_trainer_rating'] ?? '—' }}</span>
-                                                            {{ __('(reflected on the Instructors tab when exactly one instructor teaches this training)') }}
-                                                        </p>
-                                                    </div>
+                                            <div x-show="open" x-cloak class="bg-gray-50/60 dark:bg-gray-900/20">
+                                                @php
+                                                    $hasL1 = $session['modules']->isNotEmpty();
+                                                    $hasDistribution = $hasL1 && $session['modules']->contains(fn ($module) => $module['participant_responses'] > 0);
+                                                    $hasTrainerSummary = $hasL1 && $session['trainer_ratings_by_module']->isNotEmpty();
+                                                    $hasTrainerRatings = $hasL1 && $session['instructor_ratings']->isNotEmpty();
+                                                    $hasPerTaker = ! empty($session['module_matrix_columns']);
+                                                    $hasL2 = $session['pretest_stats']['count'] > 0 || $session['posttest_stats']['count'] > 0;
 
-                                                    @if ($session['modules']->contains(fn ($module) => $module['participant_responses'] > 0))
-                                                        <div x-data="{ open: false }">
-                                                            <button type="button" @click="open = !open" class="text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D] inline-flex items-center gap-1">
-                                                                <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="open ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-                                                                {{ __('Participant Module Ratings — Distribution & Comments') }}
-                                                            </button>
-                                                            <div x-show="open" x-cloak class="mt-2 overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                                                <table class="min-w-full text-sm">
-                                                                    <thead>
-                                                                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                                                            <th class="py-2 pl-4 pr-4">{{ __('Module') }}</th>
-                                                                            @foreach (range(1, 5) as $value)
-                                                                                <th class="py-2 pr-4 text-center">{{ $value }}</th>
+                                                    $evalTabs = collect([
+                                                        'l1' => ['label' => 'Module & Trainer Ratings', 'show' => $hasL1],
+                                                        'distribution' => ['label' => 'Rating Distribution', 'show' => $hasDistribution],
+                                                        'trainerSummary' => ['label' => "Trainer's Rating Summary", 'show' => $hasTrainerSummary],
+                                                        'trainerRatings' => ['label' => 'Participant Trainer Ratings', 'show' => $hasTrainerRatings],
+                                                        'perTaker' => ['label' => 'Per-Taker Scores', 'show' => $hasPerTaker],
+                                                        'l2' => ['label' => 'Pre/Post Test (L2)', 'show' => $hasL2],
+                                                    ])->filter(fn ($tab) => $tab['show']);
+                                                @endphp
+
+                                                @if ($evalTabs->isEmpty())
+                                                    <p class="px-6 pb-6 pt-1 text-sm text-gray-400">{{ __('No evaluation data recorded for this session yet.') }}</p>
+                                                @else
+                                                    <div x-data="{ activeEvalTab: @js($evalTabs->keys()->first()) }" class="px-6 pb-6 pt-1">
+                                                        <div class="flex items-center gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700 mb-5">
+                                                            @foreach ($evalTabs as $key => $tab)
+                                                                <button type="button" @click="activeEvalTab = @js($key)"
+                                                                    :class="activeEvalTab === @js($key)
+                                                                        ? 'text-[#152A4E] dark:text-white border-[#152A4E] dark:border-white'
+                                                                        : 'text-gray-400 dark:text-gray-500 border-transparent hover:text-gray-600 dark:hover:text-gray-300'"
+                                                                    class="shrink-0 border-b-2 px-3 py-2.5 text-sm font-semibold transition whitespace-nowrap">
+                                                                    {{ __($tab['label']) }}
+                                                                </button>
+                                                            @endforeach
+                                                        </div>
+
+                                                        @if ($hasL1)
+                                                            <div x-show="activeEvalTab === 'l1'" x-cloak>
+                                                                <div class="max-h-[28rem] overflow-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                                    <table class="min-w-full text-sm">
+                                                                        <thead class="sticky top-0 z-10 bg-white dark:bg-gray-800">
+                                                                            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                                                <th class="py-3 pl-4 pr-4">{{ __('Module') }}</th>
+                                                                                <th class="py-3 pr-4">{{ __('Module Rating') }}</th>
+                                                                                <th class="py-3 pr-4">{{ __('Trainer Rating') }}</th>
+                                                                                <th class="py-3 pr-4">{{ __('Participant Avg') }}</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                                            @foreach ($session['modules'] as $module)
+                                                                                <tr>
+                                                                                    <td class="py-3 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $module['module'] }}</td>
+                                                                                    <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $module['module_rating'] ?? '—' }}</td>
+                                                                                    <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $module['trainer_rating'] ?? '—' }}</td>
+                                                                                    <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
+                                                                                        {{ $module['participant_rating'] ?? '—' }}
+                                                                                        @if ($module['participant_responses'] > 0)
+                                                                                            <span class="text-gray-400">({{ trans_choice(':count response|:count responses', $module['participant_responses'], ['count' => $module['participant_responses']]) }})</span>
+                                                                                        @endif
+                                                                                    </td>
+                                                                                </tr>
                                                                             @endforeach
-                                                                            <th class="py-2 pr-4">{{ __('Responses') }}</th>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-3">
+                                                                    {{ __('Overall Trainer Rating:') }} <span class="font-semibold text-[#152A4E] dark:text-white">{{ $session['overall_trainer_rating'] ?? '—' }}</span>
+                                                                    {{ __('(reflected on the Instructors tab when exactly one instructor teaches this training)') }}
+                                                                </p>
+                                                            </div>
+                                                        @endif
+
+                                                        @if ($hasDistribution)
+                                                            <div x-show="activeEvalTab === 'distribution'" x-cloak class="max-h-[28rem] overflow-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                                <table class="min-w-full text-sm">
+                                                                    <thead class="sticky top-0 z-10 bg-white dark:bg-gray-800">
+                                                                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                                            <th class="py-3 pl-4 pr-4">{{ __('Module') }}</th>
+                                                                            @foreach (range(1, 5) as $value)
+                                                                                <th class="py-3 pr-4 text-center">{{ $value }}</th>
+                                                                            @endforeach
+                                                                            <th class="py-3 pr-4">{{ __('Responses') }}</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                                                         @foreach ($session['modules'] as $module)
                                                                             <tr>
-                                                                                <td class="py-2 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $module['module'] }}</td>
+                                                                                <td class="py-3 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $module['module'] }}</td>
                                                                                 @foreach (range(1, 5) as $value)
-                                                                                    <td class="py-2 pr-4 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $module['rating_distribution'][$value] }}</td>
+                                                                                    <td class="py-3 pr-4 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $module['rating_distribution'][$value] }}</td>
                                                                                 @endforeach
-                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $module['participant_responses'] }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $module['participant_responses'] }}</td>
                                                                             </tr>
                                                                             @if (! empty($module['comments']))
                                                                                 <tr>
-                                                                                    <td colspan="7" class="py-2 pl-4 pr-4 bg-gray-50/60 dark:bg-gray-900/20">
-                                                                                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{{ __(':module — Comments (anonymous)', ['module' => $module['module']]) }}</p>
-                                                                                        <ul class="space-y-1">
+                                                                                    <td colspan="7" class="py-3 pl-4 pr-4 bg-gray-50/60 dark:bg-gray-900/20">
+                                                                                        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1.5">{{ __(':module — Comments (anonymous)', ['module' => $module['module']]) }}</p>
+                                                                                        <ul class="space-y-1.5">
                                                                                             @foreach ($module['comments'] as $comment)
-                                                                                                <li class="text-xs text-gray-600 dark:text-gray-300">"{{ $comment }}"</li>
+                                                                                                <li class="text-sm text-gray-600 dark:text-gray-300">"{{ $comment }}"</li>
                                                                                             @endforeach
                                                                                         </ul>
                                                                                     </td>
@@ -443,77 +272,71 @@
                                                                     </tbody>
                                                                 </table>
                                                             </div>
-                                                        </div>
-                                                    @endif
+                                                        @endif
 
-                                                    @if ($session['trainer_ratings_by_module']->isNotEmpty())
-                                                        <div>
-                                                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{{ __("Summary of Trainer's Rating per Module") }}</p>
-                                                            <div class="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                        @if ($hasTrainerSummary)
+                                                            <div x-show="activeEvalTab === 'trainerSummary'" x-cloak class="max-h-[28rem] overflow-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
                                                                 <table class="min-w-full text-sm">
-                                                                    <thead>
+                                                                    <thead class="sticky top-0 z-10 bg-white dark:bg-gray-800">
                                                                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                                                            <th class="py-2 pl-4 pr-4">{{ __('Module') }}</th>
+                                                                            <th class="py-3 pl-4 pr-4">{{ __('Module') }}</th>
                                                                             @foreach (range(1, 5) as $value)
-                                                                                <th class="py-2 pr-4 text-center">{{ $value }}</th>
+                                                                                <th class="py-3 pr-4 text-center">{{ $value }}</th>
                                                                             @endforeach
-                                                                            <th class="py-2 pr-4">{{ __('Avg') }}</th>
-                                                                            <th class="py-2 pr-4">{{ __('Trainer Name') }}</th>
-                                                                            <th class="py-2 pr-4">{{ __('Organization / Agency') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Avg') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Trainer Name') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Organization / Agency') }}</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                                                         @foreach ($session['trainer_ratings_by_module'] as $moduleTrainerRating)
                                                                             <tr>
-                                                                                <td class="py-2 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $moduleTrainerRating['module'] }}</td>
+                                                                                <td class="py-3 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $moduleTrainerRating['module'] }}</td>
                                                                                 @foreach (range(1, 5) as $value)
-                                                                                    <td class="py-2 pr-4 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $moduleTrainerRating['rating_distribution'][$value] }}</td>
+                                                                                    <td class="py-3 pr-4 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $moduleTrainerRating['rating_distribution'][$value] }}</td>
                                                                                 @endforeach
-                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $moduleTrainerRating['rating'] }}</td>
-                                                                                <td class="py-2 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $moduleTrainerRating['trainer'] ?? '—' }}</td>
-                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $moduleTrainerRating['organization'] ?? '—' }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $moduleTrainerRating['rating'] }}</td>
+                                                                                <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $moduleTrainerRating['trainer'] ?? '—' }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $moduleTrainerRating['organization'] ?? '—' }}</td>
                                                                             </tr>
                                                                         @endforeach
                                                                     </tbody>
                                                                 </table>
                                                             </div>
-                                                        </div>
-                                                    @endif
+                                                        @endif
 
-                                                    @if ($session['instructor_ratings']->isNotEmpty())
-                                                        <div>
-                                                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{{ __('Participant Trainer Ratings') }}</p>
-                                                            <div class="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                        @if ($hasTrainerRatings)
+                                                            <div x-show="activeEvalTab === 'trainerRatings'" x-cloak class="max-h-[28rem] overflow-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
                                                                 <table class="min-w-full text-sm">
-                                                                    <thead>
+                                                                    <thead class="sticky top-0 z-10 bg-white dark:bg-gray-800">
                                                                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                                                            <th class="py-2 pl-4 pr-4">{{ __('Trainer') }}</th>
-                                                                            <th class="py-2 pr-4">{{ __('Organization') }}</th>
-                                                                            <th class="py-2 pr-4">{{ __('Avg') }}</th>
+                                                                            <th class="py-3 pl-4 pr-4">{{ __('Trainer') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Organization') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Avg') }}</th>
                                                                             @foreach (range(1, 5) as $value)
-                                                                                <th class="py-2 pr-4 text-center">{{ $value }}</th>
+                                                                                <th class="py-3 pr-4 text-center">{{ $value }}</th>
                                                                             @endforeach
-                                                                            <th class="py-2 pr-4">{{ __('Responses') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Responses') }}</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                                                         @foreach ($session['instructor_ratings'] as $instructorRating)
                                                                             <tr>
-                                                                                <td class="py-2 pl-4 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $instructorRating['instructor'] }}</td>
-                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $instructorRating['agency_organization'] ?? '—' }}</td>
-                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300">{{ $instructorRating['rating'] }}</td>
+                                                                                <td class="py-3 pl-4 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $instructorRating['instructor'] }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructorRating['agency_organization'] ?? '—' }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructorRating['rating'] }}</td>
                                                                                 @foreach (range(1, 5) as $value)
-                                                                                    <td class="py-2 pr-4 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $instructorRating['rating_distribution'][$value] }}</td>
+                                                                                    <td class="py-3 pr-4 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $instructorRating['rating_distribution'][$value] }}</td>
                                                                                 @endforeach
-                                                                                <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $instructorRating['responses'] }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $instructorRating['responses'] }}</td>
                                                                             </tr>
                                                                             @if (! empty($instructorRating['comments']))
                                                                                 <tr>
-                                                                                    <td colspan="8" class="py-2 pl-4 pr-4 bg-gray-50/60 dark:bg-gray-900/20">
-                                                                                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{{ __(':trainer — Comments (anonymous)', ['trainer' => $instructorRating['instructor']]) }}</p>
-                                                                                        <ul class="space-y-1">
+                                                                                    <td colspan="8" class="py-3 pl-4 pr-4 bg-gray-50/60 dark:bg-gray-900/20">
+                                                                                        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1.5">{{ __(':trainer — Comments (anonymous)', ['trainer' => $instructorRating['instructor']]) }}</p>
+                                                                                        <ul class="space-y-1.5">
                                                                                             @foreach ($instructorRating['comments'] as $comment)
-                                                                                                <li class="text-xs text-gray-600 dark:text-gray-300">"{{ $comment }}"</li>
+                                                                                                <li class="text-sm text-gray-600 dark:text-gray-300">"{{ $comment }}"</li>
                                                                                             @endforeach
                                                                                         </ul>
                                                                                     </td>
@@ -523,136 +346,78 @@
                                                                     </tbody>
                                                                 </table>
                                                             </div>
-                                                        </div>
-                                                    @endif
-                                                @endif
+                                                        @endif
 
-                                                @if (! empty($session['module_matrix_columns']))
-                                                    <div>
-                                                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{{ __('L1 — Per-Taker Module & Trainer Ratings') }}</p>
-                                                        <div class="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                                            <table class="min-w-full text-sm">
-                                                                <thead>
-                                                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                                                        <th class="py-2 pl-4 pr-4" rowspan="2">{{ __('Taker') }}</th>
-                                                                        @foreach ($session['module_matrix_columns'] as $moduleName)
-                                                                            <th class="py-2 pr-4 text-center" colspan="2">{{ $moduleName }}</th>
-                                                                        @endforeach
-                                                                        <th class="py-2 pr-4" rowspan="2">{{ __('Overall') }}</th>
-                                                                    </tr>
-                                                                    <tr class="text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
-                                                                        @foreach ($session['module_matrix_columns'] as $moduleName)
-                                                                            <th class="py-1 pr-2 text-center font-normal">{{ __('Module') }}</th>
-                                                                            <th class="py-1 pr-4 text-center font-normal">{{ __('Trainer') }}</th>
-                                                                        @endforeach
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                                                    @foreach ($session['module_matrix'] as $takerRow)
-                                                                        <tr>
-                                                                            <td class="py-2 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $takerRow['participant'] }}</td>
-                                                                            @foreach ($session['module_matrix_columns'] as $moduleName)
-                                                                                <td class="py-2 pr-2 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $takerRow['scores'][$moduleName]['module_rating'] ?? '—' }}</td>
-                                                                                <td class="py-2 pr-4 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $takerRow['scores'][$moduleName]['trainer_rating'] ?? '—' }}</td>
+                                                        @if ($hasPerTaker)
+                                                            <div x-show="activeEvalTab === 'perTaker'" x-cloak>
+                                                                <p class="text-xs text-gray-400 mb-2 sm:hidden">{{ __('Scroll to see every module — the taker column stays put.') }}</p>
+                                                                <div class="max-h-[28rem] overflow-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                                    <table class="min-w-full text-sm">
+                                                                        <thead class="sticky top-0 z-10 bg-white dark:bg-gray-800">
+                                                                            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                                                <th class="sticky left-0 z-20 bg-white dark:bg-gray-800 py-3 pl-4 pr-4" rowspan="2">{{ __('Taker') }}</th>
+                                                                                @foreach ($session['module_matrix_columns'] as $moduleName)
+                                                                                    <th class="py-3 pr-4 text-center" colspan="2">{{ $moduleName }}</th>
+                                                                                @endforeach
+                                                                                <th class="py-3 pr-4" rowspan="2">{{ __('Overall') }}</th>
+                                                                            </tr>
+                                                                            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
+                                                                                @foreach ($session['module_matrix_columns'] as $moduleName)
+                                                                                    <th class="py-2 pr-2 text-center font-normal">{{ __('Module') }}</th>
+                                                                                    <th class="py-2 pr-4 text-center font-normal">{{ __('Trainer') }}</th>
+                                                                                @endforeach
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                                            @foreach ($session['module_matrix'] as $takerRow)
+                                                                                <tr>
+                                                                                    <td class="sticky left-0 z-10 bg-white dark:bg-gray-800 py-3 pl-4 pr-4 text-gray-700 dark:text-gray-200">{{ $takerRow['participant'] }}</td>
+                                                                                    @foreach ($session['module_matrix_columns'] as $moduleName)
+                                                                                        <td class="py-3 pr-2 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $takerRow['scores'][$moduleName]['module_rating'] ?? '—' }}</td>
+                                                                                        <td class="py-3 pr-4 text-center text-gray-600 dark:text-gray-300 tabular-nums">{{ $takerRow['scores'][$moduleName]['trainer_rating'] ?? '—' }}</td>
+                                                                                    @endforeach
+                                                                                    <td class="py-3 pr-4 font-semibold text-[#152A4E] dark:text-white tabular-nums">{{ $takerRow['overall'] ?? '—' }}</td>
+                                                                                </tr>
                                                                             @endforeach
-                                                                            <td class="py-2 pr-4 font-semibold text-[#152A4E] dark:text-white tabular-nums">{{ $takerRow['overall'] ?? '—' }}</td>
-                                                                        </tr>
-                                                                    @endforeach
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </div>
-                                                @endif
+                                                                        </tbody>
+                                                                </table>
+                                                                </div>
+                                                            </div>
+                                                        @endif
 
-                                                @if ($session['pretest_stats']['count'] > 0 || $session['posttest_stats']['count'] > 0)
-                                                    <div>
-                                                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{{ __('L2 — Pre/Post Test') }}</p>
-                                                        <div class="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                                            <table class="min-w-full text-sm">
-                                                                <thead>
-                                                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                                                        <th class="py-2 pl-4 pr-4"></th>
-                                                                        <th class="py-2 pr-4">{{ __('Mean') }}</th>
-                                                                        <th class="py-2 pr-4">{{ __('Median') }}</th>
-                                                                        <th class="py-2 pr-4">{{ __('Mode') }}</th>
-                                                                        <th class="py-2 pr-4">{{ __('Min') }}</th>
-                                                                        <th class="py-2 pr-4">{{ __('Max') }}</th>
-                                                                        <th class="py-2 pr-4">{{ __('Count') }}</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                                                    @foreach (['Pre-Test' => $session['pretest_stats'], 'Post-Test' => $session['posttest_stats']] as $label => $stats)
-                                                                        <tr>
-                                                                            <td class="py-2 pl-4 pr-4 font-medium text-[#152A4E] dark:text-white">{{ __($label) }}</td>
-                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['mean'] ?? '—' }}</td>
-                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['median'] ?? '—' }}</td>
-                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['mode'] ?? '—' }}</td>
-                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['min'] ?? '—' }}</td>
-                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['max'] ?? '—' }}</td>
-                                                                            <td class="py-2 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['count'] }}</td>
+                                                        @if ($hasL2)
+                                                            <div x-show="activeEvalTab === 'l2'" x-cloak class="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                                <table class="min-w-full text-sm">
+                                                                    <thead>
+                                                                        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                                                            <th class="py-3 pl-4 pr-4"></th>
+                                                                            <th class="py-3 pr-4">{{ __('Mean') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Median') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Mode') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Min') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Max') }}</th>
+                                                                            <th class="py-3 pr-4">{{ __('Count') }}</th>
                                                                         </tr>
-                                                                    @endforeach
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
+                                                                    </thead>
+                                                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                                        @foreach (['Pre-Test' => $session['pretest_stats'], 'Post-Test' => $session['posttest_stats']] as $label => $stats)
+                                                                            <tr>
+                                                                                <td class="py-3 pl-4 pr-4 font-medium text-[#152A4E] dark:text-white">{{ __($label) }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['mean'] ?? '—' }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['median'] ?? '—' }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['mode'] ?? '—' }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['min'] ?? '—' }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['max'] ?? '—' }}</td>
+                                                                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $stats['count'] }}</td>
+                                                                            </tr>
+                                                                        @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        @endif
                                                     </div>
                                                 @endif
                                             </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-
-            <!-- Graduates by LGU -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by LGU') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                    {{ __('Completed trainings grouped by the LGU recorded on Summary.') }}
-                    {{ __('For a point-level map of graduates by LGU / Volunteers / RDRRMC member agencies, see the') }}
-                    <a href="{{ route('admin.monitoring.map', $region ? ['regions' => [$region]] : []) }}" class="font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">{{ __('Graduates Map') }}</a>.
-                </p>
-                <p class="text-xs text-amber-700 dark:text-amber-400 mb-5">
-                    {{ __('"Teams Organized" isn\'t shown here since there\'s no team data in the system yet.') }}
-                </p>
-
-                @if (empty($graduatesByLgu))
-                    <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
-                        {{ __('No completed trainings with an LGU recorded yet.') }}
-                    </div>
-                @else
-                    <div x-data="{ activeLguRegion: @js(array_key_first($graduatesByLgu)) }">
-                        <div class="flex items-center gap-1 overflow-x-auto bg-gray-100 dark:bg-gray-900/40 rounded-xl p-1.5">
-                            @foreach ($graduatesByLgu as $regionName => $regionGroup)
-                                <button type="button" @click="activeLguRegion = @js($regionName)"
-                                    :class="activeLguRegion === @js($regionName)
-                                        ? 'bg-white dark:bg-gray-700 text-[#152A4E] dark:text-white shadow-sm'
-                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
-                                    class="shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition whitespace-nowrap">
-                                    {{ $regionName }}
-                                    <span :class="activeLguRegion === @js($regionName)
-                                            ? 'bg-[#152A4E]/10 text-[#152A4E] dark:bg-white/15 dark:text-white px-1.5 py-0.5 rounded-full text-xs font-semibold'
-                                            : 'text-gray-400 dark:text-gray-500 text-xs font-normal'">
-                                        {{ $regionGroup['total'] }}
-                                    </span>
-                                </button>
-                            @endforeach
-                        </div>
-
-                        @foreach ($graduatesByLgu as $regionName => $regionGroup)
-                            <div x-show="activeLguRegion === @js($regionName)" x-cloak class="mt-5">
-                                @php $regionMax = max(array_column($regionGroup['lgus'], 'total')); @endphp
-                                <div class="space-y-3">
-                                    @foreach ($regionGroup['lgus'] as $row)
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-48 shrink-0 text-xs font-medium text-gray-600 dark:text-gray-300 truncate">{{ $row['lgu'] }}</div>
-                                            <div class="flex-1 h-5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                                                <div class="h-full rounded-full bg-[#152A4E] dark:bg-[#E2762D] transition-all" style="width: {{ round(($row['total'] / $regionMax) * 100) }}%;"></div>
-                                            </div>
-                                            <div class="w-8 text-right text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $row['total'] }}</div>
                                         </div>
                                     @endforeach
                                 </div>
@@ -664,4 +429,6 @@
 
         </div>
     </div>
+
+    @include('admin.partials.live-search-script')
 </x-app-layout>

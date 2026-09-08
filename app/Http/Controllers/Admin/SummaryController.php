@@ -78,15 +78,16 @@ class SummaryController extends Controller
                 ->fragment('registered-participants')
             : null;
 
-        // A participant can be tied to more than one TrainingRequest (their own
-        // submissions plus any bulk request an admin filed them under), so the
-        // row shows their most recent one — same "involved" definition already
-        // used for a participant's own dashboard — rather than trying to fit an
-        // unbounded list of trainings/LGUs/certificates into one table row.
         $participants?->getCollection()->transform(function (User $participant) {
-            $participant->latestTrainingRequest = TrainingRequest::involvingUser($participant)
+            // Every training that left this participant with a certificate —
+            // deliberately not region-scoped: a participant who transferred
+            // regions (e.g. trained in Region III, now registered under NCR)
+            // keeps every certificate they've earned, and their new region's
+            // admin should still be able to view all of them here.
+            $participant->certificates = TrainingRequest::involvingUser($participant)
+                ->where(fn ($q) => $q->whereNotNull('certificate_file_path')->orWhereNotNull('certificate_remarks'))
                 ->orderByDesc('preferred_date')
-                ->first();
+                ->get();
 
             return $participant;
         });
@@ -204,7 +205,10 @@ class SummaryController extends Controller
             'venue' => ['required', 'string', 'max:255'],
             'lgu' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'in:'.implode(',', config('regions.list'))],
-            'category' => ['nullable', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$categoryLabels))],
+            // Allows keeping whatever category is already on the record (e.g. a
+            // legacy "apb" one) even though it's no longer a selectable option —
+            // see admin/summary-edit.blade.php for the matching defensive <option>.
+            'category' => ['nullable', 'string', 'in:'.implode(',', array_unique(array_filter([...array_keys(TrainingRequest::$categoryLabels), $trainingRequest->category])))],
             'agency_type' => ['nullable', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$agencyTypeLabels))],
             'teams_organized' => ['nullable', 'integer', 'min:0'],
             'certificate_code' => ['nullable', 'string', 'max:255'],

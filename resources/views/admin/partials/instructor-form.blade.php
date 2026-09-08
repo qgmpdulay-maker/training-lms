@@ -2,13 +2,20 @@
     <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Add Instructor') }}</h2>
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Instructor ratings are computed automatically from L1 Evaluation data once exactly one instructor is on file for a given training type.') }}</p>
 
-    <form method="POST" action="{{ route('admin.instructors.store') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <form method="POST" action="{{ route('admin.instructors.store') }}" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         @csrf
 
         <div>
             <x-input-label for="name" :value="__('Instructor Name')" />
             <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" required value="{{ old('name') }}" />
             <x-input-error :messages="$errors->get('name')" class="mt-1" />
+        </div>
+
+        <div>
+            <x-input-label for="photo" :value="__('Photo (optional)')" />
+            <input id="photo" name="photo" type="file" accept="image/*"
+                class="mt-1 block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#152A4E]/8 dark:file:bg-white/10 file:text-[#152A4E] dark:file:text-white hover:file:bg-[#152A4E]/15">
+            <x-input-error :messages="$errors->get('photo')" class="mt-1" />
         </div>
 
         <div>

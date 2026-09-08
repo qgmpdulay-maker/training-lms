@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\PendingRegistration;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
@@ -26,45 +25,59 @@ class RegisteredUserController extends Controller
     /**
      * Handle an incoming registration request.
      *
+     * Government account: registering doesn't create a `users` row or grant
+     * access on its own. It lands in `pending_registrations` until the email
+     * is OTP-verified and a Super Admin approves it (see
+     * PendingRegistration::approve(), AuthenticatedSessionController, and
+     * UserManagementController).
+     *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
+        // Only OCD Personnel pick their OCD Regional Office (which drives region
+        // scoping, see config/regions.php); everyone else just gives their city.
+        $isOcdPersonnel = $request->input('participant_type') === 'OCD Personnel';
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'age' => ['required', 'integer', 'min:1', 'max:120'],
             'sex' => ['required', 'in:Male,Female,Other'],
-            'picture' => ['required', 'image', 'max:4096'],
             'participant_type' => ['required', 'string', 'max:255'],
-            'organization' => ['required', 'string', 'max:255'],
-            'agency' => ['required', 'string', 'max:255'],
-            'mobile_number' => ['required', 'digits:11'],
-            'landline_number' => ['nullable', 'digits:10'],
+            'agency' => [$isOcdPersonnel ? 'required' : 'nullable', 'string', 'max:255'],
+            'city' => [$isOcdPersonnel ? 'nullable' : 'required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'age' => $validated['age'],
-            'sex' => $validated['sex'],
-            'picture' => $request->file('picture')->store('participant-pictures', 'public'),
-            'participant_type' => $validated['participant_type'],
-            'organization' => $validated['organization'],
-            'agency' => $validated['agency'],
-            // Derived from the "OCD Regional Office" picklist so participants can be
-            // scoped to a region the same way admins are (see config/regions.php).
-            'region' => config('regions.agency_map')[$validated['agency']] ?? null,
-            'mobile_number' => $validated['mobile_number'],
-            'landline_number' => $validated['landline_number'] ?? null,
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
+        // A previous attempt under this email (still pending, or rejected and
+        // trying again) is replaced rather than blocked — only a real,
+        // already-approved account (checked above via unique:users) stops
+        // someone from registering.
+        $registration = PendingRegistration::updateOrCreate(
+            ['email' => $validated['email']],
+            [
+                'name' => $validated['name'],
+                'age' => $validated['age'],
+                'sex' => $validated['sex'],
+                'participant_type' => $validated['participant_type'],
+                'agency' => $validated['agency'] ?? null,
+                'city' => $validated['city'] ?? null,
+                'password' => Hash::make($validated['password']),
+            ]
+        );
 
-        event(new Registered($user));
+        // Reset in case this reuses a previous (rejected, or abandoned
+        // mid-verification) attempt under the same email.
+        $registration->status = PendingRegistration::STATUS_PENDING;
+        $registration->email_verified_at = null;
+        $registration->approved_user_id = null;
+        $registration->save();
 
-        Auth::login($user);
+        $registration->sendOtpEmail();
 
-        return redirect(route('dashboard', absolute: false));
+        $request->session()->put('pending_registration_id', $registration->id);
+
+        return redirect()->route('otp.show');
     }
 }

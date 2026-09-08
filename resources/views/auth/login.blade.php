@@ -17,8 +17,16 @@
             <!-- Left: Form -->
             <div class="flex-1 lg:flex-none lg:w-[45%] flex flex-col px-6 sm:px-12 lg:px-20 py-10 bg-white">
 
+                <!-- Back -->
+                <a href="{{ route('home') }}" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-8">
+                    <svg class="w-5 h-5 me-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                    {{ __('Back to Trainings') }}
+                </a>
+
                 <!-- Logo -->
-                <div class="flex items-center gap-3 mb-16">
+                <div class="flex items-center gap-3 mb-10">
                     <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training IMS Logo') }}" class="h-20 w-20 object-contain">
                     <span class="text-base font-semibold text-[#152A4E] tracking-tight">
                         {{ __('OCD Training IMS') }}
@@ -77,24 +85,22 @@
                                 <x-input-error :messages="$errors->get('password')" class="mt-1" />
                             </div>
 
-                            <!-- Remember + Forgot -->
+                            <!-- Remember -->
                             <div class="flex items-center justify-between">
                                 <label for="remember_me" class="inline-flex items-center">
                                     <input id="remember_me" type="checkbox" name="remember"
                                         class="rounded border-gray-300 text-[#152A4E] shadow-sm focus:ring-[#152A4E]">
                                     <span class="ms-2 text-xs text-gray-600">{{ __('Remember me') }}</span>
                                 </label>
-
-                                @if (Route::has('password.request'))
-                                    <a href="{{ route('password.request') }}" class="text-xs text-[#152A4E] hover:text-[#E2762D] font-medium">
-                                        {{ __('Forgot password?') }}
-                                    </a>
-                                @endif
                             </div>
+
+                            <p class="text-xs text-gray-500">
+                                {{ __('Forgot your password? Contact your Super Admin to have it reset.') }}
+                            </p>
 
                             <!-- Submit -->
                             <button type="submit"
-                                class="w-full bg-[#152A4E] hover:bg-[#1E3A66] text-white text-sm font-semibold rounded-lg py-3 transition">
+                                class="w-full bg-[#152A4E]/70 hover:bg-[#152A4E]/85 backdrop-blur-xl backdrop-saturate-150 border border-white/10 text-white text-sm font-semibold rounded-lg py-3 shadow-lg transition">
                                 {{ __('Sign In') }}
                             </button>
                         </form>
@@ -114,8 +120,6 @@
             <div class="hidden lg:flex lg:flex-1 relative overflow-hidden bg-gradient-to-br from-[#152A4E] via-[#1E3A66] to-[#0D1B33]">
                 <img src="{{ asset('images/ocd-seal.png') }}" alt=""
                     class="absolute -right-24 -bottom-24 w-[560px] h-[560px] object-contain opacity-[0.07] pointer-events-none">
-
-                <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#152A4E] via-[#152A4E] to-[#E2762D]"></div>
 
                 <div class="relative z-10 flex flex-col justify-end p-16 text-white">
                     <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase mb-4">

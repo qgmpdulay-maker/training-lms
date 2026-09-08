@@ -17,9 +17,9 @@
             @endif
 
             @if (Auth::user()->isSuperAdmin())
-                <div class="flex items-center flex-wrap gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm px-5 py-3">
-                    <span class="text-sm font-semibold text-[#152A4E] dark:text-white">{{ __('Region') }}</span>
-                    <form method="GET" action="{{ route('admin.summary') }}" class="flex items-center gap-2">
+                <div class="flex items-center flex-wrap gap-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-2 pl-4">
+                    <span class="text-sm font-semibold text-[#152A4E] dark:text-white shrink-0">{{ __('Region') }}</span>
+                    <form method="GET" action="{{ route('admin.summary') }}" class="flex-1 min-w-[12rem]">
                         @if ($search !== '')
                             <input type="hidden" name="q" value="{{ $search }}">
                         @endif
@@ -35,17 +35,22 @@
                         @if ($evaluationSearch !== '')
                             <input type="hidden" name="evaluations_q" value="{{ $evaluationSearch }}">
                         @endif
-                        <select name="region" onchange="this.form.submit()"
-                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
-                            <option value="">{{ __('All Regions (Philippines)') }}</option>
-                            @foreach ($regions as $regionOption)
-                                <option value="{{ $regionOption }}" @selected($selectedRegion === $regionOption)>{{ $regionOption }}</option>
-                            @endforeach
-                        </select>
+                        <div class="relative">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                            </svg>
+                            <select name="region" onchange="this.form.submit()"
+                                class="w-full rounded-xl border-0 bg-gray-50 dark:bg-gray-900 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 pr-9 py-2.5 transition">
+                                <option value="">{{ __('All Regions (Philippines)') }}</option>
+                                @foreach ($regions as $regionOption)
+                                    <option value="{{ $regionOption }}" @selected($selectedRegion === $regionOption)>{{ $regionOption }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </form>
                     @if ($selectedRegion)
                         <a href="{{ route('admin.summary', array_filter(['q' => $search ?: null, 'status' => ! $statusDefaulted ? $selectedStatus : null, 'participants_q' => $participantSearch ?: null, 'instructors_q' => $instructorSearch ?: null, 'evaluations_q' => $evaluationSearch ?: null])) }}"
-                            class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                            class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap shrink-0">
                             {{ __('Reset to all regions') }}
                         </a>
                     @endif
@@ -53,8 +58,8 @@
             @endif
 
             <div id="training-requests" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
-                    <div>
+                <div class="mb-5">
+                    <div class="mb-4">
                         <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Training Requests') }}</h2>
                         <p class="text-sm text-gray-500 dark:text-gray-400">
                             @php
@@ -72,7 +77,7 @@
                         </p>
                     </div>
                     <form id="training-requests-form" data-live-form data-live-section="training-requests" data-live-target="training-requests-results"
-                        method="GET" action="{{ route('admin.summary') }}#training-requests" class="flex items-center flex-wrap gap-2">
+                        method="GET" action="{{ route('admin.summary') }}#training-requests" class="w-full">
                         <input type="hidden" name="_section" value="training-requests">
                         @if ($participantSearch !== '')
                             <input type="hidden" name="participants_q" value="{{ $participantSearch }}">
@@ -86,23 +91,35 @@
                         @if ($selectedRegion)
                             <input type="hidden" name="region" value="{{ $selectedRegion }}">
                         @endif
-                        <input type="text" name="q" value="{{ $search }}" placeholder="{{ __('Search training, agency, participant, venue, or date…') }}"
-                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-64">
-                        <select name="status"
-                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
-                            <option value="all" @selected($selectedStatus === 'all')>{{ __('All statuses') }}</option>
-                            @foreach ($statusLabels as $value => $label)
-                                <option value="{{ $value }}" @selected($selectedStatus === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <button type="submit"
-                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
-                            {{ __('Search') }}
-                        </button>
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
+                            <div class="relative flex-1 min-w-[14rem]">
+                                <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                                <input type="text" name="q" value="{{ $search }}" placeholder="{{ __('Search training, agency, participant, venue, or date…') }}"
+                                    class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
+                            </div>
+                            <div class="relative sm:w-48 shrink-0">
+                                <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                                </svg>
+                                <select name="status"
+                                    class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 pr-9 py-2.5 transition">
+                                    <option value="all" @selected($selectedStatus === 'all')>{{ __('All statuses') }}</option>
+                                    @foreach ($statusLabels as $value => $label)
+                                        <option value="{{ $value }}" @selected($selectedStatus === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <button type="submit"
+                                class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                                {{ __('Search') }}
+                            </button>
+                        </div>
                         @if ($search !== '' || ! $statusDefaulted)
                             <a href="{{ route('admin.summary', array_filter(['participants_q' => $participantSearch ?: null, 'instructors_q' => $instructorSearch ?: null, 'evaluations_q' => $evaluationSearch ?: null, 'region' => $selectedRegion ?: null])) }}#training-requests"
-                                class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
-                                {{ __('Clear') }}
+                                class="inline-block mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                                {{ __('Clear filters') }}
                             </a>
                         @endif
                     </form>
@@ -115,8 +132,8 @@
 
             @if (Auth::user()->isAdmin() || Auth::user()->isSuperAdmin())
                 <div id="registered-participants" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
-                        <div>
+                    <div class="mb-5">
+                        <div class="mb-4">
                             <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Registered Participants') }}</h2>
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 @if (Auth::user()->isAdmin())
@@ -129,7 +146,7 @@
                             </p>
                         </div>
                         <form id="participants-form" data-live-form data-live-section="participants" data-live-target="participants-results"
-                            method="GET" action="{{ route('admin.summary') }}#registered-participants" class="flex items-center flex-wrap gap-2">
+                            method="GET" action="{{ route('admin.summary') }}#registered-participants" class="w-full">
                             <input type="hidden" name="_section" value="participants">
                             @if ($search !== '')
                                 <input type="hidden" name="q" value="{{ $search }}">
@@ -146,15 +163,22 @@
                             @if ($evaluationSearch !== '')
                                 <input type="hidden" name="evaluations_q" value="{{ $evaluationSearch }}">
                             @endif
-                            <input type="text" name="participants_q" value="{{ $participantSearch }}" placeholder="{{ __('Search name, type, agency, email, or contact no.…') }}"
-                                class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-60">
-                            <button type="submit"
-                                class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
-                                {{ __('Search') }}
-                            </button>
+                            <div class="flex items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
+                                <div class="relative flex-1">
+                                    <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                    </svg>
+                                    <input type="text" name="participants_q" value="{{ $participantSearch }}" placeholder="{{ __('Search name, type, agency, email, or contact no.…') }}"
+                                        class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
+                                </div>
+                                <button type="submit"
+                                    class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                                    {{ __('Search') }}
+                                </button>
+                            </div>
                             @if ($participantSearch !== '')
                                 <a href="{{ route('admin.summary', array_filter(['q' => $search ?: null, 'status' => ! $statusDefaulted ? $selectedStatus : null, 'region' => $selectedRegion ?: null, 'instructors_q' => $instructorSearch ?: null, 'evaluations_q' => $evaluationSearch ?: null])) }}#registered-participants"
-                                    class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                                    class="inline-block mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
                                     {{ __('Clear') }}
                                 </a>
                             @endif
@@ -169,8 +193,8 @@
 
             @if (Auth::user()->isAdmin() || Auth::user()->isSuperAdmin())
                 <div id="evaluations" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
-                        <div>
+                    <div class="mb-5">
+                        <div class="mb-4">
                             <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Evaluations') }}</h2>
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 @if (Auth::user()->isAdmin())
@@ -183,7 +207,7 @@
                             </p>
                         </div>
                         <form id="evaluations-form" data-live-form data-live-section="evaluations" data-live-target="evaluations-results"
-                            method="GET" action="{{ route('admin.summary') }}#evaluations" class="flex items-center flex-wrap gap-2">
+                            method="GET" action="{{ route('admin.summary') }}#evaluations" class="w-full">
                             <input type="hidden" name="_section" value="evaluations">
                             @if ($search !== '')
                                 <input type="hidden" name="q" value="{{ $search }}">
@@ -200,15 +224,22 @@
                             @if ($instructorSearch !== '')
                                 <input type="hidden" name="instructors_q" value="{{ $instructorSearch }}">
                             @endif
-                            <input type="text" name="evaluations_q" value="{{ $evaluationSearch }}" placeholder="{{ __('Search participant or training…') }}"
-                                class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-64">
-                            <button type="submit"
-                                class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
-                                {{ __('Search') }}
-                            </button>
+                            <div class="flex items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
+                                <div class="relative flex-1">
+                                    <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                    </svg>
+                                    <input type="text" name="evaluations_q" value="{{ $evaluationSearch }}" placeholder="{{ __('Search participant or training…') }}"
+                                        class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
+                                </div>
+                                <button type="submit"
+                                    class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                                    {{ __('Search') }}
+                                </button>
+                            </div>
                             @if ($evaluationSearch !== '')
                                 <a href="{{ route('admin.summary', array_filter(['q' => $search ?: null, 'status' => ! $statusDefaulted ? $selectedStatus : null, 'region' => $selectedRegion ?: null, 'participants_q' => $participantSearch ?: null, 'instructors_q' => $instructorSearch ?: null])) }}#evaluations"
-                                    class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                                    class="inline-block mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
                                     {{ __('Clear') }}
                                 </a>
                             @endif
@@ -223,8 +254,8 @@
 
             @if (Auth::user()->isSuperAdmin())
                 <div id="instructors" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
-                        <div>
+                    <div class="mb-5">
+                        <div class="mb-4">
                             <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Instructors') }}</h2>
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 @if ($selectedRegion)
@@ -235,7 +266,7 @@
                             </p>
                         </div>
                         <form id="instructors-form" data-live-form data-live-section="instructors" data-live-target="instructors-results"
-                            method="GET" action="{{ route('admin.summary') }}#instructors" class="flex items-center flex-wrap gap-2">
+                            method="GET" action="{{ route('admin.summary') }}#instructors" class="w-full">
                             <input type="hidden" name="_section" value="instructors">
                             @if ($search !== '')
                                 <input type="hidden" name="q" value="{{ $search }}">
@@ -252,15 +283,22 @@
                             @if ($evaluationSearch !== '')
                                 <input type="hidden" name="evaluations_q" value="{{ $evaluationSearch }}">
                             @endif
-                            <input type="text" name="instructors_q" value="{{ $instructorSearch }}" placeholder="{{ __('Search name, training type, agency, or certificate code…') }}"
-                                class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-64">
-                            <button type="submit"
-                                class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
-                                {{ __('Search') }}
-                            </button>
+                            <div class="flex items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
+                                <div class="relative flex-1">
+                                    <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                    </svg>
+                                    <input type="text" name="instructors_q" value="{{ $instructorSearch }}" placeholder="{{ __('Search name, training type, agency, or certificate code…') }}"
+                                        class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
+                                </div>
+                                <button type="submit"
+                                    class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                                    {{ __('Search') }}
+                                </button>
+                            </div>
                             @if ($instructorSearch !== '')
                                 <a href="{{ route('admin.summary', array_filter(['q' => $search ?: null, 'status' => ! $statusDefaulted ? $selectedStatus : null, 'region' => $selectedRegion ?: null, 'participants_q' => $participantSearch ?: null, 'evaluations_q' => $evaluationSearch ?: null])) }}#instructors"
-                                    class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                                    class="inline-block mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
                                     {{ __('Clear') }}
                                 </a>
                             @endif
@@ -313,6 +351,14 @@
                 function applyResponse(html, url) {
                     target.innerHTML = html;
                     window.history.replaceState({}, '', url);
+
+                    // Content swapped in via innerHTML bypasses Alpine's mutation
+                    // observer in some cases (e.g. the certificate dropdown on
+                    // the participants table), so any x-data in the new markup
+                    // needs to be initialized explicitly.
+                    if (window.Alpine) {
+                        window.Alpine.initTree(target);
+                    }
                 }
 
                 function request(url) {

@@ -26,10 +26,21 @@
             <!-- Profile Summary -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                 <div class="flex flex-col sm:flex-row gap-6">
-                    <div class="shrink-0 w-24 h-24 rounded-full bg-[#152A4E]/10 dark:bg-white/10 flex items-center justify-center">
-                        <svg class="w-12 h-12 text-[#152A4E] dark:text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                        </svg>
+                    <div class="shrink-0 flex flex-col items-center gap-2">
+                        <x-instructor-avatar :instructor="$instructor" class="w-24 h-24 text-2xl" />
+
+                        @php $photoInputId = 'instructor-photo-'.$instructor->id; @endphp
+                        <form method="POST" action="{{ route('admin.instructors.photo', $instructor) }}" enctype="multipart/form-data">
+                            @csrf
+                            <input type="file" name="photo" id="{{ $photoInputId }}" accept="image/*" class="hidden" onchange="this.form.submit()">
+                            <label for="{{ $photoInputId }}"
+                                class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-full pl-2 pr-2.5 py-1 hover:text-[#152A4E] dark:hover:text-white hover:border-gray-400 dark:hover:border-gray-500 cursor-pointer transition">
+                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                                </svg>
+                                {{ $instructor->photo_path ? __('Replace photo') : __('Upload photo') }}
+                            </label>
+                        </form>
                     </div>
 
                     <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">

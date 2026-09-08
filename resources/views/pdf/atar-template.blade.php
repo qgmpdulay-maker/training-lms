@@ -123,8 +123,6 @@
         <td width="50%">
             <div class="label">Category</div>
             <div class="checks">
-                <span class="box"></span> APB
-                &nbsp;&nbsp;
                 <span class="box"></span> Technical Assistance
             </div>
         </td>

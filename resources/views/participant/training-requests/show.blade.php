@@ -87,7 +87,7 @@
                                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Your feedback helps improve future sessions.') }}</p>
                             </div>
                             <a href="{{ route('training-requests.evaluation.edit', $trainingRequest) }}"
-                                class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition">
+                                class="inline-flex items-center justify-center bg-[#152A4E]/70 hover:bg-[#152A4E]/85 backdrop-blur-xl backdrop-saturate-150 border border-white/10 text-white text-sm font-semibold rounded-lg px-5 py-2.5 shadow-lg transition">
                                 {{ __('Evaluate Training') }}
                             </a>
                         @endif

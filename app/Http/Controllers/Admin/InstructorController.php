@@ -68,11 +68,45 @@ class InstructorController extends Controller
             ]);
         }
 
-        $instructors = Instructor::where('region', $user->region)->orderBy('name')->paginate(20);
+        $trainingType = trim((string) $request->query('training_type'));
+        $search = trim((string) $request->query('instructors_q'));
+
+        $instructors = Instructor::where('region', $user->region)
+            ->when($trainingType !== '', fn ($query) => $query->where('training_type', $trainingType))
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('training_type', 'like', "%{$search}%")
+                        ->orWhere('certificate_code', 'like', "%{$search}%")
+                        ->orWhere('agency_organization', 'like', "%{$search}%")
+                        ->orWhere('lgu', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name')
+            ->paginate(20)
+            ->withQueryString();
+
+        $trainingTypes = Instructor::where('region', $user->region)
+            ->whereNotNull('training_type')
+            ->distinct()
+            ->orderBy('training_type')
+            ->pluck('training_type');
+
+        // The roster search box re-requests this same route and swaps in just the
+        // results, so typing doesn't reload the whole page — see resources/views/
+        // admin/partials/live-search-script.blade.php for the client-side half.
+        if ($request->ajax() && $request->query('_section') === 'instructor-roster') {
+            return view('admin.partials.instructor-roster', [
+                'instructors' => $instructors,
+            ]);
+        }
 
         return view('admin.instructors', [
             'instructors' => $instructors,
             'regions' => config('regions.list'),
+            'trainingTypes' => $trainingTypes,
+            'selectedTrainingType' => $trainingType,
+            'instructorSearch' => $search,
         ]);
     }
 
@@ -83,6 +117,7 @@ class InstructorController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
             'sex' => ['nullable', 'string', 'in:Male,Female,Other'],
+            'photo' => ['nullable', 'image', 'max:2048'],
             'position' => ['nullable', 'string', 'max:255'],
             'training_type' => ['required', 'string', 'max:255'],
             'specialization' => ['nullable', 'string', 'max:255'],
@@ -100,6 +135,11 @@ class InstructorController extends Controller
         if ($request->user()->isAdmin()) {
             $validated['region'] = $request->user()->region;
         }
+
+        if ($request->hasFile('photo')) {
+            $validated['photo_path'] = $validated['photo']->store('instructors/photos', 'public');
+        }
+        unset($validated['photo']);
 
         Instructor::create($validated);
 
@@ -125,6 +165,45 @@ class InstructorController extends Controller
         $instructor->update($validated);
 
         return Redirect::back()->with('status', "Deployment details updated for {$instructor->name}.");
+    }
+
+    /**
+     * Upload (or replace) the scanned certificate for one roster row — a
+     * regional admin may only do this for instructors on file for their own
+     * region, same boundary as update().
+     */
+    public function uploadCertificate(Request $request, Instructor $instructor): RedirectResponse
+    {
+        abort_if($request->user()->isAdmin() && $instructor->region !== $request->user()->region, 403);
+
+        $validated = $request->validate([
+            'certificate_file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ]);
+
+        $instructor->update([
+            'certificate_file_path' => $validated['certificate_file']->store('instructors/certificates', 'public'),
+        ]);
+
+        return Redirect::back()->with('status', "Certificate uploaded for {$instructor->name}.");
+    }
+
+    /**
+     * Upload (or replace) an instructor's profile photo — same region
+     * boundary as update() and uploadCertificate().
+     */
+    public function uploadPhoto(Request $request, Instructor $instructor): RedirectResponse
+    {
+        abort_if($request->user()->isAdmin() && $instructor->region !== $request->user()->region, 403);
+
+        $validated = $request->validate([
+            'photo' => ['required', 'image', 'max:2048'],
+        ]);
+
+        $instructor->update([
+            'photo_path' => $validated['photo']->store('instructors/photos', 'public'),
+        ]);
+
+        return Redirect::back()->with('status', "Photo updated for {$instructor->name}.");
     }
 
     public function show(Instructor $instructor): View

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrainingRequest;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -12,28 +11,13 @@ use Illuminate\View\View;
 
 class MonitoringController extends Controller
 {
-    public function regional(Request $request): View
-    {
-        $filters = $this->filtersFromRequest($request);
-        $regionalData = $this->regionalData($filters);
-
-        return view('admin.super-admin.monitoring.regional', [
-            'filters' => $filters,
-            'regions' => config('regions.list'),
-            'categoryLabels' => TrainingRequest::$categoryLabels,
-            'periodLabel' => $this->periodLabel($filters),
-            'summary' => $this->summary($this->completedTrainings($filters)->get()),
-            'regionalData' => $regionalData,
-            'regionalHighlights' => $this->regionalHighlights($regionalData),
-            'threeYearData' => $this->threeYearData($filters),
-            'chartData' => $this->chartData($filters),
-        ]);
-    }
-
     /**
      * Reachable by both Regional Admins and Super Admin (see routes/web.php) —
      * a Regional Admin's region filter is force-overridden below rather than
      * merged, so it can't be widened by editing the `regions[]` query string.
+     * Super Admin's own dashboard embeds this same map inline (see
+     * DashboardController) — this standalone page still exists for Regional
+     * Admins' own dashboard link and the Tools page's "Graduates Map" link.
      */
     public function map(Request $request): View
     {
@@ -44,56 +28,46 @@ class MonitoringController extends Controller
             $filters['regions'] = [$user->region];
         }
 
-        $trainings = $this->completedTrainings($filters)->get();
+        $trainings = static::completedTrainings($filters)->get();
 
         return view('admin.super-admin.monitoring.map', [
             'filters' => $filters,
             'regionLocked' => $user->isAdmin(),
             'regions' => config('regions.list'),
-            'categoryLabels' => TrainingRequest::$categoryLabels,
-            'summary' => $this->summary($trainings),
-            'mapPoints' => $this->mapPoints($trainings),
+            'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
+            'summary' => static::summary($trainings),
+            'mapPoints' => static::mapPoints($trainings),
         ]);
     }
 
-    private function completedTrainings(array $filters): Builder
+    public static function completedTrainings(array $filters): Builder
     {
         return TrainingRequest::completed()->filteredBy($filters);
     }
 
     /**
-     * @return array{regions: array, category: ?string, from: string, until: string}
+     * @return array{regions: array, training_title: ?string, from: ?string, until: ?string}
      */
     private function filtersFromRequest(Request $request): array
     {
         return [
             'regions' => array_filter((array) $request->query('regions', [])),
-            'category' => $request->query('category') ?: null,
-            'from' => $request->query('from') ?: now()->subYears(2)->startOfYear()->toDateString(),
-            'until' => $request->query('until') ?: now()->endOfYear()->toDateString(),
+            'training_title' => $request->query('training_title') ?: null,
+            'from' => $request->query('from') ?: null,
+            'until' => $request->query('until') ?: null,
         ];
-    }
-
-    private function periodLabel(array $filters): string
-    {
-        $from = $filters['from'] ? Carbon::parse($filters['from'])->format('d M Y') : 'the earliest record';
-        $until = $filters['until'] ? Carbon::parse($filters['until'])->format('d M Y') : 'today';
-
-        return "{$from} to {$until}";
     }
 
     /**
      * @param  Collection<int, TrainingRequest>  $trainings
      */
-    private function summary(Collection $trainings): array
+    public static function summary(Collection $trainings): array
     {
         $participants = $trainings->sum('number_of_participants');
         $graduates = $trainings->sum(fn (TrainingRequest $t) => $t->graduates);
 
         return [
             'trainings' => $trainings->count(),
-            'apb' => $trainings->where('category', TrainingRequest::CATEGORY_APB)->count(),
-            'ta' => $trainings->where('category', TrainingRequest::CATEGORY_TA)->count(),
             'participants' => $participants,
             'graduates' => $graduates,
             'non_completers' => max($participants - $graduates, 0),
@@ -104,21 +78,25 @@ class MonitoringController extends Controller
         ];
     }
 
-    private function regionalData(array $filters): array
+    /**
+     * Per-region rollup plus a "Central (All OCDROs)" total row — feeds the
+     * Regional Performance table on the Super Admin dashboard.
+     */
+    public static function regionalData(array $filters): array
     {
-        $trainings = $this->completedTrainings($filters)->get();
+        $trainings = static::completedTrainings($filters)->get();
 
         $rows = collect(config('regions.list'))
             ->map(function (string $region) use ($trainings) {
                 $regionTrainings = $trainings->where('region', $region);
 
-                return array_merge(['label' => $region, 'short_label' => $region], $this->summary($regionTrainings));
+                return array_merge(['label' => $region, 'short_label' => $region], static::summary($regionTrainings));
             })
             ->filter(fn (array $row) => $row['trainings'] > 0)
             ->sortByDesc('graduates')
             ->values();
 
-        $total = array_merge(['label' => 'Central (All OCDROs)', 'short_label' => 'Total'], $this->summary($trainings));
+        $total = array_merge(['label' => 'Central (All OCDROs)', 'short_label' => 'Total'], static::summary($trainings));
 
         return $rows->push($total)->all();
     }
@@ -129,7 +107,7 @@ class MonitoringController extends Controller
      * gets the headline without reading the whole table. Only real regions are
      * considered, never the "Central (All OCDROs)" aggregate row.
      */
-    private function regionalHighlights(array $regionalData): array
+    public static function regionalHighlights(array $regionalData): array
     {
         $regions = collect($regionalData)->reject(fn (array $row) => $row['label'] === 'Central (All OCDROs)');
 
@@ -151,63 +129,14 @@ class MonitoringController extends Controller
         ]));
     }
 
-    private function threeYearData(array $filters): array
-    {
-        $endYear = $filters['until'] ? Carbon::parse($filters['until'])->year : now()->year;
-
-        $years = [];
-
-        for ($year = $endYear - 2; $year <= $endYear; $year++) {
-            $trainings = $this->completedTrainings(['regions' => $filters['regions'], 'category' => $filters['category']])
-                ->whereYear('preferred_date', $year)
-                ->get();
-
-            $years[(string) $year] = $this->summary($trainings);
-        }
-
-        return $years;
-    }
-
-    private function chartData(array $filters): array
-    {
-        $trainings = $this->completedTrainings($filters)->get();
-
-        return [
-            'trainingsConducted' => $this->trainingsConductedChart($trainings, $filters),
-            'graduatesBySex' => [
-                'male' => $trainings->sum('graduates_male'),
-                'female' => $trainings->sum('graduates_female'),
-            ],
-            'graduatesByAgeRange' => [
-                'age_18_30' => $trainings->sum('graduates_age_18_30'),
-                'age_31_45' => $trainings->sum('graduates_age_31_45'),
-                'age_46_59' => $trainings->sum('graduates_age_46_59'),
-                'age_60_up' => $trainings->sum('graduates_age_60_up'),
-            ],
-        ];
-    }
-
-    private function trainingsConductedChart(Collection $trainings, array $filters): array
-    {
-        $from = Carbon::parse($filters['from']);
-        $until = Carbon::parse($filters['until']);
-        $byYear = $from->diffInMonths($until) > 36;
-
-        $buckets = $trainings
-            ->groupBy(fn (TrainingRequest $t) => $byYear ? $t->preferred_date->format('Y') : $t->preferred_date->format('Y-m'))
-            ->sortKeys();
-
-        return $buckets->map(fn ($rows, $bucket) => [
-            'label' => $byYear ? $bucket : Carbon::createFromFormat('Y-m', $bucket)->format('M Y'),
-            'apb' => $rows->where('category', TrainingRequest::CATEGORY_APB)->count(),
-            'ta' => $rows->where('category', TrainingRequest::CATEGORY_TA)->count(),
-        ])->values()->all();
-    }
-
     /**
+     * Shared with both dashboards' embedded maps (see DashboardController),
+     * hence public static rather than a private instance method like the
+     * rest of this controller's helpers.
+     *
      * @param  Collection<int, TrainingRequest>  $trainings
      */
-    private function mapPoints(Collection $trainings): array
+    public static function mapPoints(Collection $trainings): array
     {
         return $trainings
             ->groupBy(fn (TrainingRequest $t) => $t->agency_type && $t->requesting_agency
@@ -225,13 +154,10 @@ class MonitoringController extends Controller
                     'trainings' => $rows->count(),
                     'graduates' => $rows->sum(fn (TrainingRequest $t) => $t->graduates),
                     'teams' => $rows->sum('teams_organized'),
-                    'apb' => $rows->where('category', TrainingRequest::CATEGORY_APB)->count(),
-                    'ta' => $rows->where('category', TrainingRequest::CATEGORY_TA)->count(),
                 ];
             })
             ->sortByDesc('graduates')
             ->values()
             ->all();
     }
-
 }

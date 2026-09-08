@@ -66,7 +66,7 @@
                                         </span>
                                     @else
                                         <a href="{{ route('training-requests.evaluation.edit', $training) }}"
-                                            class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-lg px-4 py-2 hover:bg-[#1E3A66] transition">
+                                            class="shrink-0 inline-flex items-center justify-center bg-[#152A4E]/70 hover:bg-[#152A4E]/85 backdrop-blur-xl backdrop-saturate-150 border border-white/10 text-white text-xs font-semibold rounded-lg px-4 py-2 shadow-lg transition">
                                             {{ __('Evaluate Training') }}
                                         </a>
                                     @endif

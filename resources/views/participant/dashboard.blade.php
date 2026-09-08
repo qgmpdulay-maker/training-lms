@@ -25,15 +25,15 @@
 
                     <div class="flex flex-wrap gap-3">
                         <a href="{{ route('trainings.index') }}"
-                            class="inline-flex items-center justify-center bg-white text-[#152A4E] text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-white/90 transition">
+                            class="inline-flex items-center justify-center bg-white/90 hover:bg-white backdrop-blur-xl backdrop-saturate-150 border border-white/40 text-[#152A4E] text-sm font-semibold rounded-lg px-5 py-2.5 shadow-lg transition">
                             {{ __('Browse Trainings') }}
                         </a>
                         <a href="{{ route('training-needs-assessment.index') }}"
-                            class="inline-flex items-center justify-center bg-white/10 text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-white/20 transition border border-white/20">
+                            class="inline-flex items-center justify-center bg-white/10 hover:bg-white/20 backdrop-blur-xl backdrop-saturate-150 border border-white/20 text-white text-sm font-semibold rounded-lg px-5 py-2.5 transition">
                             {{ __('Take Needs Assessment') }}
                         </a>
                         <a href="{{ route('training-requests.index') }}"
-                            class="inline-flex items-center justify-center bg-white/10 text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-white/20 transition border border-white/20">
+                            class="inline-flex items-center justify-center bg-white/10 hover:bg-white/20 backdrop-blur-xl backdrop-saturate-150 border border-white/20 text-white text-sm font-semibold rounded-lg px-5 py-2.5 transition">
                             {{ __('Upcoming Trainings') }}
                         </a>
                     </div>

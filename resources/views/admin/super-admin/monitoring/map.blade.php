@@ -18,7 +18,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                 <div class="mb-5">
                     <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Filter') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Narrow the map and tables below by date range, region, or category.') }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Narrow the map and tables below by date range, region, or training.') }}</p>
                 </div>
 
                 <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -67,11 +67,11 @@
                         @endif
                     </div>
                     <div>
-                        <x-input-label for="category" :value="__('APB / TA')" />
-                        <select id="category" name="category" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
-                            <option value="">{{ __('APB and TA') }}</option>
-                            @foreach ($categoryLabels as $value => $label)
-                                <option value="{{ $value }}" @selected($filters['category'] === $value)>{{ $label }}</option>
+                        <x-input-label for="training_title" :value="__('Training')" />
+                        <select id="training_title" name="training_title" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
+                            <option value="">{{ __('All Trainings') }}</option>
+                            @foreach ($trainingTitles as $title)
+                                <option value="{{ $title }}" @selected($filters['training_title'] === $title)>{{ $title }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -79,7 +79,7 @@
                         <button type="submit" class="w-full inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-4 py-2 hover:bg-[#1E3A66] transition">
                             {{ __('Apply Filters') }}
                         </button>
-                        @if (! empty($filters['regions']) || $filters['category'])
+                        @if (! empty($filters['regions']) || $filters['training_title'])
                             <a href="{{ route('admin.monitoring.map', array_filter(['from' => $filters['from'], 'until' => $filters['until']])) }}"
                                 class="shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
                                 {{ __('Reset') }}
@@ -313,7 +313,7 @@
                     '<div style="color:#6b7280;margin-bottom:6px">' + subtitle + '</div>' +
                     '<div style="color:#374151">' + '{{ __('Graduates') }}: <strong>' + point.graduates + '</strong></div>' +
                     '<div style="color:#374151">' + '{{ __('Teams organized') }}: <strong>' + point.teams + '</strong></div>' +
-                    '<div style="color:#374151">' + '{{ __('Trainings') }}: <strong>' + point.trainings + '</strong> (APB ' + point.apb + ' / TA ' + point.ta + ')</div>',
+                    '<div style="color:#374151">' + '{{ __('Trainings') }}: <strong>' + point.trainings + '</strong></div>',
                     { className: 'graduates-popup', closeButton: false }
                 );
 

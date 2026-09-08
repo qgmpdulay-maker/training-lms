@@ -13,9 +13,6 @@
                     <th class="py-2 pr-4">{{ __('Recommended Training') }}</th>
                     <th class="py-2 pr-4">{{ __('Max Hours') }}</th>
                     <th class="py-2 pr-4">{{ __('Submitted') }}</th>
-                    @if (Auth::user()->isAdmin())
-                        <th class="py-2 pr-4"></th>
-                    @endif
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -30,16 +27,6 @@
                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $submission->recommended_training_title }}</td>
                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $submission->max_hours ?? '—' }}</td>
                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $submission->created_at->format('M j, Y') }}</td>
-                        @if (Auth::user()->isAdmin())
-                            <td class="py-3 pr-4 text-right">
-                                @if ($submission->recommended_training_slug)
-                                    <a href="{{ route('admin.training-requests.create', ['training' => $submission->recommended_training_slug]) }}"
-                                        class="inline-flex items-center text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D] whitespace-nowrap">
-                                        {{ __('Request Training') }} &rarr;
-                                    </a>
-                                @endif
-                            </td>
-                        @endif
                     </tr>
                 @endforeach
             </tbody>

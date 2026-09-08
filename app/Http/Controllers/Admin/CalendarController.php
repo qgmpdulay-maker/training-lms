@@ -31,6 +31,7 @@ class CalendarController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
+        $search = trim((string) $request->query('search'));
 
         if ($user->isAdmin()) {
             $events = CalendarEvent::with('creator')
@@ -39,6 +40,7 @@ class CalendarController extends Controller
                 ->get();
 
             $requests = TrainingRequest::where('region', $user->region)
+                ->when($search !== '', fn ($q) => $this->searchTrainings($q, $search))
                 ->orderBy('preferred_date')
                 ->get();
 
@@ -49,20 +51,17 @@ class CalendarController extends Controller
                 'defaultMonth' => $this->defaultMonth($groupedByMonth),
                 'categoryColors' => self::CATEGORY_COLORS,
                 'eventTypeColors' => self::EVENT_TYPE_COLORS,
-                'eventTypeLabels' => CalendarEvent::$typeLabels,
                 'regions' => config('regions.list'),
-                'categoryLabels' => TrainingRequest::$categoryLabels,
-                'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
+                'search' => $search,
                 'filters' => null,
             ]);
         }
 
-        // Super Admin (Central) sees every region — filterable by region, training
-        // type, and category so the whole-country agenda stays usable at scale.
+        // Super Admin (Central) sees every region — filterable by region, plus
+        // a free-text search over training/agency so the whole-country agenda
+        // stays usable at scale. No category filter — every training is TA.
         $filters = [
             'region' => $request->query('region') ?: null,
-            'category' => $request->query('category') ?: null,
-            'training_title' => $request->query('training_title') ?: null,
         ];
 
         $events = CalendarEvent::with('creator')
@@ -72,8 +71,7 @@ class CalendarController extends Controller
 
         $requests = TrainingRequest::query()
             ->when($filters['region'], fn ($q) => $q->where('region', $filters['region']))
-            ->when($filters['category'], fn ($q) => $q->where('category', $filters['category']))
-            ->when($filters['training_title'], fn ($q) => $q->where('training_title', $filters['training_title']))
+            ->when($search !== '', fn ($q) => $this->searchTrainings($q, $search))
             ->orderBy('preferred_date')
             ->get();
 
@@ -84,30 +82,23 @@ class CalendarController extends Controller
             'defaultMonth' => $this->defaultMonth($groupedByMonth),
             'categoryColors' => self::CATEGORY_COLORS,
             'eventTypeColors' => self::EVENT_TYPE_COLORS,
-            'eventTypeLabels' => CalendarEvent::$typeLabels,
             'regions' => config('regions.list'),
-            'categoryLabels' => TrainingRequest::$categoryLabels,
-            'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
+            'search' => $search,
             'filters' => $filters,
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    /**
+     * Free-text match on training name or requesting agency (e.g. "PCO",
+     * "TA for LGU/NGA") — replaces the old exact-title dropdown so the
+     * calendar can be searched the way people actually think of a training.
+     */
+    private function searchTrainings($query, string $search)
     {
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'string', 'in:'.implode(',', array_keys(CalendarEvent::$typeLabels))],
-            'date' => ['required', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:date'],
-            'region' => ['nullable', 'string', 'in:'.implode(',', config('regions.list'))],
-            'description' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $validated['created_by'] = $request->user()->id;
-
-        CalendarEvent::create($validated);
-
-        return Redirect::route('admin.calendar')->with('status', "\"{$validated['title']}\" was added to the calendar.");
+        return $query->where(function ($q) use ($search) {
+            $q->where('training_title', 'like', "%{$search}%")
+                ->orWhere('requesting_agency', 'like', "%{$search}%");
+        });
     }
 
     public function destroy(CalendarEvent $calendarEvent): RedirectResponse
@@ -145,8 +136,8 @@ class CalendarController extends Controller
      * Merge training requests and calendar events into one collection, grouped
      * and ordered by month so both appear together in the same agenda view.
      *
-     * @param  \Illuminate\Support\Collection<int, TrainingRequest>  $requests
-     * @param  \Illuminate\Support\Collection<int, CalendarEvent>  $events
+     * @param  Collection<int, TrainingRequest>  $requests
+     * @param  Collection<int, CalendarEvent>  $events
      */
     private function groupEntries($requests, $events)
     {

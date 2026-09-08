@@ -39,7 +39,8 @@
                         @foreach ($instructors as $instructor)
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                                 <td class="py-3 pr-4 font-medium">
-                                    <a href="{{ route('admin.instructors.show', $instructor) }}" class="text-[#152A4E] dark:text-white hover:text-[#E2762D] dark:hover:text-[#E2762D] hover:underline">
+                                    <a href="{{ route('admin.instructors.show', $instructor) }}" class="flex items-center gap-2.5 text-[#152A4E] dark:text-white hover:text-[#E2762D] dark:hover:text-[#E2762D] hover:underline">
+                                        <x-instructor-avatar :instructor="$instructor" />
                                         {{ $instructor->name }}
                                     </a>
                                 </td>

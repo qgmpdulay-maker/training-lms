@@ -5,35 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Instructor;
 use App\Models\TrainingRequest;
-use App\Models\TrainingTarget;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class ToolsController extends Controller
 {
-    // Status-semantic colors from the design system's fixed status palette,
-    // plus one categorical slot (blue) and one neutral for the two statuses
-    // that aren't strictly good/warning/critical.
-    private const STATUS_COLORS = [
-        TrainingRequest::STATUS_SUBMITTED => '#9ca3af',
-        TrainingRequest::STATUS_UNDER_REVIEW => '#fab219',
-        TrainingRequest::STATUS_APPROVED => '#2a78d6',
-        TrainingRequest::STATUS_DECLINED => '#d03b3b',
-        TrainingRequest::STATUS_COMPLETED => '#0ca30c',
-    ];
-
-    // Matches the APB/Technical Assistance legend colors already used on the
-    // Calendar tab (bg-blue-400 / bg-orange-400), so the category is
-    // recognizable across pages.
-    private const CATEGORY_COLORS = [
-        TrainingRequest::CATEGORY_APB => '#60a5fa',
-        TrainingRequest::CATEGORY_TA => '#fb923c',
-    ];
-
     public function index(Request $request): View
     {
         // This page pulls every training request (plus their participants,
@@ -49,42 +29,37 @@ class ToolsController extends Controller
         $user = $request->user();
         $region = $user->isAdmin() ? $user->region : ($user->isSuperAdmin() ? $request->query('region') : null);
 
+        $filesSearch = trim((string) $request->query('files_q'));
+
         $filesRecords = TrainingRequest::with(['user', 'participants', 'trainingEvaluation'])
             ->when($region, fn ($query) => $query->where('region', $region))
+            ->when($filesSearch !== '', function ($query) use ($filesSearch) {
+                $query->where(function ($q) use ($filesSearch) {
+                    $q->where('training_title', 'like', "%{$filesSearch}%")
+                        ->orWhere('venue', 'like', "%{$filesSearch}%")
+                        ->orWhere('lgu', 'like', "%{$filesSearch}%")
+                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$filesSearch}%"))
+                        ->orWhereHas('participants', fn ($p) => $p->where('name', 'like', "%{$filesSearch}%"));
+                });
+            })
             ->orderByDesc('preferred_date')
             ->paginate(10, ['*'], 'files')
             ->withQueryString();
 
-        // The files table paginates via plain links; fetch() re-requests this same
-        // route and swaps in just the table so paging doesn't reload the whole page.
-        if ($request->ajax()) {
+        // The search box and pagination links re-request this same route and swap
+        // in just the table, so typing/paging doesn't reload the whole page — see
+        // resources/views/admin/partials/live-search-script.blade.php.
+        if ($request->ajax() && $request->query('_section') === 'files') {
             return view('admin.partials.files-table', compact('filesRecords'));
         }
-
-        $graduatesByTraining = TrainingRequest::where('status', TrainingRequest::STATUS_COMPLETED)
-            ->when($region, fn ($query) => $query->where('region', $region))
-            ->with('participants')
-            ->get()
-            ->groupBy('training_title')
-            ->map(fn ($records) => [
-                'total' => $records->sum(fn (TrainingRequest $r) => max($r->participants->count(), 1)),
-                'byYear' => $records->groupBy(fn (TrainingRequest $r) => $r->preferred_date->format('Y'))
-                    ->map(fn ($yearRecords) => $yearRecords->sum(fn (TrainingRequest $r) => max($r->participants->count(), 1)))
-                    ->sortKeys(),
-            ])
-            ->sortKeys();
 
         return view('admin.tools', [
             'region' => $region,
             'regionLocked' => $user->isAdmin(),
             'regions' => config('regions.list'),
-            'graduatesByTraining' => $graduatesByTraining,
             'filesRecords' => $filesRecords,
-            'statusDonut' => $this->statusDonut($region),
-            'categoryDonut' => $this->categoryDonut($region),
-            'taAccomplishment' => $this->taAccomplishment($region),
+            'filesSearch' => $filesSearch,
             'evaluationsByTraining' => $this->evaluationSummaries($region),
-            'graduatesByLgu' => $this->graduatesByLgu($region),
         ]);
     }
 
@@ -111,171 +86,18 @@ class ToolsController extends Controller
         return back()->with('status', "Files updated for {$trainingRequest->training_title}.");
     }
 
-    public function downloadAtarTemplate(): \Symfony\Component\HttpFoundation\Response
+    public function downloadAtarTemplate(): Response
     {
         return Pdf::loadView('pdf.atar-template')
             ->setPaper('a4', 'portrait')
             ->download('after-training-activity-report-template.pdf');
     }
 
-    public function downloadCertificateTemplate(): \Symfony\Component\HttpFoundation\Response
+    public function downloadCertificateTemplate(): Response
     {
         return Pdf::loadView('pdf.certificate-template')
             ->setPaper('a4', 'landscape')
             ->download('training-certificate-template.pdf');
-    }
-
-    /**
-     * Super Admin sets the planning target for a Technical Assistance
-     * training type — everything else on the accomplishment chart
-     * (Accomplished) is derived from actual completed requests, but Target
-     * is an externally set planning number with no other source of truth.
-     * Targets are per-region (e.g. NCR's target for a title differs from
-     * Region III's); a null region is the nationwide "All Regions" target,
-     * set the same way while that filter is selected on the Tools page.
-     */
-    public function updateTarget(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'training_title' => ['required', 'string', 'max:255'],
-            'region' => ['nullable', 'string', Rule::in(config('regions.list'))],
-            'target' => ['required', 'integer', 'min:0'],
-        ]);
-
-        TrainingTarget::updateOrCreate(
-            [
-                'training_title' => $validated['training_title'],
-                'category' => TrainingRequest::CATEGORY_TA,
-                'region' => $validated['region'] ?? null,
-            ],
-            ['target' => $validated['target']],
-        );
-
-        $regionLabel = $validated['region'] ?? 'All Regions';
-
-        return back()->with('status', "Target updated for {$validated['training_title']} ({$regionLabel}).");
-    }
-
-    private function statusDonut(?string $region): array
-    {
-        $total = TrainingRequest::when($region, fn ($query) => $query->where('region', $region))->count();
-        $accomplished = TrainingRequest::where('status', TrainingRequest::STATUS_COMPLETED)
-            ->when($region, fn ($query) => $query->where('region', $region))
-            ->count();
-        $pending = $total - $accomplished;
-
-        $radius = 40;
-        $circumference = 2 * M_PI * $radius;
-        $accomplishedFraction = $total > 0 ? $accomplished / $total : 0;
-        $accomplishedArc = $accomplishedFraction * $circumference;
-
-        return [
-            'total' => $total,
-            'circumference' => $circumference,
-            'radius' => $radius,
-            'segments' => [
-                [
-                    'label' => 'Accomplished',
-                    'value' => $accomplished,
-                    'percent' => $total > 0 ? round($accomplishedFraction * 100) : 0,
-                    'color' => self::STATUS_COLORS[TrainingRequest::STATUS_COMPLETED],
-                    'dasharray' => "{$accomplishedArc} {$circumference}",
-                    'dashoffset' => 0,
-                ],
-                [
-                    'label' => 'Pending',
-                    'value' => $pending,
-                    'percent' => $total > 0 ? 100 - round($accomplishedFraction * 100) : 0,
-                    'color' => '#9ca3af',
-                    'dasharray' => ($circumference - $accomplishedArc).' '.$circumference,
-                    'dashoffset' => -$accomplishedArc,
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * Requests split by category (APB vs. Technical Assistance) — sits next
-     * to the status donut as the other natural cut of the same request
-     * volume, colored to match the APB/TA legend already used on Calendar.
-     */
-    private function categoryDonut(?string $region): array
-    {
-        $total = TrainingRequest::when($region, fn ($query) => $query->where('region', $region))->count();
-        $apb = TrainingRequest::where('category', TrainingRequest::CATEGORY_APB)
-            ->when($region, fn ($query) => $query->where('region', $region))
-            ->count();
-        $ta = $total - $apb;
-
-        $radius = 40;
-        $circumference = 2 * M_PI * $radius;
-        $apbFraction = $total > 0 ? $apb / $total : 0;
-        $apbArc = $apbFraction * $circumference;
-
-        return [
-            'total' => $total,
-            'circumference' => $circumference,
-            'radius' => $radius,
-            'segments' => [
-                [
-                    'label' => TrainingRequest::$categoryLabels[TrainingRequest::CATEGORY_APB],
-                    'value' => $apb,
-                    'percent' => $total > 0 ? round($apbFraction * 100) : 0,
-                    'color' => self::CATEGORY_COLORS[TrainingRequest::CATEGORY_APB],
-                    'dasharray' => "{$apbArc} {$circumference}",
-                    'dashoffset' => 0,
-                ],
-                [
-                    'label' => TrainingRequest::$categoryLabels[TrainingRequest::CATEGORY_TA],
-                    'value' => $ta,
-                    'percent' => $total > 0 ? 100 - round($apbFraction * 100) : 0,
-                    'color' => self::CATEGORY_COLORS[TrainingRequest::CATEGORY_TA],
-                    'dasharray' => ($circumference - $apbArc).' '.$circumference,
-                    'dashoffset' => -$apbArc,
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * Target vs. Accomplished per Technical Assistance training type.
-     * Accomplished is the graduate count from completed TA requests of that
-     * title; Target comes from the separately maintained TrainingTarget
-     * table, since it's a planning figure with no other source of truth.
-     * Both are scoped to the same region as the rest of the page — a null
-     * $region reads/writes the nationwide "All Regions" target, not a sum
-     * of every region's target, so switching the region filter shows that
-     * region's own target rather than a blended figure.
-     * Every title that has either a completed TA request or a target on
-     * file gets a row, so a target can be set ahead of the first request.
-     *
-     * @return array<int, array{title: string, target: int, accomplished: int, percent: int}>
-     */
-    private function taAccomplishment(?string $region): array
-    {
-        $accomplished = TrainingRequest::where('category', TrainingRequest::CATEGORY_TA)
-            ->where('status', TrainingRequest::STATUS_COMPLETED)
-            ->when($region, fn ($query) => $query->where('region', $region))
-            ->with('participants')
-            ->get()
-            ->groupBy('training_title')
-            ->map(fn ($records) => $records->sum(fn (TrainingRequest $r) => max($r->participants->count(), 1)));
-
-        $targets = TrainingTarget::where('category', TrainingRequest::CATEGORY_TA)
-            ->where('region', $region)
-            ->pluck('target', 'training_title');
-
-        $titles = $accomplished->keys()->merge($targets->keys())->unique()->sort()->values();
-
-        $maxValue = max($accomplished->max() ?? 0, $targets->max() ?? 0, 1);
-
-        return $titles->map(fn ($title) => [
-            'title' => $title,
-            'target' => $targets[$title] ?? 0,
-            'accomplished' => $accomplished[$title] ?? 0,
-            'target_percent' => round((($targets[$title] ?? 0) / $maxValue) * 100),
-            'accomplished_percent' => round((($accomplished[$title] ?? 0) / $maxValue) * 100),
-        ])->keyBy('title')->all();
     }
 
     /**
@@ -290,7 +112,7 @@ class ToolsController extends Controller
      * number, since they measure different things (the admin's own
      * assessment vs. what participants reported).
      *
-     * @return array<string, \Illuminate\Support\Collection>
+     * @return array<string, Collection>
      */
     private function evaluationSummaries(?string $region): array
     {
@@ -534,41 +356,5 @@ class ToolsController extends Controller
             'min' => $scores->min(),
             'max' => $scores->max(),
         ];
-    }
-
-    /**
-     * Graduates by LGU, grouped by OCD region — when a super admin isn't
-     * scoped to one region, LGUs from different regions can share a name,
-     * so a single flat ranking would blur them together. Keyed by region
-     * title to match evaluationsByTraining's shape, since the Tools view
-     * uses the same tab-switcher pattern for both.
-     *
-     * @return array<string, array{total: int, lgus: array}>
-     */
-    private function graduatesByLgu(?string $region): array
-    {
-        return TrainingRequest::where('status', TrainingRequest::STATUS_COMPLETED)
-            ->whereNotNull('lgu')
-            ->when($region, fn ($query) => $query->where('region', $region))
-            ->with('participants')
-            ->get()
-            ->groupBy(fn (TrainingRequest $r) => $r->region ?: __('Unspecified Region'))
-            ->map(function ($records) {
-                $lgus = $records->groupBy('lgu')
-                    ->map(fn ($lguRecords, $lgu) => [
-                        'lgu' => $lgu,
-                        'total' => $lguRecords->sum(fn (TrainingRequest $r) => max($r->participants->count(), 1)),
-                    ])
-                    ->sortByDesc('total')
-                    ->values()
-                    ->all();
-
-                return [
-                    'total' => array_sum(array_column($lgus, 'total')),
-                    'lgus' => $lgus,
-                ];
-            })
-            ->sortByDesc('total')
-            ->all();
     }
 }

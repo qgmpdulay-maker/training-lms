@@ -90,11 +90,11 @@
             <div class="flex-1 lg:flex-none lg:w-[45%] lg:h-screen lg:overflow-y-auto px-6 sm:px-12 lg:px-20 py-10 bg-white">
 
                 <!-- Back -->
-                <a href="{{ url()->previous() }}" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-8 footer-text">
+                <a href="{{ route('home') }}" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-8 footer-text">
                     <svg class="w-5 h-5 me-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                     </svg>
-                    {{ __('Back') }}
+                    {{ __('Back to Trainings') }}
                 </a>
 
                 <!-- Logo -->
@@ -110,7 +110,8 @@
                         {{ __('Create a Participant Account') }}
                     </h1>
 
-                    <form method="POST" action="{{ route('register') }}" enctype="multipart/form-data">
+                    <form method="POST" action="{{ route('register') }}"
+                        x-data="{ participantType: '{{ old('participant_type') }}', city: '{{ old('city') }}', showCityOptions: false }">
                         @csrf
 
                         <!-- Personal Information -->
@@ -124,25 +125,6 @@
                                 <h2 class="section-label">{{ __('Personal Information') }}</h2>
                             </div>
                             <div class="space-y-5">
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Picture of Participant') }}</label>
-                                    <div class="flex items-center gap-5">
-                                        <div id="picture-preview-wrap" class="w-20 h-20 rounded-full bg-[#152A4E]/8 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
-                                            <svg id="picture-placeholder-icon" class="w-8 h-8 text-[#152A4E]/40" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-                                            </svg>
-                                            <img id="picture-preview-img" src="" alt="" class="w-full h-full object-cover hidden">
-                                        </div>
-                                        <div class="flex-1">
-                                            <input id="picture" type="file" name="picture" accept="image/*" required
-                                                onchange="const f=this.files[0]; if(!f) return; const img=document.getElementById('picture-preview-img'); const icon=document.getElementById('picture-placeholder-icon'); const reader=new FileReader(); reader.onload=e => { img.src=e.target.result; img.classList.remove('hidden'); icon.classList.add('hidden'); }; reader.readAsDataURL(f);"
-                                                class="block w-full text-gray-600 file-input file:me-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-[#152A4E]/8 file:text-[#152A4E] hover:file:bg-[#152A4E]/15">
-                                            <x-input-error :messages="$errors->get('picture')" class="mt-1" />
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <div>
                                     <label for="name" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Full Name of Participant') }}</label>
                                     <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus autocomplete="name"
@@ -188,6 +170,7 @@
                                 <div>
                                     <label for="participant_type" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Participant Type') }}</label>
                                     <select id="participant_type" name="participant_type" required
+                                        x-model="participantType"
                                         class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] px-4 field-input">
                                         <option value="" disabled {{ old('participant_type') ? '' : 'selected' }}>{{ __('Select') }}</option>
                                         @foreach ([
@@ -206,16 +189,10 @@
                                     <x-input-error :messages="$errors->get('participant_type')" class="mt-1" />
                                 </div>
 
-                                <div>
-                                    <label for="organization" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Agency/Organization') }}</label>
-                                    <input id="organization" type="text" name="organization" value="{{ old('organization') }}" required
-                                        class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] px-4 field-input">
-                                    <x-input-error :messages="$errors->get('organization')" class="mt-1" />
-                                </div>
-
-                                <div>
+                                <!-- OCD Personnel: pick their OCD Regional Office (drives region scoping) -->
+                                <div x-show="participantType === 'OCD Personnel'" x-cloak>
                                     <label for="agency" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('OCD Regional Office') }}</label>
-                                    <select id="agency" name="agency" required
+                                    <select id="agency" name="agency" :required="participantType === 'OCD Personnel'"
                                         class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] px-4 field-input">
                                         <option value="" disabled {{ old('agency') ? '' : 'selected' }}>{{ __('Select an Agency') }}</option>
                                         @foreach ([
@@ -244,37 +221,36 @@
                                     </select>
                                     <x-input-error :messages="$errors->get('agency')" class="mt-1" />
                                 </div>
-                            </div>
-                            <hr class="section-divider">
-                        </div>
 
-                        <!-- Contact Information -->
-                        <div class="section-block">
-                            <div class="section-header">
-                                <span class="section-icon">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
-                                    </svg>
-                                </span>
-                                <h2 class="section-label">{{ __('Contact Information') }}</h2>
-                            </div>
-                            <div class="space-y-5">
-                                <div>
-                                    <label for="mobile_number" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Mobile Number') }}</label>
-                                    <input id="mobile_number" type="text" name="mobile_number" value="{{ old('mobile_number') }}" required
-                                        inputmode="numeric" pattern="\d*" maxlength="11" autocomplete="tel"
-                                        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                <!-- Everyone else: type-ahead city search instead of a full address -->
+                                <div x-show="participantType !== '' && participantType !== 'OCD Personnel'" x-cloak class="relative">
+                                    <label for="city" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('City') }}</label>
+                                    <input id="city" type="text" name="city" autocomplete="off"
+                                        x-model="city"
+                                        :required="participantType !== '' && participantType !== 'OCD Personnel'"
+                                        @focus="showCityOptions = true"
+                                        @input="showCityOptions = true"
+                                        @click.outside="showCityOptions = false"
+                                        @keydown.escape="showCityOptions = false"
+                                        placeholder="{{ __('Start typing your city...') }}"
                                         class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] px-4 field-input">
-                                    <x-input-error :messages="$errors->get('mobile_number')" class="mt-1" />
-                                </div>
 
-                                <div>
-                                    <label for="landline_number" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Landline Number') }}</label>
-                                    <input id="landline_number" type="text" name="landline_number" value="{{ old('landline_number') }}"
-                                        inputmode="numeric" pattern="\d*" maxlength="10" autocomplete="off"
-                                        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                                        class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] px-4 field-input">
-                                    <x-input-error :messages="$errors->get('landline_number')" class="mt-1" />
+                                    <template x-init="cities = {{ Js::from(config('cities.list')) }}"></template>
+
+                                    <ul x-show="showCityOptions && city.length > 0"
+                                        x-cloak
+                                        class="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg py-1">
+                                        <template x-for="option in cities.filter(c => c.toLowerCase().includes(city.toLowerCase())).slice(0, 8)" :key="option">
+                                            <li @click="city = option; showCityOptions = false"
+                                                class="px-4 py-2 text-gray-700 hover:bg-[#152A4E]/8 cursor-pointer field-label"
+                                                x-text="option"></li>
+                                        </template>
+                                        <li x-show="!cities.some(c => c.toLowerCase() === city.toLowerCase()) && cities.filter(c => c.toLowerCase().includes(city.toLowerCase())).length === 0"
+                                            class="px-4 py-2 text-gray-400 field-label">
+                                            {{ __("No match — you can still use what you typed.") }}
+                                        </li>
+                                    </ul>
+                                    <x-input-error :messages="$errors->get('city')" class="mt-1" />
                                 </div>
                             </div>
                             <hr class="section-divider">
@@ -292,7 +268,7 @@
                             </div>
                             <div class="space-y-5">
                                 <div>
-                                    <label for="email" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Email') }}</label>
+                                    <label for="email" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Work Email') }}</label>
                                     <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="username"
                                         class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] px-4 field-input">
                                     <x-input-error :messages="$errors->get('email')" class="mt-1" />
@@ -317,7 +293,7 @@
                         <!-- Submit -->
                         <div class="mt-10">
                             <button type="submit"
-                                class="w-full bg-[#152A4E] hover:bg-[#1E3A66] text-white font-semibold rounded-lg transition submit-btn">
+                                class="w-full bg-[#152A4E]/70 hover:bg-[#152A4E]/85 backdrop-blur-xl backdrop-saturate-150 border border-white/10 text-white font-semibold rounded-lg shadow-lg transition submit-btn">
                                 {{ __('Sign Up') }}
                             </button>
 
@@ -336,8 +312,6 @@
             <div class="hidden lg:flex lg:flex-1 lg:h-screen lg:sticky lg:top-0 relative overflow-hidden bg-gradient-to-br from-[#152A4E] via-[#1E3A66] to-[#0D1B33]">
                 <img src="{{ asset('images/ocd-seal.png') }}" alt=""
                     class="absolute -right-24 -bottom-24 w-[560px] h-[560px] object-contain opacity-[0.07] pointer-events-none">
-
-                <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#152A4E] via-[#152A4E] to-[#E2762D]"></div>
 
                 <div class="relative z-10 flex flex-col justify-end p-16 text-white">
                     <p class="font-semibold tracking-[0.2em] text-[#E2762D] uppercase mb-4 text-sm">
