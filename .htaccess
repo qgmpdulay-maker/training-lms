@@ -1,0 +1,13 @@
+# Only needed on hosts like InfinityFree where the whole Laravel project
+# (not just public/) has to live inside the web-served folder (htdocs) —
+# there's no way to point the document root at public/ directly. This file
+# belongs at the project root (i.e. htdocs/.htaccess on InfinityFree, a
+# sibling of artisan and composer.json), and sends every request into
+# public/, so app/, vendor/, .env, etc. are never reachable directly even
+# though they technically sit inside the web root — e.g. a request for
+# /.env becomes /public/.env, which doesn't exist there, so it 404s instead
+# of serving the real file.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

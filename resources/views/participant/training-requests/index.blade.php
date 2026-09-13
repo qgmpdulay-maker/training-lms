@@ -12,9 +12,12 @@
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
             <div class="mb-8">
-                <h1 class="text-2xl font-bold text-[#152A4E] dark:text-white mb-1">{{ __('My Upcoming Trainings') }}</h1>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Trainings your OCD Regional Office has scheduled you for.') }}</p>
+                <h1 class="text-2xl font-bold text-[#152A4E] dark:text-white mb-1">{{ __('My Trainings') }}</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Trainings your OCD Regional Office has scheduled you for — upcoming and completed.') }}</p>
             </div>
+
+            <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Upcoming') }}</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __("Trainings you're confirmed for that haven't happened yet.") }}</p>
 
             @if ($upcomingTrainings->isEmpty())
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-10 text-center">
@@ -30,7 +33,7 @@
                             class="block bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition p-5 sm:p-6">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div>
-                                    <h2 class="font-bold text-[#152A4E] dark:text-white">{{ $training->training_title }}</h2>
+                                    <h3 class="font-bold text-[#152A4E] dark:text-white">{{ $training->training_title }}</h3>
                                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                         {{ __(':date at :venue', ['date' => $training->preferred_date->format('F j, Y'), 'venue' => $training->venue]) }}
                                     </p>

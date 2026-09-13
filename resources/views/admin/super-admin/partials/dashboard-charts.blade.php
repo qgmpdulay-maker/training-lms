@@ -1,0 +1,118 @@
+{{--
+    The "Filter Charts by Region" card + the five overview charts grid.
+    Re-rendered in place (no page reload) whenever the chart_region or year
+    select changes — see submitDashboardFilter() in dashboard.blade.php.
+--}}
+@php
+    $chartRegionLabel = $chartRegion ?: __('every region');
+@endphp
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm px-5 sm:px-6 py-4 flex items-center justify-between flex-wrap gap-4">
+    <div class="flex items-center gap-3">
+        <div class="h-11 w-11 shrink-0 rounded-lg bg-[#E2762D]/10 dark:bg-[#E2762D]/20 flex items-center justify-center text-[#E2762D]">
+            @include('admin.partials.icon', ['name' => 'map'])
+        </div>
+        <div>
+            <div class="font-bold text-[#152A4E] dark:text-white leading-tight">{{ __('Filter Charts by Region') }}</div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Applies to the five overview charts below.') }}</p>
+        </div>
+    </div>
+    <form method="GET" action="{{ route('admin.dashboard') }}" onsubmit="return submitDashboardFilter(this, event)">
+        <input type="hidden" name="year" value="{{ $year }}">
+        @foreach (($monitoringFilters['regions'] ?? []) as $regionValue)
+            <input type="hidden" name="regions[]" value="{{ $regionValue }}">
+        @endforeach
+        @if (! empty($monitoringFilters['training_title']))
+            <input type="hidden" name="training_title" value="{{ $monitoringFilters['training_title'] }}">
+        @endif
+        @if (! empty($monitoringFilters['from']))
+            <input type="hidden" name="from" value="{{ $monitoringFilters['from'] }}">
+        @endif
+        @if (! empty($monitoringFilters['until']))
+            <input type="hidden" name="until" value="{{ $monitoringFilters['until'] }}">
+        @endif
+        <label for="chart_region" class="sr-only">{{ __('Region') }}</label>
+        <div class="relative">
+            <select id="chart_region" name="chart_region" onchange="submitDashboardFilter(this)"
+                class="appearance-none min-w-[180px] rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm font-semibold py-2.5 pl-4 pr-10 hover:border-[#152A4E] dark:hover:border-white/40 focus:border-[#152A4E] focus:ring-[#152A4E] transition">
+                <option value="" @selected(! $chartRegion)>{{ __('All Regions') }}</option>
+                @foreach ($regions as $regionOption)
+                    <option value="{{ $regionOption }}" @selected($chartRegion === $regionOption)>{{ $regionOption }}</option>
+                @endforeach
+            </select>
+            <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+        </div>
+    </form>
+</div>
+<div class="grid grid-cols-1 gap-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:divide-x lg:divide-gray-100 dark:lg:divide-gray-700">
+            <div>
+                <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Requests by Status') }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('All training requests on file, :region.', ['region' => $chartRegionLabel]) }}</p>
+                <div class="h-64 max-w-xs mx-auto"><canvas id="dashStatusBreakdownChart"></canvas></div>
+            </div>
+            <div class="lg:pl-6">
+                <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Sex') }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings only, :region.', ['region' => $chartRegionLabel]) }}</p>
+                @if ($chartData['graduatesBySex']['male'] + $chartData['graduatesBySex']['female'] > 0)
+                    <div class="h-64 max-w-xs mx-auto"><canvas id="dashGraduatesBySexChart"></canvas></div>
+                @else
+                    <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings yet.') }}</p>
+                @endif
+            </div>
+            <div class="lg:pl-6">
+                <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Age Range') }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings only, :region.', ['region' => $chartRegionLabel]) }}</p>
+                <div class="h-64"><canvas id="dashGraduatesByAgeRangeChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-1">
+            <h3 class="font-bold text-[#152A4E] dark:text-white">{{ __('Graduates by Training') }}</h3>
+            <form method="GET" action="{{ route('admin.dashboard') }}" class="flex items-center gap-2" onsubmit="return submitDashboardFilter(this, event)">
+                @if ($chartRegion)
+                    <input type="hidden" name="chart_region" value="{{ $chartRegion }}">
+                @endif
+                @foreach (($monitoringFilters['regions'] ?? []) as $regionValue)
+                    <input type="hidden" name="regions[]" value="{{ $regionValue }}">
+                @endforeach
+                @if (! empty($monitoringFilters['training_title']))
+                    <input type="hidden" name="training_title" value="{{ $monitoringFilters['training_title'] }}">
+                @endif
+                @if (! empty($monitoringFilters['from']))
+                    <input type="hidden" name="from" value="{{ $monitoringFilters['from'] }}">
+                @endif
+                @if (! empty($monitoringFilters['until']))
+                    <input type="hidden" name="until" value="{{ $monitoringFilters['until'] }}">
+                @endif
+                <label for="year" class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ __('Year') }}</label>
+                <select id="year" name="year" onchange="submitDashboardFilter(this)"
+                    class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                    @foreach ($availableYears as $yearOption)
+                        <option value="{{ $yearOption }}" @selected((string) $year === (string) $yearOption)>{{ $yearOption }}</option>
+                    @endforeach
+                    <option value="all" @selected($year === 'all')>{{ __('All Years') }}</option>
+                </select>
+            </form>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings only, :region — every course in the catalog is Technical Assistance.', ['region' => $chartRegionLabel]) }}</p>
+        @if (count($chartData['graduatesByTraining']) > 0)
+            <div style="height: {{ max(240, count($chartData['graduatesByTraining']) * 34) }}px"><canvas id="dashGraduatesByTrainingChart"></canvas></div>
+        @else
+            <p class="text-sm text-gray-400 dark:text-gray-500">{{ $year === 'all' ? __('No completed trainings yet.') : __('No completed trainings for :year.', ['year' => $year]) }}</p>
+        @endif
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+        <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Most Needed Trainings') }}</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('What the Training Needs Assessment says participants need most, :region.', ['region' => $chartRegionLabel]) }}</p>
+        @if (count($chartData['mostNeededTrainings']) > 0)
+            <div style="height: {{ max(240, count($chartData['mostNeededTrainings']) * 34) }}px"><canvas id="dashMostNeededTrainingsChart"></canvas></div>
+        @else
+            <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No Training Needs Assessment submissions yet.') }}</p>
+        @endif
+    </div>
+    @include('admin.super-admin.partials.dashboard-atar-charts', ['chartData' => $chartData, 'chartRegionLabel' => $chartRegionLabel])
+</div>

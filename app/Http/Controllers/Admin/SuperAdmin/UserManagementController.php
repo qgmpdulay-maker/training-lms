@@ -7,6 +7,7 @@ use App\Mail\AccountApproved;
 use App\Mail\AccountRejected;
 use App\Models\PendingRegistration;
 use App\Models\User;
+use App\Rules\NotSimilarToAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
 class UserManagementController extends Controller
@@ -137,11 +139,16 @@ class UserManagementController extends Controller
      * random one-time password, but the Super Admin may type a specific one
      * instead. Either way it's flashed back once so it can be relayed
      * directly; it's never stored anywhere in plain text or emailed.
+     *
+     * A typed-in password still has to clear the same strength bar as
+     * registration (Password::defaults(), set in AppServiceProvider) plus
+     * NotSimilarToAccount, which blocks reusing the account's current
+     * password outright or picking one derived from its own name/email/phone.
      */
     public function resetPassword(Request $request, User $user): RedirectResponse
     {
         $validated = $request->validate([
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => ['nullable', 'string', Password::defaults(), new NotSimilarToAccount($user)],
         ]);
 
         $newPassword = filled($validated['password'] ?? null) ? $validated['password'] : Str::password(12);

@@ -39,6 +39,22 @@
                     preferredDate: '{{ old('preferred_date', $defaultPreferredDate) }}',
                     venue: '{{ addslashes(old('venue', '')) }}',
                     stepError: '',
+                    trainings: {{ Js::from($trainings) }},
+                    trainingSearch: '',
+                    trainingCategory: 'All',
+                    get filteredTrainings() {
+                        return this.trainings.filter(t =>
+                            (this.trainingCategory === 'All' || t.category === this.trainingCategory) &&
+                            t.title.toLowerCase().includes(this.trainingSearch.toLowerCase())
+                        );
+                    },
+                    get groupedTrainings() {
+                        const groups = {};
+                        this.filteredTrainings.forEach(t => {
+                            (groups[t.category] ??= []).push(t);
+                        });
+                        return Object.keys(groups).sort().map(category => ({ category, items: groups[category] }));
+                    },
                     get daysUntil() {
                         if (!this.preferredDate) return null;
                         const diff = (new Date(this.preferredDate) - new Date(new Date().toDateString())) / 86400000;
@@ -105,23 +121,55 @@
 
                             <x-input-error :messages="$errors->get('training_slug')" class="mb-4" />
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                @foreach ($trainings as $training)
-                                    <label
-                                        class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition"
-                                        :class="training_slug === '{{ $training['slug'] }}' ? 'border-[#152A4E] bg-[#152A4E]/5' : 'border-gray-200 hover:border-gray-300'"
-                                    >
-                                        <input type="radio" name="training_slug" value="{{ $training['slug'] }}"
-                                            class="sr-only" required
-                                            x-model="training_slug"
-                                            @click="trainingTitle = '{{ addslashes($training['title']) }}'; stepError = ''">
-                                        <span class="text-[11px] font-semibold tracking-wide uppercase text-[#152A4E] bg-[#152A4E]/8 rounded-full px-2.5 py-1 w-fit mb-2">
-                                            {{ $training['category'] }}
-                                        </span>
-                                        <span class="font-bold text-[#152A4E] leading-snug mb-1">{{ $training['title'] }}</span>
-                                        <span class="text-xs text-gray-500">{{ $training['hours'] }} {{ __('training hours') }}</span>
-                                    </label>
-                                @endforeach
+                            <!-- Search + category filter, same pattern as the public training catalog -->
+                            <div class="flex flex-col sm:flex-row gap-2 bg-gray-50 rounded-xl border border-gray-100 p-2 mb-6">
+                                <div class="relative flex-1">
+                                    <input type="text" x-model="trainingSearch" placeholder="{{ __('Search trainings...') }}"
+                                        class="w-full rounded-lg border-0 bg-white focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
+                                    <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                    </svg>
+                                </div>
+                                <div class="relative sm:w-56 shrink-0">
+                                    <select x-model="trainingCategory"
+                                        class="w-full rounded-lg border-0 bg-white focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-3 pr-9 py-2.5 transition">
+                                        <option value="All">{{ __('All Categories') }}</option>
+                                        @foreach (collect($trainings)->pluck('category')->unique()->sort() as $categoryOption)
+                                            <option value="{{ $categoryOption }}">{{ $categoryOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Trainings grouped per category, one section per category -->
+                            <div class="space-y-8">
+                                <template x-for="group in groupedTrainings" :key="group.category">
+                                    <div>
+                                        <div class="flex items-center gap-3 mb-3">
+                                            <h3 class="text-sm font-bold text-[#152A4E] whitespace-nowrap" x-text="group.category"></h3>
+                                            <span class="h-px flex-1 bg-gradient-to-r from-[#152A4E]/25 via-[#E2762D]/25 to-transparent"></span>
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <template x-for="training in group.items" :key="training.slug">
+                                                <label
+                                                    class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition"
+                                                    :class="training_slug === training.slug ? 'border-[#152A4E] bg-[#152A4E]/5' : 'border-gray-200 hover:border-gray-300'"
+                                                >
+                                                    <input type="radio" name="training_slug" class="sr-only" required
+                                                        :value="training.slug"
+                                                        x-model="training_slug"
+                                                        @click="trainingTitle = training.title; stepError = ''">
+                                                    <span class="font-bold text-[#152A4E] leading-snug mb-1" x-text="training.title"></span>
+                                                    <span class="text-xs text-gray-500" x-text="training.hours + ' {{ __('training hours') }}'"></span>
+                                                </label>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <p x-show="groupedTrainings.length === 0" class="text-sm text-gray-500 text-center py-8">
+                                    {{ __('No trainings match your search.') }}
+                                </p>
                             </div>
                         </div>
                     </div>

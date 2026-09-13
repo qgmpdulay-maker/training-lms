@@ -43,8 +43,14 @@ class PendingRegistration extends Model
      * Generates a fresh 6-digit OTP, stores it hashed with a 10-minute
      * expiry, and emails it. Used both right after registration and
      * whenever an unverified applicant tries to log in again.
+     *
+     * Returns whether the email actually went out — callers use this to
+     * warn the applicant instead of silently pointing them at an inbox
+     * that will never get the code (e.g. misconfigured SMTP credentials).
+     * The OTP itself is still generated and stored either way, so
+     * "Resend it" can succeed once the mail problem is fixed.
      */
-    public function sendOtpEmail(): void
+    public function sendOtpEmail(): bool
     {
         $code = (string) random_int(100000, 999999);
 
@@ -54,8 +60,12 @@ class PendingRegistration extends Model
 
         try {
             Mail::to($this->email)->send(new OtpCode($this, $code));
+
+            return true;
         } catch (\Throwable $e) {
             Log::error('Failed to send OTP email: '.$e->getMessage());
+
+            return false;
         }
     }
 

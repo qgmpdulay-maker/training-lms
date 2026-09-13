@@ -3,24 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\CalendarEvent;
 use App\Models\TrainingRequest;
 use Carbon\Carbon;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 
 class CalendarController extends Controller
 {
-    // Same colors used elsewhere so an event type reads consistently across the app.
-    const EVENT_TYPE_COLORS = [
-        CalendarEvent::TYPE_HOLIDAY => 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700',
-        CalendarEvent::TYPE_SUSPENSION => 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700',
-        CalendarEvent::TYPE_OTHER => 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600',
-    ];
-
     // TOR asks for APB/TA color-coding at both the Regional and Central level —
     // one shared palette so a category reads the same everywhere it appears.
     const CATEGORY_COLORS = [
@@ -34,23 +24,17 @@ class CalendarController extends Controller
         $search = trim((string) $request->query('search'));
 
         if ($user->isAdmin()) {
-            $events = CalendarEvent::with('creator')
-                ->where(fn ($q) => $q->whereNull('region')->orWhere('region', $user->region))
-                ->orderBy('date')
-                ->get();
-
             $requests = TrainingRequest::where('region', $user->region)
                 ->when($search !== '', fn ($q) => $this->searchTrainings($q, $search))
                 ->orderBy('preferred_date')
                 ->get();
 
-            $groupedByMonth = $this->groupEntries($requests, $events);
+            $groupedByMonth = $this->groupEntries($requests);
 
             return view('admin.calendar', [
                 'groupedByMonth' => $groupedByMonth,
                 'defaultMonth' => $this->defaultMonth($groupedByMonth),
                 'categoryColors' => self::CATEGORY_COLORS,
-                'eventTypeColors' => self::EVENT_TYPE_COLORS,
                 'regions' => config('regions.list'),
                 'search' => $search,
                 'filters' => null,
@@ -59,15 +43,10 @@ class CalendarController extends Controller
 
         // Super Admin (Central) sees every region — filterable by region, plus
         // a free-text search over training/agency so the whole-country agenda
-        // stays usable at scale. No category filter — every training is TA.
+        // stays usable at scale.
         $filters = [
             'region' => $request->query('region') ?: null,
         ];
-
-        $events = CalendarEvent::with('creator')
-            ->when($filters['region'], fn ($q) => $q->where(fn ($qq) => $qq->whereNull('region')->orWhere('region', $filters['region'])))
-            ->orderBy('date')
-            ->get();
 
         $requests = TrainingRequest::query()
             ->when($filters['region'], fn ($q) => $q->where('region', $filters['region']))
@@ -75,13 +54,12 @@ class CalendarController extends Controller
             ->orderBy('preferred_date')
             ->get();
 
-        $groupedByMonth = $this->groupEntries($requests, $events);
+        $groupedByMonth = $this->groupEntries($requests);
 
         return view('admin.calendar', [
             'groupedByMonth' => $groupedByMonth,
             'defaultMonth' => $this->defaultMonth($groupedByMonth),
             'categoryColors' => self::CATEGORY_COLORS,
-            'eventTypeColors' => self::EVENT_TYPE_COLORS,
             'regions' => config('regions.list'),
             'search' => $search,
             'filters' => $filters,
@@ -99,13 +77,6 @@ class CalendarController extends Controller
             $q->where('training_title', 'like', "%{$search}%")
                 ->orWhere('requesting_agency', 'like', "%{$search}%");
         });
-    }
-
-    public function destroy(CalendarEvent $calendarEvent): RedirectResponse
-    {
-        $calendarEvent->delete();
-
-        return Redirect::route('admin.calendar')->with('status', "\"{$calendarEvent->title}\" was removed from the calendar.");
     }
 
     /**
@@ -133,31 +104,17 @@ class CalendarController extends Controller
     }
 
     /**
-     * Merge training requests and calendar events into one collection, grouped
-     * and ordered by month so both appear together in the same agenda view.
+     * Groups training requests by month so the agenda view can tab between
+     * months. Sorting before grouping keeps each month's entries in date
+     * order, and the months themselves fall in chronological order since
+     * groupBy preserves first-seen order.
      *
      * @param  Collection<int, TrainingRequest>  $requests
-     * @param  Collection<int, CalendarEvent>  $events
      */
-    private function groupEntries($requests, $events)
+    private function groupEntries(Collection $requests): Collection
     {
-        $trainingEntries = $requests->map(fn (TrainingRequest $request) => (object) [
-            'kind' => 'training',
-            'date' => $request->preferred_date,
-            'model' => $request,
-        ]);
-
-        $eventEntries = $events->map(fn (CalendarEvent $event) => (object) [
-            'kind' => 'event',
-            'date' => $event->date,
-            'model' => $event,
-        ]);
-
-        // Sorting before grouping keeps each month's entries in date order, and
-        // the months themselves fall in chronological order since groupBy
-        // preserves first-seen order.
-        return $trainingEntries->concat($eventEntries)
-            ->sortBy('date')
-            ->groupBy(fn ($entry) => $entry->date->format('F Y'));
+        return $requests
+            ->sortBy('preferred_date')
+            ->groupBy(fn (TrainingRequest $request) => $request->preferred_date->format('F Y'));
     }
 }

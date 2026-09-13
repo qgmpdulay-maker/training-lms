@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\SuperAdmin\MonitoringController;
 use App\Http\Controllers\Controller;
+use App\Models\AtarRecord;
 use App\Models\Instructor;
 use App\Models\TrainingNeedsAssessment;
 use App\Models\TrainingRequest;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -14,7 +17,7 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $user = $request->user();
 
@@ -42,6 +45,9 @@ class DashboardController extends Controller
             ];
             $graduatesByAgeRange = $this->graduatesByAgeRangeChart($completed);
             $mostNeededTrainings = $this->mostNeededTrainingsChart($user->region);
+            $atarTrainingsByMode = $this->atarTrainingsByModeChart($user->region);
+            $atarTrainingsByMonth = $this->atarTrainingsByMonthChart($user->region);
+            $atarGraduatesBySector = $this->atarGraduatesBySectorChart($user->region);
 
             return view('admin.dashboard-regional', [
                 'user' => $user,
@@ -64,6 +70,9 @@ class DashboardController extends Controller
                     'graduatesBySex' => $graduatesBySex,
                     'graduatesByAgeRange' => $graduatesByAgeRange,
                     'mostNeededTrainings' => $mostNeededTrainings,
+                    'atarTrainingsByMode' => $atarTrainingsByMode,
+                    'atarTrainingsByMonth' => $atarTrainingsByMonth,
+                    'atarGraduatesBySector' => $atarGraduatesBySector,
                 ],
                 'graduatesByLocation' => MonitoringController::mapPoints($completed),
                 'regionCenter' => config('regions.geo.'.$user->region, [12.8797, 121.7740]),
@@ -80,20 +89,31 @@ class DashboardController extends Controller
 
         $completed = TrainingRequest::completed()->get();
 
+        // One shared region filter for the five overview charts below —
+        // distinct from $monitoringFilters['regions'], which is a separate
+        // multi-select scoped to the Regional Performance & Graduates Map
+        // section further down the page.
+        $chartRegion = $request->query('chart_region') ?: null;
+        $completedForCharts = $completed->when($chartRegion, fn ($c) => $c->where('region', $chartRegion));
+
         $availableYears = $this->availableYears();
         $graduatesByTrainingCompleted = TrainingRequest::completed()
             ->when($year !== 'all', fn ($q) => $q->whereYear('preferred_date', $year))
+            ->when($chartRegion, fn ($q) => $q->where('region', $chartRegion))
             ->get();
         $graduatesByTraining = $this->graduatesByTrainingChart($graduatesByTrainingCompleted);
         $requestsByTraining = $this->requestsByTrainingChart();
-        $statusBreakdown = $this->statusBreakdownChart();
+        $statusBreakdown = $this->statusBreakdownChart($chartRegion);
         $graduatesByRegion = $this->graduatesByRegionChart($completed);
         $graduatesBySex = [
-            'male' => $completed->sum('graduates_male'),
-            'female' => $completed->sum('graduates_female'),
+            'male' => $completedForCharts->sum('graduates_male'),
+            'female' => $completedForCharts->sum('graduates_female'),
         ];
-        $graduatesByAgeRange = $this->graduatesByAgeRangeChart($completed);
-        $mostNeededTrainings = $this->mostNeededTrainingsChart();
+        $graduatesByAgeRange = $this->graduatesByAgeRangeChart($completedForCharts);
+        $mostNeededTrainings = $this->mostNeededTrainingsChart($chartRegion);
+        $atarTrainingsByMode = $this->atarTrainingsByModeChart($chartRegion);
+        $atarTrainingsByMonth = $this->atarTrainingsByMonthChart($chartRegion);
+        $atarGraduatesBySector = $this->atarGraduatesBySectorChart($chartRegion);
 
         // Regional Monitoring and the Graduates Map used to be their own tabs —
         // folded into the dashboard so Super Admin has one place to look,
@@ -113,10 +133,69 @@ class DashboardController extends Controller
         // has no dashboard equivalent) moved over.
         $needsAssessmentByOrganization = $this->needsAssessmentByOrganization($request);
 
+        $chartData = [
+            'graduatesByTraining' => $graduatesByTraining,
+            'requestsByTraining' => $requestsByTraining,
+            'statusBreakdown' => $statusBreakdown,
+            'graduatesBySex' => $graduatesBySex,
+            'graduatesByAgeRange' => $graduatesByAgeRange,
+            'mostNeededTrainings' => $mostNeededTrainings,
+            'atarTrainingsByMode' => $atarTrainingsByMode,
+            'atarTrainingsByMonth' => $atarTrainingsByMonth,
+            'atarGraduatesBySector' => $atarGraduatesBySector,
+        ];
+        $insights = $this->buildInsights(
+            statusBreakdown: $statusBreakdown,
+            graduatesByTraining: $graduatesByTraining,
+            requestsByTraining: $requestsByTraining,
+            graduatesByAgeRange: $graduatesByAgeRange,
+            graduatesByRegion: $graduatesByRegion,
+            graduatesBySex: $graduatesBySex,
+            mostNeededTrainings: $mostNeededTrainings,
+        );
+        $regionsList = config('regions.list');
+        $trainingTitles = collect(config('trainings.catalog'))->pluck('title');
+        $monitoringSummary = MonitoringController::summary($monitoringTrainings);
+        $regionalHighlights = MonitoringController::regionalHighlights($regionalData);
+        $mapPoints = MonitoringController::mapPoints($monitoringTrainings);
+
+        // Every filter control on the dashboard (chart region, year, and the
+        // Regional Performance filters) submits via fetch() instead of a plain
+        // GET navigation, so filtering doesn't reload the page or reset scroll
+        // position — see submitDashboardFilter() in dashboard.blade.php. This
+        // returns just the re-rendered fragments instead of the full page.
+        if ($request->ajax()) {
+            return response()->json([
+                'charts_html' => view('admin.super-admin.partials.dashboard-charts', [
+                    'chartRegion' => $chartRegion,
+                    'regions' => $regionsList,
+                    'year' => $year,
+                    'availableYears' => $availableYears,
+                    'chartData' => $chartData,
+                    'monitoringFilters' => $monitoringFilters,
+                ])->render(),
+                'insights_html' => view('admin.super-admin.partials.dashboard-insights', [
+                    'insights' => $insights,
+                ])->render(),
+                'monitoring_html' => view('admin.super-admin.partials.dashboard-monitoring', [
+                    'monitoringFilters' => $monitoringFilters,
+                    'regions' => $regionsList,
+                    'trainingTitles' => $trainingTitles,
+                    'monitoringSummary' => $monitoringSummary,
+                    'regionalHighlights' => $regionalHighlights,
+                    'regionalData' => $regionalData,
+                    'mapPoints' => $mapPoints,
+                ])->render(),
+                'chartData' => $chartData,
+                'mapPoints' => $mapPoints,
+            ]);
+        }
+
         return view('admin.super-admin.dashboard', [
             'user' => $user,
             'year' => $year,
             'availableYears' => $availableYears,
+            'chartRegion' => $chartRegion,
             'stats' => [
                 'instructors' => Instructor::count(),
                 'tna_submissions' => TrainingNeedsAssessment::count(),
@@ -124,30 +203,15 @@ class DashboardController extends Controller
                     ->whereIn('status', [TrainingRequest::STATUS_APPROVED, TrainingRequest::STATUS_UNDER_REVIEW])
                     ->count(),
             ],
-            'chartData' => [
-                'graduatesByTraining' => $graduatesByTraining,
-                'requestsByTraining' => $requestsByTraining,
-                'statusBreakdown' => $statusBreakdown,
-                'graduatesBySex' => $graduatesBySex,
-                'graduatesByAgeRange' => $graduatesByAgeRange,
-                'mostNeededTrainings' => $mostNeededTrainings,
-            ],
-            'insights' => $this->buildInsights(
-                statusBreakdown: $statusBreakdown,
-                graduatesByTraining: $graduatesByTraining,
-                requestsByTraining: $requestsByTraining,
-                graduatesByAgeRange: $graduatesByAgeRange,
-                graduatesByRegion: $graduatesByRegion,
-                graduatesBySex: $graduatesBySex,
-                mostNeededTrainings: $mostNeededTrainings,
-            ),
+            'chartData' => $chartData,
+            'insights' => $insights,
             'monitoringFilters' => $monitoringFilters,
-            'regions' => config('regions.list'),
-            'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
-            'monitoringSummary' => MonitoringController::summary($monitoringTrainings),
+            'regions' => $regionsList,
+            'trainingTitles' => $trainingTitles,
+            'monitoringSummary' => $monitoringSummary,
             'regionalData' => $regionalData,
-            'regionalHighlights' => MonitoringController::regionalHighlights($regionalData),
-            'mapPoints' => MonitoringController::mapPoints($monitoringTrainings),
+            'regionalHighlights' => $regionalHighlights,
+            'mapPoints' => $mapPoints,
             'needsAssessmentByOrganization' => $needsAssessmentByOrganization,
             'region' => null,
             'graduatesByLgu' => $this->graduatesByLgu(),
@@ -429,15 +493,23 @@ class DashboardController extends Controller
      * region, LGUs from different regions can share a name, so a single flat
      * ranking would blur them together. Moved here from the Tools tab.
      *
+     * Regions with completed trainings but none tagged with an LGU still get
+     * an entry (empty `lgus`) rather than being omitted — a region built
+     * entirely from ATAR CSV imports (which deliberately leave `lgu` blank
+     * instead of guessing it from the training title) would otherwise vanish
+     * from this chart as if it had no completed trainings at all.
+     *
      * @return array<string, array{total: int, lgus: array}>
      */
     private function graduatesByLgu(?string $region = null): array
     {
-        return TrainingRequest::where('status', TrainingRequest::STATUS_COMPLETED)
-            ->whereNotNull('lgu')
+        $completed = TrainingRequest::where('status', TrainingRequest::STATUS_COMPLETED)
             ->when($region, fn ($query) => $query->where('region', $region))
             ->with('participants')
-            ->get()
+            ->get();
+
+        $byRegion = $completed
+            ->filter(fn (TrainingRequest $r) => filled($r->lgu))
             ->groupBy(fn (TrainingRequest $r) => $r->region ?: __('Unspecified Region'))
             ->map(function ($records) {
                 $lgus = $records->groupBy('lgu')
@@ -453,8 +525,100 @@ class DashboardController extends Controller
                     'total' => array_sum(array_column($lgus, 'total')),
                     'lgus' => $lgus,
                 ];
-            })
-            ->sortByDesc('total')
+            });
+
+        $regionsWithoutLgu = $completed->pluck('region')->filter()->unique()->diff($byRegion->keys());
+
+        foreach ($regionsWithoutLgu as $regionName) {
+            $byRegion[$regionName] = ['total' => 0, 'lgus' => []];
+        }
+
+        return $byRegion->sortByDesc('total')->all();
+    }
+
+    /**
+     * Training counts per delivery mode from imported ATAR records — blank
+     * modes (some rows in the source Training Database leave this unset) are
+     * grouped under "Unspecified" rather than dropped.
+     */
+    private function atarTrainingsByModeChart(?string $region = null): array
+    {
+        // Built from get()+map() rather than pluck('total', 'mode_of_implementation') —
+        // mode_of_implementation is nullable, and using a null value as an
+        // array key triggers a deprecation notice.
+        return AtarRecord::query()
+            ->when($region, fn ($q) => $q->where('region', $region))
+            ->selectRaw('mode_of_implementation, count(*) as total')
+            ->groupBy('mode_of_implementation')
+            ->get()
+            ->map(fn ($row) => ['label' => $row->mode_of_implementation ?: __('Unspecified'), 'value' => (int) $row->total])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Training counts per month from imported ATAR records, ordered
+     * chronologically (Jan → Dec) rather than alphabetically or by import
+     * order — months not present in the data are simply omitted.
+     */
+    private function atarTrainingsByMonthChart(?string $region = null): array
+    {
+        $counts = AtarRecord::query()
+            ->when($region, fn ($q) => $q->where('region', $region))
+            ->whereNotNull('month')
+            ->selectRaw('month, count(*) as total')
+            ->groupBy('month')
+            ->pluck('total', 'month');
+
+        return $counts
+            ->map(fn ($total, $month) => ['label' => $month, 'value' => (int) $total, 'sort' => $this->monthSortKey($month)])
+            ->sortBy('sort')
+            ->map(fn (array $row) => ['label' => $row['label'], 'value' => $row['value']])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Best-effort month index (1-12) for sorting free-text month labels like
+     * "March" or "Apr" — unparseable labels sort last rather than breaking
+     * the chart.
+     */
+    private function monthSortKey(string $month): int
+    {
+        try {
+            return Carbon::parse("1 {$month} 2000")->month;
+        } catch (\Throwable) {
+            return 99;
+        }
+    }
+
+    /**
+     * Graduate totals per sector from imported ATAR records, sectors with
+     * zero graduates omitted so the chart doesn't pad out with empty bars.
+     */
+    private function atarGraduatesBySectorChart(?string $region = null): array
+    {
+        $records = AtarRecord::query()
+            ->when($region, fn ($q) => $q->where('region', $region))
+            ->get();
+
+        $sectors = [
+            'graduates_rdrrmc' => 'RDRRMC',
+            'graduates_lgu' => 'LGU',
+            'graduates_ldrrmo' => 'LDRRMO',
+            'graduates_academe' => 'Academe',
+            'graduates_cso' => 'CSO',
+            'graduates_ngo' => 'NGO',
+            'graduates_volunteer' => 'Volunteer',
+            'graduates_private_sector' => 'Private Sector',
+            'graduates_others' => 'Others',
+        ];
+
+        return collect($sectors)
+            ->map(fn (string $label, string $column) => ['sector' => $label, 'graduates' => (int) $records->sum($column)])
+            ->filter(fn (array $row) => $row['graduates'] > 0)
+            ->sortByDesc('graduates')
+            ->values()
             ->all();
     }
 }

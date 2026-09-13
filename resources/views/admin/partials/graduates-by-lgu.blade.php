@@ -19,7 +19,7 @@
         <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
             {{ __('No completed trainings with an LGU recorded yet.') }}
         </div>
-    @elseif (count($graduatesByLgu) === 1)
+    @elseif (count($graduatesByLgu) === 1 && ! empty(reset($graduatesByLgu)['lgus']))
         @php $regionMax = max(array_column(reset($graduatesByLgu)['lgus'], 'total')); @endphp
         <div class="space-y-3">
             @foreach (reset($graduatesByLgu)['lgus'] as $row)
@@ -31,6 +31,10 @@
                     <div class="w-8 text-right text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $row['total'] }}</div>
                 </div>
             @endforeach
+        </div>
+    @elseif (count($graduatesByLgu) === 1)
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
+            {{ __('No LGU-tagged trainings yet for this region.') }}
         </div>
     @else
         <div x-data="{ activeLguRegion: @js(array_key_first($graduatesByLgu)) }">
@@ -53,18 +57,24 @@
 
             @foreach ($graduatesByLgu as $regionName => $regionGroup)
                 <div x-show="activeLguRegion === @js($regionName)" x-cloak class="mt-5">
-                    @php $regionMax = max(array_column($regionGroup['lgus'], 'total')); @endphp
-                    <div class="space-y-3">
-                        @foreach ($regionGroup['lgus'] as $row)
-                            <div class="flex items-center gap-3">
-                                <div class="w-48 shrink-0 text-xs font-medium text-gray-600 dark:text-gray-300 truncate">{{ $row['lgu'] }}</div>
-                                <div class="flex-1 h-5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                                    <div class="h-full rounded-full bg-[#152A4E] dark:bg-[#E2762D] transition-all" style="width: {{ round(($row['total'] / $regionMax) * 100) }}%;"></div>
+                    @if (empty($regionGroup['lgus']))
+                        <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
+                            {{ __('No LGU-tagged trainings yet for :region.', ['region' => $regionName]) }}
+                        </div>
+                    @else
+                        @php $regionMax = max(array_column($regionGroup['lgus'], 'total')); @endphp
+                        <div class="space-y-3">
+                            @foreach ($regionGroup['lgus'] as $row)
+                                <div class="flex items-center gap-3">
+                                    <div class="w-48 shrink-0 text-xs font-medium text-gray-600 dark:text-gray-300 truncate">{{ $row['lgu'] }}</div>
+                                    <div class="flex-1 h-5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                                        <div class="h-full rounded-full bg-[#152A4E] dark:bg-[#E2762D] transition-all" style="width: {{ round(($row['total'] / $regionMax) * 100) }}%;"></div>
+                                    </div>
+                                    <div class="w-8 text-right text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $row['total'] }}</div>
                                 </div>
-                                <div class="w-8 text-right text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $row['total'] }}</div>
-                            </div>
-                        @endforeach
-                    </div>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             @endforeach
         </div>

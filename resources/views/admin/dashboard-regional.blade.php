@@ -100,6 +100,8 @@
                     @endif
                 </div>
 
+                @include('admin.super-admin.partials.dashboard-atar-charts', ['chartData' => $chartData])
+
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
                     <div class="flex items-center justify-between flex-wrap gap-3 px-6 pt-6 pb-4">
                         <div>
@@ -398,5 +400,50 @@
                 },
             });
         }
+
+        const atarByMode = @json($chartData['atarTrainingsByMode']);
+        const atarModeChartEl = document.getElementById('dashAtarModeChart');
+        if (atarModeChartEl && atarByMode.length) {
+            new Chart(atarModeChartEl, {
+                type: 'doughnut',
+                data: {
+                    labels: atarByMode.map(row => row.label),
+                    datasets: [{ data: atarByMode.map(row => row.value), backgroundColor: [brandNavy, brandOrange, brandBlue, '#94A3B8'] }],
+                },
+                options: { maintainAspectRatio: false, cutout: '55%', plugins: { legend: { position: 'bottom' } } },
+            });
+        }
+
+        const atarByMonth = @json($chartData['atarTrainingsByMonth']);
+        const atarMonthChartEl = document.getElementById('dashAtarMonthChart');
+        if (atarMonthChartEl && atarByMonth.length) {
+            new Chart(atarMonthChartEl, {
+                type: 'bar',
+                data: {
+                    labels: atarByMonth.map(row => row.label),
+                    datasets: [{ label: 'Trainings', data: atarByMonth.map(row => row.value), backgroundColor: brandBlue, borderRadius: 4 }],
+                },
+                options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+            });
+        }
+
+        const atarBySector = @json($chartData['atarGraduatesBySector']);
+        const atarSectorChartEl = document.getElementById('dashAtarSectorChart');
+        if (atarSectorChartEl && atarBySector.length) {
+            new Chart(atarSectorChartEl, {
+                type: 'bar',
+                data: {
+                    labels: atarBySector.map(row => row.sector),
+                    datasets: [{ label: 'Graduates', data: atarBySector.map(row => row.graduates), backgroundColor: brandOrange, borderRadius: 4 }],
+                },
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+
     </script>
 </x-app-layout>

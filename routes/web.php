@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EvaluationController;
 use App\Http\Controllers\Admin\InstructorController;
 use App\Http\Controllers\Admin\SummaryController;
+use App\Http\Controllers\Admin\SuperAdmin\AtarRecordController;
+use App\Http\Controllers\Admin\SuperAdmin\AtarReportController;
 use App\Http\Controllers\Admin\SuperAdmin\MonitoringController;
 use App\Http\Controllers\Admin\SuperAdmin\TrainingController as SuperAdminTrainingController;
 use App\Http\Controllers\Admin\SuperAdmin\UserManagementController;
@@ -46,6 +48,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/training-needs-assessment', [TrainingNeedsAssessmentController::class, 'index'])->name('training-needs-assessment.index');
     Route::post('/training-needs-assessment/recommendation', [TrainingNeedsAssessmentController::class, 'storeRecommendation'])->name('training-needs-assessment.recommendation');
+    Route::post('/training-needs-assessment/academe', [TrainingNeedsAssessmentController::class, 'storeAcademe'])->name('training-needs-assessment.academe.store');
+    Route::post('/training-needs-assessment/nrdrrmc', [TrainingNeedsAssessmentController::class, 'storeNrdrrmc'])->name('training-needs-assessment.nrdrrmc.store');
+    Route::post('/training-needs-assessment/lgu', [TrainingNeedsAssessmentController::class, 'storeLgu'])->name('training-needs-assessment.lgu.store');
+    Route::post('/training-needs-assessment/volunteer', [TrainingNeedsAssessmentController::class, 'storeVolunteer'])->name('training-needs-assessment.volunteer.store');
 
     Route::get('/training-requests', [TrainingRequestController::class, 'index'])->name('training-requests.index');
     Route::get('/training-requests/{trainingRequest}', [TrainingRequestController::class, 'show'])->name('training-requests.show');
@@ -97,7 +103,25 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
     Route::post('/trainings', [SuperAdminTrainingController::class, 'store'])->name('trainings.store');
     Route::get('/trainings/participants', [SuperAdminTrainingController::class, 'participants'])->name('trainings.participants');
 
-    Route::delete('/calendar-events/{calendarEvent}', [AdminCalendarController::class, 'destroy'])->name('calendar-events.destroy');
+    Route::get('/atar-records', [AtarRecordController::class, 'index'])->name('atar-records.index');
+    Route::get('/atar-records/import', [AtarRecordController::class, 'create'])->name('atar-records.import');
+    Route::post('/atar-records/import', [AtarRecordController::class, 'store'])->name('atar-records.import.store');
+    Route::post('/atar-records/import/confirm', [AtarRecordController::class, 'confirmImport'])->name('atar-records.import.confirm');
+    Route::post('/atar-records/import/cancel', [AtarRecordController::class, 'cancelImport'])->name('atar-records.import.cancel');
+    Route::delete('/atar-records/{atarRecord}', [AtarRecordController::class, 'destroy'])->name('atar-records.destroy');
+
+    // Narrative ATAR reports (AtarReportController) — a separate feature
+    // from atar-records above: these are the actual multi-page ATAR
+    // documents (generated from a training or written from scratch), not
+    // the CSV-imported tracker rows.
+    Route::get('/atar-reports', [AtarReportController::class, 'index'])->name('atar-reports.index');
+    Route::get('/atar-reports/create', [AtarReportController::class, 'create'])->name('atar-reports.create');
+    Route::post('/atar-reports', [AtarReportController::class, 'store'])->name('atar-reports.store');
+    Route::get('/atar-reports/{atarReport}/edit', [AtarReportController::class, 'edit'])->name('atar-reports.edit');
+    Route::put('/atar-reports/{atarReport}', [AtarReportController::class, 'update'])->name('atar-reports.update');
+    Route::post('/atar-reports/{atarReport}/recompute', [AtarReportController::class, 'recompute'])->name('atar-reports.recompute');
+    Route::get('/atar-reports/{atarReport}/pdf', [AtarReportController::class, 'pdf'])->name('atar-reports.pdf');
+    Route::delete('/atar-reports/{atarReport}', [AtarReportController::class, 'destroy'])->name('atar-reports.destroy');
 });
 
 require __DIR__.'/auth.php';

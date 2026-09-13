@@ -111,7 +111,20 @@
                     </h1>
 
                     <form method="POST" action="{{ route('register') }}"
-                        x-data="{ participantType: '{{ old('participant_type') }}', city: '{{ old('city') }}', showCityOptions: false }">
+                        x-data="{
+                            participantType: '{{ old('participant_type') }}',
+                            city: '{{ old('city') }}',
+                            region: '{{ old('region') }}',
+                            showCityOptions: false,
+                            cityRegionMap: {{ Js::from(config('regions.city_region_map')) }},
+                            pickCity(option) {
+                                this.city = option;
+                                this.showCityOptions = false;
+                                if (this.cityRegionMap[option]) {
+                                    this.region = this.cityRegionMap[option];
+                                }
+                            },
+                        }">
                         @csrf
 
                         <!-- Personal Information -->
@@ -177,9 +190,9 @@
                                             'Academe', 'Artisanal Fisherfolk', 'Barangay', 'Children',
                                             'City Government', 'Cooperatives', 'CSOs/NGOs',
                                             'Farmers and Landless Rural Workers', 'GOCC', 'Humanitarian',
-                                            'Indigenous Peoples', 'Informal Sector', 'Local Chief Executive',
-                                            'Municipal Government', 'National Government', 'OCD Personnel',
-                                            'Others', 'Persons with Disabilities', 'Private Sector',
+                                            'Indigenous Peoples', 'Informal Sector', 'LGU', 'Local Chief Executive',
+                                            'Municipal Government', 'N&RDRRMC', 'National Government', 'OCD Personnel',
+                                            'Others', 'Persons with Disabilities', 'Private Sector', 'Volunteers',
                                         ] as $type)
                                             <option value="{{ $type }}" {{ old('participant_type') == $type ? 'selected' : '' }}>
                                                 {{ $type }}
@@ -241,7 +254,7 @@
                                         x-cloak
                                         class="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg py-1">
                                         <template x-for="option in cities.filter(c => c.toLowerCase().includes(city.toLowerCase())).slice(0, 8)" :key="option">
-                                            <li @click="city = option; showCityOptions = false"
+                                            <li @click="pickCity(option)"
                                                 class="px-4 py-2 text-gray-700 hover:bg-[#152A4E]/8 cursor-pointer field-label"
                                                 x-text="option"></li>
                                         </template>
@@ -253,14 +266,17 @@
                                     <x-input-error :messages="$errors->get('city')" class="mt-1" />
                                 </div>
 
-                                <!-- Everyone else: plain region select (OCD Personnel get theirs from the Regional Office above) -->
+                                <!-- Everyone else: plain region select (OCD Personnel get theirs from the Regional Office above).
+                                     Auto-filled from the chosen city (see pickCity() above) when it's a recognized one —
+                                     still just a normal select, so participants can correct it if the guess is wrong. -->
                                 <div x-show="participantType !== '' && participantType !== 'OCD Personnel'" x-cloak>
                                     <label for="region" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Region') }}</label>
-                                    <select id="region" name="region" :required="participantType !== '' && participantType !== 'OCD Personnel'"
+                                    <select id="region" name="region" x-model="region"
+                                        :required="participantType !== '' && participantType !== 'OCD Personnel'"
                                         class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] px-4 field-input">
-                                        <option value="" disabled {{ old('region') ? '' : 'selected' }}>{{ __('Select your region') }}</option>
+                                        <option value="" disabled>{{ __('Select your region') }}</option>
                                         @foreach (config('regions.list') as $regionOption)
-                                            <option value="{{ $regionOption }}" {{ old('region') == $regionOption ? 'selected' : '' }}>
+                                            <option value="{{ $regionOption }}">
                                                 {{ $regionOption }}
                                             </option>
                                         @endforeach

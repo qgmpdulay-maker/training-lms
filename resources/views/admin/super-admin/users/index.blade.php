@@ -17,6 +17,19 @@
                 </div>
             @endif
 
+            @if ($errors->any())
+                <div class="flex items-start gap-3 text-sm text-red-800 dark:text-red-300 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+                    <svg class="w-5 h-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <ul class="space-y-0.5">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             @if (session('tempPasswords'))
                 @php $tempPasswords = session('tempPasswords'); @endphp
                 <div x-data="{ dismissed: false, copiedAll: false, copiedIndex: null }" x-show="! dismissed"
@@ -76,9 +89,6 @@
                             {{ $pendingAccounts->count() }}
                         </span>
                     </div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                        {{ __('These accounts have verified their email and are waiting for a decision before they can log in. Grouped by region — only OCD Personnel have a known region at this stage, so everyone else falls under "Unspecified Region" for now.') }}
-                    </p>
 
                     <div x-data="{ activeRegion: @js($pendingAccountsByRegion->keys()->first()) }">
                         <div class="flex items-center gap-1 overflow-x-auto bg-gray-100 dark:bg-gray-900/40 rounded-xl p-1.5">

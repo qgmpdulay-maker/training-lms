@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -38,23 +39,29 @@ class TrainingController extends Controller
     /**
      * Backs the participant picker on the create form. The participant roster
      * runs into the thousands nationwide, so it's searched on demand (scoped
-     * to the chosen region) rather than shipped to the browser in one go.
-     * Regional admins are eligible to attend too — only Super Admins are
-     * excluded, since they're purely administrative.
+     * to the chosen region) rather than shipped to the browser in one go —
+     * paginated 10 at a time rather than silently truncated to the first 10
+     * matches. Regional admins are eligible to attend too — only Super
+     * Admins are excluded, since they're purely administrative.
      */
     public function participants(Request $request): JsonResponse
     {
         $region = $request->query('region');
         $search = trim((string) $request->query('q', ''));
+        $page = max((int) $request->query('page', 1), 1);
 
         $participants = User::whereIn('role', [User::ROLE_PARTICIPANT, User::ROLE_ADMIN])
             ->when($region, fn ($query) => $query->where('region', $region))
             ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
             ->orderBy('name')
-            ->limit(10)
-            ->get(['id', 'name', 'organization', 'region']);
+            ->paginate(10, ['id', 'name', 'organization', 'region'], 'page', $page);
 
-        return response()->json($participants);
+        return response()->json([
+            'data' => $participants->items(),
+            'current_page' => $participants->currentPage(),
+            'last_page' => $participants->lastPage(),
+            'total' => $participants->total(),
+        ]);
     }
 
     /**
@@ -76,7 +83,9 @@ class TrainingController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'training_slug' => ['required', 'string', 'in:'.$catalog->pluck('slug')->implode(',')],
+            'training_type' => ['required', 'in:catalog,custom'],
+            'training_slug' => ['required_if:training_type,catalog', 'nullable', 'string', 'in:'.$catalog->pluck('slug')->implode(',')],
+            'custom_training_title' => ['required_if:training_type,custom', 'nullable', 'string', 'max:255'],
             'region' => ['required', 'string', 'in:'.implode(',', config('regions.list'))],
             'agency_type' => ['nullable', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$agencyTypeLabels))],
             'requesting_agency' => ['required', 'string', 'max:255'],
@@ -102,14 +111,25 @@ class TrainingController extends Controller
             ],
         ]);
 
-        $training = $catalog->firstWhere('slug', $validated['training_slug']);
+        if ($validated['training_type'] === 'custom') {
+            // Typed in rather than picked from the TA catalog — treated as an
+            // APB training, and its slug is derived from the title since there's
+            // no catalog entry to key off of.
+            $trainingSlug = Str::slug($validated['custom_training_title']);
+            $trainingTitle = $validated['custom_training_title'];
+            $category = TrainingRequest::CATEGORY_APB;
+        } else {
+            $training = $catalog->firstWhere('slug', $validated['training_slug']);
+            $trainingSlug = $validated['training_slug'];
+            $trainingTitle = $training['title'];
+            $category = TrainingRequest::CATEGORY_TA;
+        }
 
         $trainingRequest = new TrainingRequest($validated);
         $trainingRequest->user_id = $user->id;
-        $trainingRequest->training_title = $training['title'];
-        // Every training scheduled through this form is Technical Assistance —
-        // OCD doesn't run APB trainings, so there's nothing to choose here.
-        $trainingRequest->category = TrainingRequest::CATEGORY_TA;
+        $trainingRequest->training_slug = $trainingSlug;
+        $trainingRequest->training_title = $trainingTitle;
+        $trainingRequest->category = $category;
         $trainingRequest->source = TrainingRequest::SOURCE_ADMIN_SCHEDULED;
         $trainingRequest->signature_name = $user->name;
         // Super Admin is scheduling this directly — it doesn't go through the

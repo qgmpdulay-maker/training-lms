@@ -40,7 +40,15 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            // Points straight at public/storage instead of the usual
+            // storage/app/public + `storage:link` symlink pairing — some
+            // shared hosts (InfinityFree included) disable PHP's symlink()
+            // entirely, which leaves storage:link silently non-functional
+            // and every uploaded file (certificates, ATAR photos, profile
+            // pictures) unreachable. Writing directly into the public disk's
+            // real location sidesteps that with no symlink step required,
+            // and works identically on hosts that do support symlinks.
+            'root' => public_path('storage'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
@@ -71,6 +79,9 @@ return [
     | `storage:link` Artisan command is executed. The array keys should be
     | the locations of the links and the values should be their targets.
     |
+    | Not used by this app anymore — the 'public' disk above now writes
+    | directly into public/storage, so there's nothing left to symlink.
+    | Left in place only in case a disk needing a real symlink is added later.
     */
 
     'links' => [

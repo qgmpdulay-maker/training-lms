@@ -59,9 +59,11 @@ class OtpVerificationController extends Controller
         $registration = $this->pendingRegistration($request);
         abort_unless($registration, 419);
 
-        $registration->sendOtpEmail();
+        $emailSent = $registration->sendOtpEmail();
 
-        return back()->with('status', __('A new code has been sent to :email.', ['email' => $registration->email]));
+        return back()->with('status', $emailSent
+            ? __('A new code has been sent to :email.', ['email' => $registration->email])
+            : __("We still couldn't send the email — please try again shortly, or contact your Super Admin if this continues."));
     }
 
     private function pendingRegistration(Request $request): ?PendingRegistration

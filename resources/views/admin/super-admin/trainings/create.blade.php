@@ -33,17 +33,51 @@
             <form
                 method="POST" action="{{ route('admin.trainings.store') }}" class="space-y-6"
                 x-data="{
+                    trainingType: '{{ old('training_type', 'catalog') }}',
                     trainingSlug: '{{ old('training_slug', $preselected['slug'] ?? '') }}',
+                    customTrainingTitle: '{{ old('custom_training_title', '') }}',
                     region: '{{ old('region', '') }}',
+                    trainings: {{ Js::from($trainings) }},
+                    trainingSearch: '',
+                    trainingCategory: 'All',
+                    get filteredTrainings() {
+                        return this.trainings.filter(t =>
+                            (this.trainingCategory === 'All' || t.category === this.trainingCategory) &&
+                            t.title.toLowerCase().includes(this.trainingSearch.toLowerCase())
+                        );
+                    },
+                    get groupedTrainings() {
+                        const groups = {};
+                        this.filteredTrainings.forEach(t => {
+                            (groups[t.category] ??= []).push(t);
+                        });
+                        return Object.keys(groups).sort().map(category => ({ category, items: groups[category] }));
+                    },
                     participantSearch: '',
+                    participantRegionFilter: '',
                     searchResults: [],
+                    participantPage: 1,
+                    participantLastPage: 1,
+                    participantTotal: 0,
                     selectedParticipants: @js($selectedParticipants->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'organization' => $p->organization, 'region' => $p->region])->values()),
                     numberOfParticipants: '{{ old('number_of_participants', '') }}',
                     searchParticipants() {
-                        const params = new URLSearchParams({ region: this.region, q: this.participantSearch });
+                        const params = new URLSearchParams({ region: this.participantRegionFilter, q: this.participantSearch, page: this.participantPage });
                         fetch('{{ route('admin.trainings.participants') }}?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                             .then(response => response.json())
-                            .then(data => { this.searchResults = data; });
+                            .then(data => {
+                                this.searchResults = data.data;
+                                this.participantLastPage = data.last_page;
+                                this.participantTotal = data.total;
+                            });
+                    },
+                    resetParticipantSearch() {
+                        this.participantPage = 1;
+                        this.searchParticipants();
+                    },
+                    goToParticipantPage(page) {
+                        this.participantPage = page;
+                        this.searchParticipants();
                     },
                     isSelected(id) {
                         return this.selectedParticipants.some(p => p.id === id);
@@ -57,7 +91,7 @@
                         }
                     },
                 }"
-                x-init="searchParticipants(); $watch('region', () => searchParticipants())"
+                x-init="searchParticipants(); $watch('participantRegionFilter', () => resetParticipantSearch())"
                 x-effect="if (selectedParticipants.length) numberOfParticipants = selectedParticipants.length"
             >
                 @csrf
@@ -65,26 +99,86 @@
                 <!-- Training -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                     <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('1. Which training is this?') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">{{ __('Tap a card to select it.') }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">{{ __('Pick an existing Technical Assistance training, or type in a new one (e.g. an APB training).') }}</p>
 
-                    <x-input-error :messages="$errors->get('training_slug')" class="mb-4" />
+                    <x-input-error :messages="$errors->get('training_slug')" class="mb-2" />
+                    <x-input-error :messages="$errors->get('custom_training_title')" class="mb-2" />
+                    <x-input-error :messages="$errors->get('training_type')" class="mb-4" />
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-96 overflow-y-auto pe-1">
-                        @foreach ($trainings as $training)
-                            <label
-                                class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition"
-                                :class="trainingSlug === '{{ $training['slug'] }}' ? 'border-[#152A4E] bg-[#152A4E]/5 dark:bg-[#152A4E]/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'"
-                            >
-                                <input type="radio" name="training_slug" value="{{ $training['slug'] }}"
-                                    class="sr-only" required
-                                    x-model="trainingSlug">
-                                <span class="text-[11px] font-semibold tracking-wide uppercase text-[#152A4E] dark:text-white bg-[#152A4E]/8 dark:bg-[#152A4E]/30 rounded-full px-2.5 py-1 w-fit mb-2">
-                                    {{ $training['category'] }}
-                                </span>
-                                <span class="font-bold text-[#152A4E] dark:text-white leading-snug mb-1">{{ $training['title'] }}</span>
-                                <span class="text-xs text-gray-500 dark:text-gray-400">{{ $training['hours'] }} {{ __('training hours') }}</span>
-                            </label>
-                        @endforeach
+                    <!-- Catalog vs custom toggle -->
+                    <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-600 p-1 mb-6 bg-gray-50 dark:bg-gray-700/40">
+                        <label class="px-4 py-2 rounded-md text-sm font-semibold cursor-pointer transition"
+                            :class="trainingType === 'catalog' ? 'bg-white dark:bg-gray-800 text-[#152A4E] dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'">
+                            <input type="radio" name="training_type" value="catalog" class="sr-only" x-model="trainingType">
+                            {{ __('Select a TA training') }}
+                        </label>
+                        <label class="px-4 py-2 rounded-md text-sm font-semibold cursor-pointer transition"
+                            :class="trainingType === 'custom' ? 'bg-white dark:bg-gray-800 text-[#152A4E] dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'">
+                            <input type="radio" name="training_type" value="custom" class="sr-only" x-model="trainingType">
+                            {{ __('Enter a new training name') }}
+                        </label>
+                    </div>
+
+                    <div x-show="trainingType === 'catalog'" x-cloak>
+                        <!-- Search + category filter, same pattern as the public training catalog -->
+                        <div class="flex flex-col sm:flex-row gap-2 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-100 dark:border-gray-700 p-2 mb-6">
+                            <div class="relative flex-1">
+                                <input type="text" x-model="trainingSearch" placeholder="{{ __('Search trainings...') }}"
+                                    class="w-full rounded-lg border-0 bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
+                                <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                            </div>
+                            <div class="relative sm:w-56 shrink-0">
+                                <select x-model="trainingCategory"
+                                    class="w-full rounded-lg border-0 bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-3 pr-9 py-2.5 transition">
+                                    <option value="All">{{ __('All Categories') }}</option>
+                                    @foreach (collect($trainings)->pluck('category')->unique()->sort() as $categoryOption)
+                                        <option value="{{ $categoryOption }}">{{ $categoryOption }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Trainings grouped per category, one section per category -->
+                        <div class="space-y-6 max-h-96 overflow-y-auto pe-1">
+                            <template x-for="group in groupedTrainings" :key="group.category">
+                                <div>
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <h3 class="text-sm font-bold text-[#152A4E] dark:text-white whitespace-nowrap" x-text="group.category"></h3>
+                                        <span class="h-px flex-1 bg-gradient-to-r from-[#152A4E]/25 via-[#E2762D]/25 to-transparent"></span>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <template x-for="training in group.items" :key="training.slug">
+                                            <label
+                                                class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition"
+                                                :class="trainingSlug === training.slug ? 'border-[#152A4E] bg-[#152A4E]/5 dark:bg-[#152A4E]/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'"
+                                            >
+                                                <input type="radio" name="training_slug" class="sr-only"
+                                                    :required="trainingType === 'catalog'"
+                                                    :value="training.slug"
+                                                    x-model="trainingSlug">
+                                                <span class="font-bold text-[#152A4E] dark:text-white leading-snug mb-1" x-text="training.title"></span>
+                                                <span class="text-xs text-gray-500 dark:text-gray-400" x-text="training.hours + ' {{ __('training hours') }}'"></span>
+                                            </label>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <p x-show="groupedTrainings.length === 0" class="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+                                {{ __('No trainings match your search.') }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div x-show="trainingType === 'custom'" x-cloak>
+                        <x-input-label for="custom_training_title" :value="__('Training Name')" />
+                        <x-text-input id="custom_training_title" type="text" name="custom_training_title" class="mt-1 block w-full"
+                            x-bind:required="trainingType === 'custom'"
+                            placeholder="{{ __('e.g. Annual Program Budget Orientation') }}"
+                            x-model="customTrainingTitle" />
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('This will be scheduled as an APB training since it isn\'t part of the OCD Technical Assistance catalog.') }}</p>
                     </div>
                 </div>
 
@@ -193,7 +287,7 @@
                             <span x-text="selectedParticipants.length"></span> {{ __('selected') }}
                         </span>
                     </div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Optional — pick a region above to narrow this list. Leave empty to just set a participant count.') }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Optional — participants can be pulled from any region, independent of the training\'s own region above. Leave empty to just set a participant count.') }}</p>
 
                     <template x-for="participant in selectedParticipants" :key="participant.id">
                         <input type="hidden" name="participant_ids[]" :value="participant.id">
@@ -208,11 +302,20 @@
                         </template>
                     </div>
 
-                    <input type="text" x-model="participantSearch" @input.debounce.350ms="searchParticipants()"
-                        placeholder="{{ __('Search participants by name...') }}"
-                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-sm py-2.5 mb-4">
+                    <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                        <select x-model="participantRegionFilter"
+                            class="sm:w-56 shrink-0 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">
+                            <option value="">{{ __('All Regions') }}</option>
+                            @foreach ($regions as $regionOption)
+                                <option value="{{ $regionOption }}">{{ $regionOption }}</option>
+                            @endforeach
+                        </select>
+                        <input type="text" x-model="participantSearch" @input.debounce.350ms="resetParticipantSearch()"
+                            placeholder="{{ __('Search participants by name...') }}"
+                            class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-sm py-2.5">
+                    </div>
 
-                    <div class="max-h-72 overflow-y-auto border border-gray-100 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
+                    <div class="border border-gray-100 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
                         <template x-for="participant in searchResults" :key="participant.id">
                             <label class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                 <input type="checkbox" :checked="isSelected(participant.id)" @change="toggleParticipant(participant)"
@@ -227,9 +330,23 @@
                             {{ __('No participants match this region/search.') }}
                         </p>
                     </div>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2" x-show="searchResults.length === 10" x-cloak>
-                        {{ __('Showing the first 10 matches — type a name to narrow the list further.') }}
-                    </p>
+
+                    <div class="flex items-center justify-between mt-3" x-show="participantTotal > 0" x-cloak>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">
+                            {{ __('Page') }} <span x-text="participantPage"></span> {{ __('of') }} <span x-text="participantLastPage"></span>
+                            &middot; <span x-text="participantTotal"></span> {{ __('total') }}
+                        </p>
+                        <div class="flex gap-2" x-show="participantLastPage > 1" x-cloak>
+                            <button type="button" @click="goToParticipantPage(participantPage - 1)" :disabled="participantPage <= 1"
+                                class="text-xs font-semibold px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                {{ __('Previous') }}
+                            </button>
+                            <button type="button" @click="goToParticipantPage(participantPage + 1)" :disabled="participantPage >= participantLastPage"
+                                class="text-xs font-semibold px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                {{ __('Next') }}
+                            </button>
+                        </div>
+                    </div>
                     <x-input-error :messages="$errors->get('participant_ids')" class="mt-2" />
                 </div>
 

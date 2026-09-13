@@ -79,10 +79,16 @@ class RegisteredUserController extends Controller
         $registration->approved_user_id = null;
         $registration->save();
 
-        $registration->sendOtpEmail();
+        $emailSent = $registration->sendOtpEmail();
 
         $request->session()->put('pending_registration_id', $registration->id);
 
-        return redirect()->route('otp.show');
+        $redirect = redirect()->route('otp.show');
+
+        if (! $emailSent) {
+            $redirect->with('status', __("We couldn't send your verification email just now. Wait a moment and tap \"Resend it\" below, or contact your Super Admin if this keeps happening."));
+        }
+
+        return $redirect;
     }
 }

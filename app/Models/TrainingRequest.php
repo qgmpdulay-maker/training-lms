@@ -35,11 +35,11 @@ class TrainingRequest extends Model
 
     const CERTIFICATE_REMARKS_PARTICIPATION = 'participation';
 
-    // Kept only so historical records tagged APB (from before OCD confirmed
-    // every training they run is Technical Assistance) still display and
-    // validate correctly — it's deliberately left out of $categoryLabels
-    // below so nothing new can be tagged APB. See categoryLabel() and
-    // admin/summary-edit.blade.php for how legacy values are preserved.
+    // Originally kept only for historical records predating OCD's TA-only
+    // convention, and left out of $categoryLabels so nothing new could be
+    // tagged APB. Now a real, actively-assigned category again — every ATAR
+    // Training Database import (see AtarRecordController::confirmImport())
+    // tags its trainings APB, so it's back in $categoryLabels below.
     const CATEGORY_APB = 'apb';
 
     const CATEGORY_TA = 'ta';
@@ -57,6 +57,12 @@ class TrainingRequest extends Model
     const SOURCE_PUBLIC_PORTAL = 'public_portal';
 
     const SOURCE_ADMIN_SCHEDULED = 'admin_scheduled';
+
+    // Bulk-created from a regional Training Database/ATAR CSV import (see
+    // AtarRecordController::confirmImport()) rather than filed through
+    // either request flow — already-completed historical data, not a live
+    // request.
+    const SOURCE_ATAR_IMPORT = 'atar_import';
 
     /**
      * Fallback map marker location (geographic centre of the Philippines)
@@ -79,6 +85,7 @@ class TrainingRequest extends Model
 
     public static array $categoryLabels = [
         self::CATEGORY_TA => 'Technical Assistance',
+        self::CATEGORY_APB => 'APB',
     ];
 
     public static array $agencyTypeLabels = [
@@ -89,6 +96,7 @@ class TrainingRequest extends Model
     public static array $sourceLabels = [
         self::SOURCE_PUBLIC_PORTAL => 'Public Portal',
         self::SOURCE_ADMIN_SCHEDULED => 'Scheduled by Admin',
+        self::SOURCE_ATAR_IMPORT => 'Training Database Import',
     ];
 
     protected function casts(): array

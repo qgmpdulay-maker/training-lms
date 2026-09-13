@@ -77,9 +77,9 @@
                     'Academe', 'Artisanal Fisherfolk', 'Barangay', 'Children',
                     'City Government', 'Cooperatives', 'CSOs/NGOs',
                     'Farmers and Landless Rural Workers', 'GOCC', 'Humanitarian',
-                    'Indigenous Peoples', 'Informal Sector', 'Local Chief Executive',
-                    'Municipal Government', 'National Government', 'OCD Personnel',
-                    'Others', 'Persons with Disabilities', 'Private Sector',
+                    'Indigenous Peoples', 'Informal Sector', 'LGU', 'Local Chief Executive',
+                    'Municipal Government', 'N&RDRRMC', 'National Government', 'OCD Personnel',
+                    'Others', 'Persons with Disabilities', 'Private Sector', 'Volunteers',
                 ] as $type)
                     <option value="{{ $type }}" {{ old('participant_type', $user->participant_type) == $type ? 'selected' : '' }}>
                         {{ $type }}
