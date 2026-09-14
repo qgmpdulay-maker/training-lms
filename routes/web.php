@@ -105,6 +105,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
 
     Route::get('/atar-records', [AtarRecordController::class, 'index'])->name('atar-records.index');
     Route::get('/atar-records/import', [AtarRecordController::class, 'create'])->name('atar-records.import');
+    Route::get('/atar-records/import/template', [AtarRecordController::class, 'downloadTemplate'])->name('atar-records.import.template');
     Route::post('/atar-records/import', [AtarRecordController::class, 'store'])->name('atar-records.import.store');
     Route::post('/atar-records/import/confirm', [AtarRecordController::class, 'confirmImport'])->name('atar-records.import.confirm');
     Route::post('/atar-records/import/cancel', [AtarRecordController::class, 'cancelImport'])->name('atar-records.import.cancel');
@@ -117,8 +118,10 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
     Route::get('/atar-reports', [AtarReportController::class, 'index'])->name('atar-reports.index');
     Route::get('/atar-reports/create', [AtarReportController::class, 'create'])->name('atar-reports.create');
     Route::post('/atar-reports', [AtarReportController::class, 'store'])->name('atar-reports.store');
+    Route::get('/atar-reports/participants/search', [AtarReportController::class, 'searchParticipants'])->name('atar-reports.participants.search');
     Route::get('/atar-reports/{atarReport}/edit', [AtarReportController::class, 'edit'])->name('atar-reports.edit');
     Route::put('/atar-reports/{atarReport}', [AtarReportController::class, 'update'])->name('atar-reports.update');
+    Route::get('/atar-reports/{atarReport}/participants/{user}', [AtarReportController::class, 'participantDetails'])->name('atar-reports.participants.show');
     Route::post('/atar-reports/{atarReport}/recompute', [AtarReportController::class, 'recompute'])->name('atar-reports.recompute');
     Route::get('/atar-reports/{atarReport}/pdf', [AtarReportController::class, 'pdf'])->name('atar-reports.pdf');
     Route::delete('/atar-reports/{atarReport}', [AtarReportController::class, 'destroy'])->name('atar-reports.destroy');

@@ -79,14 +79,7 @@ class CertificateService
 
     private function issue(TrainingRequest $trainingRequest, User $participant, string $type, Carbon $issuedOn, int $batchNumber, int $sequence): Certificate
     {
-        $code = sprintf(
-            '%s-%s-%d-%s-%d',
-            $this->abbreviateTitle($trainingRequest->training_title),
-            mb_strtoupper($trainingRequest->region),
-            $batchNumber,
-            $issuedOn->format('Y'),
-            $sequence
-        );
+        $code = $this->generateCode($trainingRequest->training_title, $trainingRequest->region, $batchNumber, (int) $issuedOn->format('Y'), $sequence);
 
         $pdf = Pdf::loadView('pdf.participant-certificate', [
             'participant' => $participant,
@@ -110,6 +103,25 @@ class CertificateService
             'file_path' => $path,
             'issued_on' => $issuedOn,
         ]);
+    }
+
+    /**
+     * The ABBREV-REGION-BATCH-YEAR-SEQUENCE format every issued certificate
+     * uses (see issue() above) — extracted so anywhere that needs a code in
+     * this exact pattern without actually issuing a certificate (e.g. the
+     * ATAR Declaration of Graduates annex, for a name with no certificate on
+     * file yet) can reuse the real format instead of re-deriving it.
+     */
+    public function generateCode(string $title, ?string $region, int $batchNumber, int $year, int $sequence): string
+    {
+        return sprintf(
+            '%s-%s-%d-%d-%d',
+            $this->abbreviateTitle($title),
+            mb_strtoupper($region ?: 'N/A'),
+            $batchNumber,
+            $year,
+            $sequence
+        );
     }
 
     /**

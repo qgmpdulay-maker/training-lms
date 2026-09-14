@@ -127,11 +127,15 @@
                 </div>
 
                 {{-- Narrative: plain textareas, no Alpine involved — these map straight to
-                     AtarReport's longtext columns and are never auto-filled (see
-                     AtarReportGenerator's class doc for why). --}}
+                     AtarReport's longtext columns. When generated from a training,
+                     AtarReportGenerator pre-fills Background/Objectives/Highlights with
+                     editable boilerplate (see its class doc) — Issues and Concerns / Ways
+                     Forward stay as instructional prompts since those report on what
+                     actually happened, not something safe to invent. Sized taller than a
+                     typical textarea since these routinely hold multiple paragraphs. --}}
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8 space-y-4">
                     <h2 class="text-lg font-semibold text-[#152A4E] dark:text-white">{{ __('Narrative') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('These sections are never auto-written — fill them in yourself.') }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Review and adjust the generated text below, or write it yourself if this ATAR wasn\'t generated from a training.') }}</p>
 
                     @foreach ([
                         'background' => 'Background',
@@ -142,7 +146,7 @@
                     ] as $field => $label)
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __($label) }}</label>
-                            <textarea name="{{ $field }}" rows="{{ $field === 'highlights' ? 10 : 4 }}" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">{{ old($field, $report->$field) }}</textarea>
+                            <textarea name="{{ $field }}" rows="{{ $field === 'highlights' ? 16 : 8 }}" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">{{ old($field, $report->$field) }}</textarea>
                         </div>
                     @endforeach
                 </div>
@@ -167,8 +171,9 @@
                     <div>
                         <div class="flex items-center justify-between">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('List of Graduates (Declaration of Graduates annex)') }}</label>
-                            <button type="button" @click="graduates.push({code:'',name:'',gender:'',agency:''})" class="text-xs font-semibold text-[#152A4E] dark:text-blue-300 hover:underline">+ {{ __('Add row') }}</button>
+                            <button type="button" @click="graduates.push(blankGraduateRow())" class="text-xs font-semibold text-[#152A4E] dark:text-blue-300 hover:underline">+ {{ __('Add row') }}</button>
                         </div>
+                        <p class="text-xs text-gray-400 mt-1">{{ __('Click the search icon next to a name to look up a registered participant — it fills in Gender, Agency, and a certificate code automatically.') }}</p>
                         <div class="mt-2 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                             <table class="min-w-full text-sm">
                                 <thead class="bg-gray-50 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400">
@@ -184,7 +189,16 @@
                                     <template x-for="(row, index) in graduates" :key="index">
                                         <tr class="border-t border-gray-100 dark:border-gray-700">
                                             <td class="px-2 py-1"><input type="text" x-model="row.code" :name="`graduates_list[${index}][code]`" class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs" /></td>
-                                            <td class="px-2 py-1"><input type="text" x-model="row.name" :name="`graduates_list[${index}][name]`" class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs" /></td>
+                                            <td class="px-2 py-1">
+                                                <div class="flex items-center gap-1">
+                                                    <input type="text" x-model="row.name" :name="`graduates_list[${index}][name]`" autocomplete="off"
+                                                        class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs" />
+                                                    <button type="button" @click="openPicker(row, true)" title="{{ __('Search participants') }}"
+                                                        class="shrink-0 p-1.5 rounded text-gray-400 hover:text-[#152A4E] hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                                                    </button>
+                                                </div>
+                                            </td>
                                             <td class="px-2 py-1"><input type="text" x-model="row.gender" :name="`graduates_list[${index}][gender]`" class="w-16 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs" /></td>
                                             <td class="px-2 py-1"><input type="text" x-model="row.agency" :name="`graduates_list[${index}][agency]`" class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs" /></td>
                                             <td class="px-2 py-1 text-right"><button type="button" @click="graduates.splice(index,1)" class="text-red-500 hover:text-red-700 text-xs">✕</button></td>
@@ -201,7 +215,7 @@
                     <div>
                         <div class="flex items-center justify-between">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('List of Dropouts') }}</label>
-                            <button type="button" @click="dropouts.push({name:'',gender:'',agency:''})" class="text-xs font-semibold text-[#152A4E] dark:text-blue-300 hover:underline">+ {{ __('Add row') }}</button>
+                            <button type="button" @click="dropouts.push(blankDropoutRow())" class="text-xs font-semibold text-[#152A4E] dark:text-blue-300 hover:underline">+ {{ __('Add row') }}</button>
                         </div>
                         <div class="mt-2 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                             <table class="min-w-full text-sm">
@@ -216,7 +230,16 @@
                                 <tbody>
                                     <template x-for="(row, index) in dropouts" :key="index">
                                         <tr class="border-t border-gray-100 dark:border-gray-700">
-                                            <td class="px-2 py-1"><input type="text" x-model="row.name" :name="`dropouts_list[${index}][name]`" class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs" /></td>
+                                            <td class="px-2 py-1">
+                                                <div class="flex items-center gap-1">
+                                                    <input type="text" x-model="row.name" :name="`dropouts_list[${index}][name]`" autocomplete="off"
+                                                        class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs" />
+                                                    <button type="button" @click="openPicker(row, false)" title="{{ __('Search participants') }}"
+                                                        class="shrink-0 p-1.5 rounded text-gray-400 hover:text-[#152A4E] hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                                                    </button>
+                                                </div>
+                                            </td>
                                             <td class="px-2 py-1"><input type="text" x-model="row.gender" :name="`dropouts_list[${index}][gender]`" class="w-16 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs" /></td>
                                             <td class="px-2 py-1"><input type="text" x-model="row.agency" :name="`dropouts_list[${index}][agency]`" class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs" /></td>
                                             <td class="px-2 py-1 text-right"><button type="button" @click="dropouts.splice(index,1)" class="text-red-500 hover:text-red-700 text-xs">✕</button></td>
@@ -404,6 +427,48 @@
                     </button>
                 </div>
             </form>
+
+            {{-- Shared participant-search modal for both the Graduates and Dropouts
+                 tables — one instance reused for whichever row's search icon was
+                 clicked (tracked in picker.row/picker.isGraduate). Search-by-name and
+                 filter-by-region combine (either alone works too), since a common
+                 name is easier to disambiguate by region than by scrolling a long
+                 unfiltered list. --}}
+            <div x-show="picker.open" x-cloak
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+                @keydown.escape.window="closePicker()">
+                <div @click.outside="closePicker()"
+                    class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                        <h3 class="font-semibold text-gray-800 dark:text-white">{{ __('Search Participants') }}</h3>
+                        <button type="button" @click="closePicker()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">✕</button>
+                    </div>
+                    <div class="p-4 space-y-3 border-b border-gray-100 dark:border-gray-700">
+                        <input type="text" x-model="picker.query" @input.debounce.300ms="searchPicker()"
+                            placeholder="{{ __('Search by name...') }}" autofocus
+                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]" />
+                        <select x-model="picker.region" @change="searchPicker()"
+                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">
+                            <option value="">{{ __('All Regions') }}</option>
+                            @foreach ($regions as $regionOption)
+                                <option value="{{ $regionOption }}">{{ $regionOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                        <template x-for="candidate in picker.results" :key="candidate.id">
+                            <button type="button" @click="choosePickerResult(candidate)"
+                                class="block w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                <span class="block text-sm font-medium text-gray-800 dark:text-gray-100" x-text="candidate.name"></span>
+                                <span class="block text-xs text-gray-400" x-text="(candidate.organization || candidate.agency || 'No agency') + ' · ' + (candidate.region || 'No region')"></span>
+                            </button>
+                        </template>
+                        <p x-show="!picker.loading && picker.results.length === 0" class="px-4 py-8 text-center text-sm text-gray-400">
+                            {{ __('No matches. Try a different name or region.') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -425,6 +490,76 @@
                 lecturers: seed.lecturers,
                 signatories: seed.signatories,
                 modules: seed.modules,
+
+                // Single shared modal state for both the Graduates and
+                // Dropouts tables — `row` and `isGraduate` remember which
+                // row's search icon opened it, so choosePickerResult() knows
+                // where to write the result and whether to also fetch a
+                // certificate code.
+                picker: { open: false, query: '', region: '', results: [], loading: false, row: null, isGraduate: true },
+
+                blankGraduateRow() {
+                    return { code: '', name: '', gender: '', agency: '' };
+                },
+
+                blankDropoutRow() {
+                    return { name: '', gender: '', agency: '' };
+                },
+
+                openPicker(row, isGraduate) {
+                    this.picker.open = true;
+                    this.picker.query = row.name || '';
+                    this.picker.region = '';
+                    this.picker.row = row;
+                    this.picker.isGraduate = isGraduate;
+                    this.searchPicker();
+                },
+
+                closePicker() {
+                    this.picker.open = false;
+                },
+
+                async searchPicker() {
+                    this.picker.loading = true;
+
+                    const params = new URLSearchParams({ q: this.picker.query, region: this.picker.region });
+                    const response = await fetch(
+                        '{{ route('admin.atar-reports.participants.search') }}?' + params.toString(),
+                        { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
+                    );
+                    const payload = await response.json();
+
+                    this.picker.results = payload.data;
+                    this.picker.loading = false;
+                },
+
+                /**
+                 * Fills Gender/Agency straight from the picked user. For a
+                 * Graduates row (isGraduate=true) it also asks the server for
+                 * a certificate code — real if one's already issued for this
+                 * report's training, otherwise generated in the same format.
+                 * Dropouts skip that extra request; they have no code field.
+                 */
+                async choosePickerResult(candidate) {
+                    const row = this.picker.row;
+                    const isGraduate = this.picker.isGraduate;
+
+                    row.name = candidate.name;
+                    row.gender = candidate.sex || '';
+                    row.agency = candidate.organization || candidate.agency || '';
+                    this.closePicker();
+
+                    if (!isGraduate) {
+                        return;
+                    }
+
+                    const url = '{{ route('admin.atar-reports.participants.show', [$report, '__USER_ID__']) }}'
+                        .replace('__USER_ID__', candidate.id);
+                    const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    const details = await response.json();
+
+                    row.code = details.code;
+                },
             };
         }
     </script>

@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Admin\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AtarReport;
+use App\Models\Certificate;
 use App\Models\TrainingRequest;
+use App\Models\User;
 use App\Services\AtarReportGenerator;
+use App\Services\CertificateService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -37,12 +41,99 @@ class AtarReportController extends Controller
     }
 
     /**
-     * Shows the "generate from a training" vs "start blank" choice, with
-     * every completed training available to generate from.
+     * Backs the participant-search modal on the Graduates/Dropouts annex
+     * tables — same role-scoping as TrainingController::participants(), the
+     * existing bulk-training participant picker, extended with a region
+     * filter since a common name (there are plenty in a 3,900-participant
+     * roster) is much easier to narrow down by region than by scrolling.
+     * Either filter works alone; at least one is required so this never
+     * dumps the entire roster.
+     */
+    public function searchParticipants(Request $request): JsonResponse
+    {
+        $search = trim((string) $request->query('q', ''));
+        $region = $request->query('region');
+
+        if ($search === '' && ! $region) {
+            return response()->json(['data' => []]);
+        }
+
+        $users = User::whereIn('role', [User::ROLE_PARTICIPANT, User::ROLE_ADMIN])
+            ->when($region, fn ($query) => $query->where('region', $region))
+            ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id', 'name', 'sex', 'organization', 'agency', 'region']);
+
+        return response()->json(['data' => $users]);
+    }
+
+    /**
+     * Called once a name is picked from the autocomplete — returns the
+     * gender/agency to auto-fill, plus (for the Graduates table only,
+     * though harmless to compute either way) a certificate code. Prefers
+     * the user's real, already-issued Certificate for this report's linked
+     * training if one exists; otherwise synthesizes a code in the exact
+     * same ABBREV-REGION-BATCH-YEAR-SEQUENCE format CertificateService
+     * issues for real, so a name added here before their real certificate
+     * exists still gets a plausible, correctly-formatted placeholder the
+     * admin can adjust once the real one is issued.
+     */
+    public function participantDetails(AtarReport $atarReport, User $user, CertificateService $certificates): JsonResponse
+    {
+        $trainingRequest = $atarReport->trainingRequest;
+        $sequence = count($atarReport->graduates_list ?? []) + 1;
+
+        if ($trainingRequest) {
+            $existing = Certificate::where('training_request_id', $trainingRequest->id)
+                ->where('user_id', $user->id)
+                ->where('type', TrainingRequest::CERTIFICATE_REMARKS_COMPLETION)
+                ->first();
+
+            if ($existing) {
+                $code = $existing->code;
+            } else {
+                // Mirrors CertificateService::generateForTrainingRequest()'s
+                // own batch-number query exactly, so a synthesized code lines
+                // up with what a real certificate for this training would get.
+                $batch = TrainingRequest::where('training_slug', $trainingRequest->training_slug)
+                    ->where('status', TrainingRequest::STATUS_COMPLETED)
+                    ->where('preferred_date', '<', $trainingRequest->preferred_date)
+                    ->count() + 1;
+
+                $year = (int) ($trainingRequest->preferred_date?->format('Y') ?? now()->year);
+                $code = $certificates->generateCode($trainingRequest->training_title, $trainingRequest->region, $batch, $year, $sequence);
+            }
+        } else {
+            // Written-from-scratch ATAR — no linked training to derive a
+            // batch/region from precisely, so this falls back to the
+            // report's own title/date and the selected user's own region.
+            $year = now()->year;
+            if ($atarReport->date_range && preg_match('/(\d{4})/', $atarReport->date_range, $matches)) {
+                $year = (int) $matches[1];
+            }
+
+            $code = $certificates->generateCode($atarReport->title ?: 'ATAR', $user->region, 1, $year, $sequence);
+        }
+
+        return response()->json([
+            'name' => $user->name,
+            'gender' => $user->sex,
+            'agency' => $user->organization ?: $user->agency,
+            'code' => $code,
+        ]);
+    }
+
+    /**
+     * Shows the "generate from a training" vs "start blank" choice. Only
+     * completed trainings with an actual roster attached are offered —
+     * excludes the rare completed request with no participants at all,
+     * since Attendees/Graduates would have nothing to draw from either way.
      */
     public function create(): View
     {
         $trainingRequests = TrainingRequest::completed()
+            ->where(fn ($q) => $q->whereHas('participants')->orWhereNotNull('user_id'))
             ->orderByDesc('preferred_date')
             ->get(['id', 'training_title', 'venue', 'preferred_date', 'region']);
 
@@ -65,7 +156,9 @@ class AtarReportController extends Controller
         ]);
 
         if ($validated['mode'] === 'generate') {
-            $trainingRequest = TrainingRequest::completed()->findOrFail($validated['training_request_id']);
+            $trainingRequest = TrainingRequest::completed()
+                ->where(fn ($q) => $q->whereHas('participants')->orWhereNotNull('user_id'))
+                ->findOrFail($validated['training_request_id']);
             $data = $generator->generate($trainingRequest);
         } else {
             $data = [
@@ -93,6 +186,7 @@ class AtarReportController extends Controller
 
         return view('admin.super-admin.atar-reports.edit', [
             'report' => $atarReport,
+            'regions' => config('regions.list'),
         ]);
     }
 

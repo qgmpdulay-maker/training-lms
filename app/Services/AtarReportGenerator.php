@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AtarReport;
 use App\Models\TrainingRequest;
+use App\Models\User;
 use Illuminate\Support\Collection;
 
 /**
@@ -27,6 +28,10 @@ use Illuminate\Support\Collection;
  */
 class AtarReportGenerator
 {
+    public function __construct(private CertificateService $certificates)
+    {
+    }
+
     /**
      * Builds the full set of attributes for a brand-new AtarReport, used by
      * AtarReportController::store() when the admin picks "generate from a
@@ -209,12 +214,40 @@ class AtarReportGenerator
      * certificate — reported as a number only, matching the sample), and
      * dropouts (attended but never got any certificate at all).
      *
+     * Certificate issuance is only a reliable graduate/dropout signal when
+     * certificates have actually been generated for this training at all
+     * (see CertificateService::generateForTrainingRequest(), triggered when
+     * a request is marked Completed through the normal admin flow). A lot
+     * of completed trainings never go through that — historical/imported
+     * data, or bulk-seeded demo data — leaving zero certificates on file.
+     * Treating that as "0 graduates, 100% dropouts" would be actively wrong
+     * for a training whose whole roster did complete it; instead, when no
+     * certificate exists for this training at all, every participant is
+     * listed as a graduate with a plausible certificate code in the same
+     * format real certificates use (via CertificateService::generateCode()),
+     * so the admin gets a usable starting roster instead of an empty annex
+     * or a misleading all-dropouts list — and can still correct individual
+     * rows by hand afterward.
+     *
      * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>, 2: int}
      */
     private function graduatesAndDropouts(TrainingRequest $trainingRequest): array
     {
         $participants = $trainingRequest->effectiveParticipants()->keyBy('id');
         $certificates = $trainingRequest->certificates()->with('user')->get();
+
+        if ($certificates->isEmpty()) {
+            $graduates = $participants->values()
+                ->map(fn (User $user, int $index) => [
+                    'code' => $this->placeholderCertificateCode($trainingRequest, $index + 1),
+                    'name' => $user->name,
+                    'gender' => $user->sex,
+                    'agency' => $user->organization ?: $user->agency,
+                ])
+                ->all();
+
+            return [$graduates, [], 0];
+        }
 
         // Declaration of Graduates annex table: one row per completion
         // certificate, with the code/name/gender/agency columns the real
@@ -234,7 +267,10 @@ class AtarReportGenerator
 
         // Anyone on the roster with no certificate of any kind is treated as
         // a dropout — there's no separate "attended but didn't finish" flag
-        // in the schema, so certificate issuance is the proxy.
+        // in the schema, so certificate issuance is the proxy. This only
+        // runs once we already know at least one certificate exists for
+        // this training, so it's a meaningful signal rather than the
+        // "certificates were simply never generated" case handled above.
         $certifiedUserIds = $certificates->pluck('user_id')->filter()->all();
 
         $dropouts = $participants
@@ -248,6 +284,25 @@ class AtarReportGenerator
             ->all();
 
         return [$graduates, $dropouts, $participationCount];
+    }
+
+    /**
+     * A certificate code in the exact real format (see
+     * CertificateService::generateCode()), for a participant whose training
+     * has no certificates issued at all yet — batch number mirrors
+     * CertificateService::generateForTrainingRequest()'s own query, so this
+     * lines up with what a real certificate for this training would get.
+     */
+    private function placeholderCertificateCode(TrainingRequest $trainingRequest, int $sequence): string
+    {
+        $batch = TrainingRequest::where('training_slug', $trainingRequest->training_slug)
+            ->where('status', TrainingRequest::STATUS_COMPLETED)
+            ->where('preferred_date', '<', $trainingRequest->preferred_date)
+            ->count() + 1;
+
+        $year = (int) ($trainingRequest->preferred_date?->format('Y') ?? now()->year);
+
+        return $this->certificates->generateCode($trainingRequest->training_title, $trainingRequest->region, $batch, $year, $sequence);
     }
 
     /**

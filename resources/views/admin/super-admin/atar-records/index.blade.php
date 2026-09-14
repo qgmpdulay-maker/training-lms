@@ -1,12 +1,14 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('ATAR Records') }}
+            {{ __('ATAR') }}
         </h2>
     </x-slot>
 
     <div class="py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+            @include('admin.super-admin.partials.atar-tabs')
 
             @if (session('status'))
                 <div class="flex items-start gap-3 text-sm text-green-800 dark:text-green-300 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3">
@@ -21,6 +23,16 @@
                 <div>
                     <h1 class="text-2xl font-bold text-[#152A4E] dark:text-white">{{ __('ATAR Records') }}</h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Historical training accomplishment data, imported from regional Training Database exports.') }}</p>
+                    {{-- Full column-order instructions + a downloadable template live on the
+                         Import page itself (see import.blade.php) — this is just a visible
+                         pointer to them from here, so the guidance isn't hidden behind a
+                         click on "Import CSV" first. --}}
+                    <p class="text-xs text-gray-400 mt-1">
+                        {{ __('CSV columns must follow a specific order to import correctly —') }}
+                        <a href="{{ route('admin.atar-records.import') }}" class="underline hover:text-[#152A4E] dark:hover:text-white">{{ __('see the import instructions') }}</a>
+                        {{ __('or') }}
+                        <a href="{{ route('admin.atar-records.import.template') }}" class="underline hover:text-[#152A4E] dark:hover:text-white">{{ __('download the CSV template') }}</a>.
+                    </p>
                 </div>
                 <a href="{{ route('admin.atar-records.import') }}"
                     class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition shrink-0">

@@ -14,10 +14,31 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class AtarRecordController extends Controller
 {
     private const SESSION_KEY = 'atar_import';
+
+    /**
+     * The exact column order AtarImportParser expects — see that class's
+     * doc comment: it reads by position (column index), not header text, so
+     * this order matters far more than the wording of any header row.
+     * Shared between the on-page instructions and the downloadable
+     * template so the two can never drift out of sync with each other.
+     *
+     * @var array<int, string>
+     */
+    private const COLUMN_LABELS = [
+        'ATAR Tracker Code', 'Training Type Code', 'Training Title', 'Mode of Implementation', 'Month',
+        'Date Conducted', 'Venue', 'Issues and Concerns', 'Ways Forward', 'Overall Rating', 'Signed (TRUE/FALSE)',
+        'Dropouts', 'Participation', 'Graduates', 'Graduates - RDRRMC', 'Graduates - LGU',
+        'Graduates - LDRRMO', 'Graduates - Academe', 'Graduates - CSO', 'Graduates - NGO',
+        'Graduates - Volunteer', 'Graduates - Private Sector', 'Graduates - Others', 'Graduates - Male',
+        'Graduates - Female', 'Graduates - PWD', 'Graduates - Youth', 'Source of Funds', 'Budget',
+        'Actual', 'Variance', 'L1 Completed (TRUE/FALSE)', 'L2 Completed (TRUE/FALSE)', 'Remarks',
+        '(unused — leave this column blank)', 'Date of ATAR Submission', 'Verified By',
+    ];
 
     public function index(Request $request): View
     {
@@ -41,6 +62,41 @@ class AtarRecordController extends Controller
         return view('admin.super-admin.atar-records.import', [
             'regions' => config('regions.list'),
             'preview' => $request->session()->get(self::SESSION_KEY),
+            'columnLabels' => self::COLUMN_LABELS,
+        ]);
+    }
+
+    /**
+     * A blank starter CSV in the exact column order the parser expects,
+     * with one filled-in example row so the expected format for dates,
+     * TRUE/FALSE columns, and the unused spacer column is concrete rather
+     * than just described. The parser always skips the first two rows
+     * unconditionally (see AtarImportParser), so this puts a plain-language
+     * notice in row 1 and the real column headers in row 2 — exactly what
+     * a real CDTI export looks like structurally.
+     */
+    public function downloadTemplate(): Response
+    {
+        $example = [
+            'BDRRM-2026-001', 'BDRRM', 'Basic Disaster Risk Reduction and Management Training', 'Face-to-Face', 'May',
+            'May 4-8, 2026', 'Madison 101 Hotel + Tower, Quezon City', 'Sample issue noted during the training.', 'Sample recommendation going forward.', '4.9', 'TRUE',
+            '0', '3', '32', '2', '4', '3', '5', '2', '1', '1', '2', '3', '13', '19', '1', '5',
+            'CDTI APB (DRRM) Fund FY 2026', '500000', '480000', '20000', 'TRUE', 'TRUE',
+            'Delete this example row before importing your real data.', '',
+            '2026-05-10', 'Juan Dela Cruz',
+        ];
+
+        $handle = fopen('php://temp', 'r+');
+        fputcsv($handle, ['TRAINING DATABASE TEMPLATE — delete this row and the example row below before importing your real data'], escape: '\\');
+        fputcsv($handle, self::COLUMN_LABELS, escape: '\\');
+        fputcsv($handle, $example, escape: '\\');
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="atar-training-database-template.csv"',
         ]);
     }
 

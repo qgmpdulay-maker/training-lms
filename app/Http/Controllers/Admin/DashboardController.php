@@ -83,6 +83,8 @@ class DashboardController extends Controller
                     graduatesByAgeRange: $graduatesByAgeRange,
                     graduatesBySex: $graduatesBySex,
                     mostNeededTrainings: $mostNeededTrainings,
+                    lowestCompletionRateTraining: $this->lowestCompletionRateTraining($user->region),
+                    lguNgaReach: $this->lguNgaReach($completed),
                 ),
             ]);
         }
@@ -152,6 +154,8 @@ class DashboardController extends Controller
             graduatesByRegion: $graduatesByRegion,
             graduatesBySex: $graduatesBySex,
             mostNeededTrainings: $mostNeededTrainings,
+            lowestCompletionRateTraining: $this->lowestCompletionRateTraining($chartRegion),
+            lguNgaReach: $this->lguNgaReach($completedForCharts),
         );
         $regionsList = config('regions.list');
         $trainingTitles = collect(config('trainings.catalog'))->pluck('title');
@@ -235,6 +239,8 @@ class DashboardController extends Controller
         ?array $graduatesByRegion = null,
         ?array $graduatesBySex = null,
         ?array $mostNeededTrainings = null,
+        ?array $lowestCompletionRateTraining = null,
+        ?array $lguNgaReach = null,
     ): array {
         $insights = [];
 
@@ -260,6 +266,19 @@ class DashboardController extends Controller
                 $pending,
                 ['count' => $pending]
             );
+        }
+
+        // Unlike the insights above and below, which mostly restate whichever
+        // chart's top bar is already visible on the page, this one is a
+        // "watch list" callout — something that actually needs attention
+        // rather than a fact already obvious from the charts.
+        if ($lowestCompletionRateTraining !== null) {
+            $insights[] = __(':training has the lowest completion rate among trainings with multiple requests on file (:rate%, :completed of :total) — may be worth a closer look.', [
+                'training' => $lowestCompletionRateTraining['training'],
+                'rate' => $lowestCompletionRateTraining['rate'],
+                'completed' => $lowestCompletionRateTraining['completed'],
+                'total' => $lowestCompletionRateTraining['total'],
+            ]);
         }
 
         if (! empty($requestsByTraining)) {
@@ -293,6 +312,20 @@ class DashboardController extends Controller
             $insights[] = __(':region leads in graduates produced, with :count so far.', [
                 'region' => $top['region'], 'count' => $top['graduates'],
             ]);
+
+            // Only meaningful nationwide (this whole callout is skipped for
+            // the regional dashboard, since $graduatesByRegion is only ever
+            // passed on the Super Admin side) — a coverage gap, not just a
+            // leaderboard, since graduatesByRegionChart() already drops any
+            // region with zero graduates rather than listing it at zero.
+            $regionsWithNoGraduates = count(config('regions.list')) - count($graduatesByRegion);
+            if ($regionsWithNoGraduates > 0) {
+                $insights[] = trans_choice(
+                    ':count region has no completed-training graduates on file yet.|:count regions have no completed-training graduates on file yet.',
+                    $regionsWithNoGraduates,
+                    ['count' => $regionsWithNoGraduates]
+                );
+            }
         }
 
         if (! empty($mostNeededTrainings)) {
@@ -313,7 +346,66 @@ class DashboardController extends Controller
             }
         }
 
+        if ($lguNgaReach !== null && ($lguNgaReach['lgus'] + $lguNgaReach['ngas']) > 0) {
+            $insights[] = __('Completed trainings have reached :lgus and :ngas so far.', [
+                'lgus' => trans_choice(':count LGU|:count LGUs', $lguNgaReach['lgus'], ['count' => $lguNgaReach['lgus']]),
+                'ngas' => trans_choice(':count NGA|:count NGAs', $lguNgaReach['ngas'], ['count' => $lguNgaReach['ngas']]),
+            ]);
+        }
+
         return $insights;
+    }
+
+    /**
+     * The single worst completion rate among trainings with enough requests
+     * on file to mean something (>= 3) — an actionable "watch list" signal,
+     * unlike the rest of buildInsights()'s callouts, which mostly just
+     * restate whichever chart's top bar is already visible above them.
+     * Returns null if nothing qualifies (too few requests per training, or
+     * every qualifying training is already completing at a healthy rate).
+     *
+     * @return array{training: string, rate: int, completed: int, total: int}|null
+     */
+    private function lowestCompletionRateTraining(?string $region): ?array
+    {
+        $rows = TrainingRequest::query()
+            ->when($region, fn ($q) => $q->where('region', $region))
+            ->selectRaw('training_title, count(*) as total, sum(case when status = ? then 1 else 0 end) as completed', [TrainingRequest::STATUS_COMPLETED])
+            ->groupBy('training_title')
+            ->havingRaw('count(*) >= 3')
+            ->get()
+            ->map(fn ($row) => [
+                'training' => $row->training_title,
+                'total' => (int) $row->total,
+                'completed' => (int) $row->completed,
+                'rate' => (int) round(((int) $row->completed) / ((int) $row->total) * 100),
+            ]);
+
+        $lowest = $rows->sortBy('rate')->first();
+
+        // Only worth flagging if it's genuinely lagging — otherwise every
+        // dashboard load would surface some training as "the worst" even
+        // when everything is completing reasonably well.
+        return ($lowest && $lowest['rate'] < 50) ? $lowest : null;
+    }
+
+    /**
+     * Distinct LGUs/NGAs actually reached by completed trainings — the same
+     * agency_type split MonitoringController::summary() computes for the
+     * Regional Performance table, recomputed here from the same $completed
+     * collection the rest of buildInsights() already uses (rather than
+     * reusing $monitoringSummary directly), so this number doesn't silently
+     * change when someone adjusts the separate Regional Performance filters.
+     *
+     * @param  Collection<int, TrainingRequest>  $completed
+     * @return array{lgus: int, ngas: int}
+     */
+    private function lguNgaReach(Collection $completed): array
+    {
+        return [
+            'lgus' => $completed->where('agency_type', TrainingRequest::AGENCY_TYPE_LGU)->pluck('requesting_agency')->filter()->unique()->count(),
+            'ngas' => $completed->where('agency_type', TrainingRequest::AGENCY_TYPE_NGA)->pluck('requesting_agency')->filter()->unique()->count(),
+        ];
     }
 
     /**

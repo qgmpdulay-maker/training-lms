@@ -87,6 +87,48 @@
                     </div>
                 </div>
             @else
+                {{-- Import parsing is purely positional (see AtarImportParser's class
+                     doc) — it reads by column INDEX, not header text, so getting the
+                     column order right matters far more than what the header row
+                     actually says. This panel exists so that's obvious up front,
+                     instead of the admin discovering it via a garbled preview. --}}
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 sm:p-8 space-y-4" x-data="{ expanded: false }">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 shrink-0 text-amber-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                        <div class="flex-1">
+                            <h2 class="font-semibold text-amber-900 dark:text-amber-200">{{ __('Before you upload: column order matters, not column names') }}</h2>
+                            <p class="text-sm text-amber-800 dark:text-amber-300 mt-1">
+                                {{ __('The importer reads each column by its position, not by what the header says — so a CSV with the right column headers in the wrong order will still import incorrectly. The first two rows of the file are always skipped (put anything there), then every column after that must appear in exactly this order:') }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <button type="button" @click="expanded = !expanded" class="text-sm font-semibold text-amber-900 dark:text-amber-200 hover:underline">
+                        <span x-show="!expanded">{{ __('Show the 37 expected columns, in order ▾') }}</span>
+                        <span x-show="expanded" x-cloak>{{ __('Hide column list ▴') }}</span>
+                    </button>
+
+                    <ol x-show="expanded" x-cloak class="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-amber-900 dark:text-amber-200 list-decimal list-inside">
+                        @foreach ($columnLabels as $label)
+                            <li>{{ $label }}</li>
+                        @endforeach
+                    </ol>
+
+                    <ul class="text-sm text-amber-800 dark:text-amber-300 list-disc list-inside space-y-1">
+                        <li>{{ __('Column 35 ("unused") is a genuine gap in the real CDTI export — leave it blank, but don\'t delete the column itself, or every column after it will shift over by one.') }}</li>
+                        <li>{{ __('"Signed", "L1 Completed", and "L2 Completed" only count as true when the cell says exactly TRUE — anything else (including a blank cell) is read as false.') }}</li>
+                        <li>{{ __('The importer stops reading at the first row with a blank Training Title — this is what lets it skip over a CDTI "DO NOT INPUT" summary block at the bottom of a sheet automatically. Just make sure there\'s no accidental blank Training Title in the middle of your real rows.') }}</li>
+                    </ul>
+
+                    <a href="{{ route('admin.atar-records.import.template') }}"
+                        class="inline-flex items-center gap-2 text-sm font-semibold text-[#152A4E] dark:text-white bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-lg px-4 py-2 hover:bg-amber-100 dark:hover:bg-gray-700 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 12m0 0l4.5-4.5M12 12V3" /></svg>
+                        {{ __('Download a blank CSV template') }}
+                    </a>
+                </div>
+
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                     <h1 class="text-2xl font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Import Training Database') }}</h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-8">
