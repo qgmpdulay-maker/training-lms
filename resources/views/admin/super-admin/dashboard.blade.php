@@ -201,23 +201,11 @@
         const brandNavy = '#03055A';
         const brandOrange = '#E2762D';
         const brandBlue = '#3B4FA8';
-        const statusColors = ['#94A3B8', '#3B4FA8', '#03055A', '#DC2626', '#E2762D'];
-
         let dashboardChartInstances = [];
 
         function renderDashboardCharts(chartData) {
             dashboardChartInstances.forEach((chart) => chart.destroy());
             dashboardChartInstances = [];
-
-            const statusBreakdown = chartData.statusBreakdown;
-            dashboardChartInstances.push(new Chart(document.getElementById('dashStatusBreakdownChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: statusBreakdown.map(row => row.label),
-                    datasets: [{ data: statusBreakdown.map(row => row.value), backgroundColor: statusColors }],
-                },
-                options: { maintainAspectRatio: false, cutout: '55%', plugins: { legend: { position: 'bottom' } } },
-            }));
 
             const bySex = chartData.graduatesBySex;
             const sexChartEl = document.getElementById('dashGraduatesBySexChart');

@@ -6,7 +6,7 @@
 @php
     $chartRegionLabel = $chartRegion ?: __('every region');
 @endphp
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm px-5 sm:px-6 py-4 flex items-center justify-between flex-wrap gap-4">
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm px-5 sm:px-6 py-4 flex items-center justify-between flex-wrap gap-4 mb-6">
     <div class="flex items-center gap-3">
         <div class="h-11 w-11 shrink-0 rounded-lg bg-[#E2762D]/10 dark:bg-[#E2762D]/20 flex items-center justify-center text-[#E2762D]">
             @include('admin.partials.icon', ['name' => 'map'])
@@ -18,9 +18,6 @@
     </div>
     <form method="GET" action="{{ route('admin.dashboard') }}" onsubmit="return submitDashboardFilter(this, event)">
         <input type="hidden" name="year" value="{{ $year }}">
-        @foreach (($monitoringFilters['regions'] ?? []) as $regionValue)
-            <input type="hidden" name="regions[]" value="{{ $regionValue }}">
-        @endforeach
         @if (! empty($monitoringFilters['training_title']))
             <input type="hidden" name="training_title" value="{{ $monitoringFilters['training_title'] }}">
         @endif
@@ -47,13 +44,8 @@
 </div>
 <div class="grid grid-cols-1 gap-6">
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:divide-x lg:divide-gray-100 dark:lg:divide-gray-700">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:divide-x lg:divide-gray-100 dark:lg:divide-gray-700">
             <div>
-                <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Requests by Status') }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('All training requests on file, :region.', ['region' => $chartRegionLabel]) }}</p>
-                <div class="h-64 max-w-xs mx-auto"><canvas id="dashStatusBreakdownChart"></canvas></div>
-            </div>
-            <div class="lg:pl-6">
                 <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Sex') }}</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings only, :region.', ['region' => $chartRegionLabel]) }}</p>
                 @if ($chartData['graduatesBySex']['male'] + $chartData['graduatesBySex']['female'] > 0)
@@ -76,9 +68,6 @@
                 @if ($chartRegion)
                     <input type="hidden" name="chart_region" value="{{ $chartRegion }}">
                 @endif
-                @foreach (($monitoringFilters['regions'] ?? []) as $regionValue)
-                    <input type="hidden" name="regions[]" value="{{ $regionValue }}">
-                @endforeach
                 @if (! empty($monitoringFilters['training_title']))
                     <input type="hidden" name="training_title" value="{{ $monitoringFilters['training_title'] }}">
                 @endif
@@ -114,5 +103,4 @@
             <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No Training Needs Assessment submissions yet.') }}</p>
         @endif
     </div>
-    @include('admin.super-admin.partials.dashboard-atar-charts', ['chartData' => $chartData, 'chartRegionLabel' => $chartRegionLabel])
 </div>

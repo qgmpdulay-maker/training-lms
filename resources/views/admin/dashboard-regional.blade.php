@@ -47,13 +47,17 @@
             <!-- Charts -->
             <div class="grid grid-cols-1 gap-6">
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:divide-x lg:divide-gray-100 dark:lg:divide-gray-700">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:divide-x lg:divide-gray-100 dark:lg:divide-gray-700">
+                        {{-- Requests by Status — hidden per regional admin request (only super admin creates trainings now).
+                        To restore: uncomment this block, change the grid above back to lg:grid-cols-3,
+                        and remove the lg:pl-6 added to "Graduates by Sex" below.
                         <div>
                             <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Requests by Status') }}</h3>
                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('All training requests filed for your region.') }}</p>
                             <div class="h-64 max-w-xs mx-auto"><canvas id="dashStatusBreakdownChart"></canvas></div>
                         </div>
-                        <div class="lg:pl-6">
+                        --}}
+                        <div>
                             <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Sex') }}</h3>
                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings only.') }}</p>
                             @if ($chartData['graduatesBySex']['male'] + $chartData['graduatesBySex']['female'] > 0)
@@ -97,6 +101,15 @@
                         <div style="height: {{ max(240, count($chartData['mostNeededTrainings']) * 34) }}px"><canvas id="dashMostNeededTrainingsChart"></canvas></div>
                     @else
                         <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No Training Needs Assessment submissions yet.') }}</p>
+                    @endif
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                    <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Participants by City') }}</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Registered participants in your region, grouped by city.') }}</p>
+                    @if (count($chartData['participantsByCity']) > 0)
+                        <div style="height: {{ max(240, count($chartData['participantsByCity']) * 34) }}px"><canvas id="dashParticipantsByCityChart"></canvas></div>
+                    @else
+                        <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No participants with a city on file yet.') }}</p>
                     @endif
                 </div>
 
@@ -319,6 +332,8 @@
         const brandNavy = '#03055A';
         const brandOrange = '#E2762D';
         const brandBlue = '#3B4FA8';
+        /* Requests by Status chart — hidden per regional admin request (only super admin creates trainings now).
+        To restore, uncomment this block along with its markup and canvas above.
         const statusColors = ['#94A3B8', '#3B4FA8', '#03055A', '#DC2626', '#E2762D'];
 
         const statusBreakdown = @json($chartData['statusBreakdown']);
@@ -330,6 +345,7 @@
             },
             options: { maintainAspectRatio: false, cutout: '55%', plugins: { legend: { position: 'bottom' } } },
         });
+        */
 
         const bySex = @json($chartData['graduatesBySex']);
         const sexChartEl = document.getElementById('dashGraduatesBySexChart');
@@ -383,6 +399,24 @@
                 data: {
                     labels: mostNeededTrainings.map(row => row.training),
                     datasets: [{ label: 'Recommended', data: mostNeededTrainings.map(row => row.count), backgroundColor: brandBlue, borderRadius: 4 }],
+                },
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+
+        const participantsByCity = @json($chartData['participantsByCity']);
+        const participantsByCityChartEl = document.getElementById('dashParticipantsByCityChart');
+        if (participantsByCityChartEl && participantsByCity.length) {
+            new Chart(participantsByCityChartEl, {
+                type: 'bar',
+                data: {
+                    labels: participantsByCity.map(row => row.city),
+                    datasets: [{ label: 'Participants', data: participantsByCity.map(row => row.total), backgroundColor: brandOrange, borderRadius: 4 }],
                 },
                 options: {
                     indexAxis: 'y',

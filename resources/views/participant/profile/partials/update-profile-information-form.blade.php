@@ -1,11 +1,21 @@
-<section>
-    <header class="mb-6">
-        <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">
-            {{ __('Your Information') }}
-        </h2>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {{ __('Keep your details up to date so OCD can reach you about your trainings.') }}
-        </p>
+<section x-data="{ editing: {{ $errors->any() ? 'true' : 'false' }} }">
+    <header class="mb-6 flex items-start justify-between gap-4">
+        <div>
+            <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">
+                {{ __('Your Information') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ __('Keep your details up to date so OCD can reach you about your trainings.') }}
+            </p>
+        </div>
+
+        <button type="button" x-show="!editing" x-cloak @click="editing = true"
+            class="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[#152A4E]/8 dark:bg-white/10 px-3.5 py-2 text-sm font-semibold text-[#152A4E] dark:text-white hover:bg-[#152A4E]/15 dark:hover:bg-white/20 transition">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+            </svg>
+            {{ __('Edit') }}
+        </button>
     </header>
 
     <form id="send-verification" method="post" action="{{ route('verification.send') }}">
@@ -25,9 +35,9 @@
                     {{ strtoupper(substr($user->name, 0, 1)) }}
                 </div>
             @endif
-            <div class="flex-1">
+            <div class="flex-1" x-show="editing" x-cloak>
                 <label for="picture" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Picture of Participant') }}</label>
-                <input id="picture" type="file" name="picture" accept="image/*"
+                <input id="picture" type="file" name="picture" accept="image/*" :disabled="!editing"
                     class="block w-full text-sm text-gray-600 dark:text-gray-400 file:me-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#152A4E]/8 dark:file:bg-[#152A4E]/30 file:text-[#152A4E] dark:file:text-white hover:file:bg-[#152A4E]/15">
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Leave blank to keep your current picture.') }}</p>
                 <x-input-error class="mt-1" :messages="$errors->get('picture')" />
@@ -37,9 +47,9 @@
         <!-- Name -->
         <div>
             <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Full Name') }}</label>
-            <input id="name" name="name" type="text" required autofocus autocomplete="name"
+            <input id="name" name="name" type="text" required autocomplete="name" :disabled="!editing"
                 value="{{ old('name', $user->name) }}"
-                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3">
+                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
             <x-input-error class="mt-1" :messages="$errors->get('name')" />
         </div>
 
@@ -47,19 +57,19 @@
             <!-- Age -->
             <div>
                 <label for="age" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Age') }}</label>
-                <input id="age" name="age" type="text" required
+                <input id="age" name="age" type="text" required :disabled="!editing"
                     value="{{ old('age', $user->age) }}"
                     inputmode="numeric" pattern="\d*" maxlength="3"
                     oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3">
+                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
                 <x-input-error class="mt-1" :messages="$errors->get('age')" />
             </div>
 
             <!-- Sex -->
             <div>
                 <label for="sex" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Sex') }}</label>
-                <select id="sex" name="sex" required
-                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3">
+                <select id="sex" name="sex" required :disabled="!editing"
+                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
                     <option value="Male" {{ old('sex', $user->sex) == 'Male' ? 'selected' : '' }}>{{ __('Male') }}</option>
                     <option value="Female" {{ old('sex', $user->sex) == 'Female' ? 'selected' : '' }}>{{ __('Female') }}</option>
                     <option value="Other" {{ old('sex', $user->sex) == 'Other' ? 'selected' : '' }}>{{ __('Other') }}</option>
@@ -71,8 +81,8 @@
         <!-- Participant Type -->
         <div>
             <label for="participant_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Participant Type') }}</label>
-            <select id="participant_type" name="participant_type" required
-                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3">
+            <select id="participant_type" name="participant_type" required :disabled="!editing"
+                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
                 @foreach ([
                     'Academe', 'Artisanal Fisherfolk', 'Barangay', 'Children',
                     'City Government', 'Cooperatives', 'CSOs/NGOs',
@@ -92,17 +102,17 @@
         <!-- Agency/Organization (participant's own org) -->
         <div>
             <label for="organization" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Agency/Organization') }}</label>
-            <input id="organization" name="organization" type="text" required
+            <input id="organization" name="organization" type="text" required :disabled="!editing"
                 value="{{ old('organization', $user->organization) }}"
-                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3">
+                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
             <x-input-error class="mt-1" :messages="$errors->get('organization')" />
         </div>
 
         <!-- Agency (OCD Region) -->
         <div>
             <label for="agency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('OCD Regional Office') }}</label>
-            <select id="agency" name="agency" required
-                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3">
+            <select id="agency" name="agency" required :disabled="!editing"
+                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
                 @foreach ([
                     'OCD-NCR: National Capital Region',
                     'OCD-CAR: Cordillera Administrative Region',
@@ -134,22 +144,22 @@
             <!-- Mobile Number -->
             <div>
                 <label for="mobile_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Mobile Number') }}</label>
-                <input id="mobile_number" name="mobile_number" type="text" required
+                <input id="mobile_number" name="mobile_number" type="text" required :disabled="!editing"
                     value="{{ old('mobile_number', $user->mobile_number) }}"
                     inputmode="numeric" pattern="\d*" maxlength="11" autocomplete="tel"
                     oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3">
+                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
                 <x-input-error class="mt-1" :messages="$errors->get('mobile_number')" />
             </div>
 
             <!-- Landline -->
             <div>
                 <label for="landline_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Landline Number') }}</label>
-                <input id="landline_number" name="landline_number" type="text"
+                <input id="landline_number" name="landline_number" type="text" :disabled="!editing"
                     value="{{ old('landline_number', $user->landline_number) }}"
                     inputmode="numeric" pattern="\d*" maxlength="10" autocomplete="off"
                     oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3">
+                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
                 <x-input-error class="mt-1" :messages="$errors->get('landline_number')" />
             </div>
         </div>
@@ -157,9 +167,9 @@
         <!-- Email -->
         <div>
             <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Email') }}</label>
-            <input id="email" name="email" type="email" required autocomplete="username"
+            <input id="email" name="email" type="email" required autocomplete="username" :disabled="!editing"
                 value="{{ old('email', $user->email) }}"
-                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3">
+                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
             <x-input-error class="mt-1" :messages="$errors->get('email')" />
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
@@ -180,10 +190,15 @@
             @endif
         </div>
 
-        <div class="flex items-center gap-4 pt-2">
+        <div class="flex items-center gap-4 pt-2" x-show="editing" x-cloak>
             <button type="submit"
                 class="bg-[#152A4E]/70 hover:bg-[#152A4E]/85 backdrop-blur-xl backdrop-saturate-150 border border-white/10 text-white text-sm font-semibold rounded-lg px-6 py-3 shadow-lg transition">
                 {{ __('Save Changes') }}
+            </button>
+
+            <button type="button" @click="editing = false; $el.closest('form').reset()"
+                class="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition">
+                {{ __('Cancel') }}
             </button>
 
             @if (session('status') === 'profile-updated')

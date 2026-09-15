@@ -17,53 +17,8 @@
                 </div>
             @endif
 
-            @if (Auth::user()->isSuperAdmin())
-                <div class="flex items-center flex-wrap gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm px-5 py-3">
-                    <span class="text-sm font-semibold text-[#152A4E] dark:text-white">{{ __('Region') }}</span>
-                    <form method="GET" action="{{ route('admin.training-needs-assessment') }}" class="flex items-center gap-2">
-                        @if ($submissionSearch !== '')
-                            <input type="hidden" name="tna_q" value="{{ $submissionSearch }}">
-                        @endif
-                        <select name="region" onchange="this.form.submit()"
-                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
-                            <option value="">{{ __('All Regions (Philippines)') }}</option>
-                            @foreach ($regions as $regionOption)
-                                <option value="{{ $regionOption }}" @selected($selectedRegion === $regionOption)>{{ $regionOption }}</option>
-                            @endforeach
-                        </select>
-                    </form>
-                    @if ($selectedRegion)
-                        <a href="{{ route('admin.training-needs-assessment', array_filter(['tna_q' => $submissionSearch ?: null])) }}"
-                            class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
-                            {{ __('Reset to all regions') }}
-                        </a>
-                    @endif
-                </div>
-            @endif
-
             <div id="tna-submissions" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <div class="flex items-center justify-between flex-wrap gap-3 mb-1">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">{{ __('TNA Submissions') }}</h2>
-                    <form data-live-form data-live-section="tna-submissions" data-live-target="tna-submissions-results"
-                        method="GET" action="{{ route('admin.training-needs-assessment') }}#tna-submissions" class="flex items-center flex-wrap gap-2">
-                        <input type="hidden" name="_section" value="tna-submissions">
-                        @if ($selectedRegion)
-                            <input type="hidden" name="region" value="{{ $selectedRegion }}">
-                        @endif
-                        <input type="text" name="tna_q" value="{{ $submissionSearch }}" placeholder="{{ __('Search participant, organization, category, or date…') }}"
-                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-72">
-                        <button type="submit"
-                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
-                            {{ __('Search') }}
-                        </button>
-                        @if ($submissionSearch !== '')
-                            <a href="{{ route('admin.training-needs-assessment', array_filter(['region' => $selectedRegion ?: null])) }}#tna-submissions"
-                                class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
-                                {{ __('Clear') }}
-                            </a>
-                        @endif
-                    </form>
-                </div>
+                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('TNA Submissions') }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
                     @if (Auth::user()->isAdmin())
                         {{ __('Training Needs Assessments submitted by participants in :region, most recent first.', ['region' => Auth::user()->region]) }}
@@ -73,6 +28,44 @@
                         {{ __('Every Training Needs Assessment participants have submitted, across all regions, most recent first.') }}
                     @endif
                 </p>
+
+                <form data-live-form data-live-section="tna-submissions" data-live-target="tna-submissions-results"
+                    method="GET" action="{{ route('admin.training-needs-assessment') }}#tna-submissions" class="w-full mb-5">
+                    <input type="hidden" name="_section" value="tna-submissions">
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
+                        <div class="relative flex-1 min-w-[14rem]">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                            <input type="text" name="tna_q" value="{{ $submissionSearch }}" placeholder="{{ __('Search participant, organization, category, or date…') }}"
+                                class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
+                        </div>
+                        @if (Auth::user()->isSuperAdmin())
+                            <div class="relative sm:w-56 shrink-0">
+                                <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                                </svg>
+                                <select name="region"
+                                    class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 pr-9 py-2.5 transition">
+                                    <option value="">{{ __('All Regions (Philippines)') }}</option>
+                                    @foreach ($regions as $regionOption)
+                                        <option value="{{ $regionOption }}" @selected($selectedRegion === $regionOption)>{{ $regionOption }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+                        <button type="submit"
+                            class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                            {{ __('Search') }}
+                        </button>
+                    </div>
+                    @if ($submissionSearch !== '' || ($selectedRegion && Auth::user()->isSuperAdmin()))
+                        <a href="{{ route('admin.training-needs-assessment') }}#tna-submissions"
+                            class="inline-block mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                            {{ __('Clear') }}
+                        </a>
+                    @endif
+                </form>
 
                 <div id="tna-submissions-results">
                     @include('admin.partials.tna-submissions-results')

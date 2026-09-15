@@ -8,6 +8,7 @@ use App\Models\AtarRecord;
 use App\Models\Instructor;
 use App\Models\TrainingNeedsAssessment;
 use App\Models\TrainingRequest;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,6 +49,7 @@ class DashboardController extends Controller
             $atarTrainingsByMode = $this->atarTrainingsByModeChart($user->region);
             $atarTrainingsByMonth = $this->atarTrainingsByMonthChart($user->region);
             $atarGraduatesBySector = $this->atarGraduatesBySectorChart($user->region);
+            $participantsByCity = $this->participantsByCityChart($user->region);
 
             return view('admin.dashboard-regional', [
                 'user' => $user,
@@ -73,6 +75,7 @@ class DashboardController extends Controller
                     'atarTrainingsByMode' => $atarTrainingsByMode,
                     'atarTrainingsByMonth' => $atarTrainingsByMonth,
                     'atarGraduatesBySector' => $atarGraduatesBySector,
+                    'participantsByCity' => $participantsByCity,
                 ],
                 'graduatesByLocation' => MonitoringController::mapPoints($completed),
                 'regionCenter' => config('regions.geo.'.$user->region, [12.8797, 121.7740]),
@@ -91,10 +94,10 @@ class DashboardController extends Controller
 
         $completed = TrainingRequest::completed()->get();
 
-        // One shared region filter for the five overview charts below —
-        // distinct from $monitoringFilters['regions'], which is a separate
-        // multi-select scoped to the Regional Performance & Graduates Map
-        // section further down the page.
+        // One shared region filter for the five overview charts below, also
+        // reused by $monitoringFilters['regions'] further down for the
+        // Regional Performance & Graduates Map section — a single control
+        // for both rather than two independent region filters on one page.
         $chartRegion = $request->query('chart_region') ?: null;
         $completedForCharts = $completed->when($chartRegion, fn ($c) => $c->where('region', $chartRegion));
 
@@ -113,15 +116,13 @@ class DashboardController extends Controller
         ];
         $graduatesByAgeRange = $this->graduatesByAgeRangeChart($completedForCharts);
         $mostNeededTrainings = $this->mostNeededTrainingsChart($chartRegion);
-        $atarTrainingsByMode = $this->atarTrainingsByModeChart($chartRegion);
-        $atarTrainingsByMonth = $this->atarTrainingsByMonthChart($chartRegion);
-        $atarGraduatesBySector = $this->atarGraduatesBySectorChart($chartRegion);
 
         // Regional Monitoring and the Graduates Map used to be their own tabs —
         // folded into the dashboard so Super Admin has one place to look,
-        // filterable independently of the charts above (which stay all-time).
+        // sharing the same region filter as the charts above (previously its
+        // own independent multi-select).
         $monitoringFilters = [
-            'regions' => array_filter((array) $request->query('regions', [])),
+            'regions' => $chartRegion ? [$chartRegion] : [],
             'training_title' => $request->query('training_title') ?: null,
             'from' => $request->query('from') ?: null,
             'until' => $request->query('until') ?: null,
@@ -142,9 +143,6 @@ class DashboardController extends Controller
             'graduatesBySex' => $graduatesBySex,
             'graduatesByAgeRange' => $graduatesByAgeRange,
             'mostNeededTrainings' => $mostNeededTrainings,
-            'atarTrainingsByMode' => $atarTrainingsByMode,
-            'atarTrainingsByMonth' => $atarTrainingsByMonth,
-            'atarGraduatesBySector' => $atarGraduatesBySector,
         ];
         $insights = $this->buildInsights(
             statusBreakdown: $statusBreakdown,
@@ -182,6 +180,7 @@ class DashboardController extends Controller
                     'insights' => $insights,
                 ])->render(),
                 'monitoring_html' => view('admin.super-admin.partials.dashboard-monitoring', [
+                    'chartRegion' => $chartRegion,
                     'monitoringFilters' => $monitoringFilters,
                     'regions' => $regionsList,
                     'trainingTitles' => $trainingTitles,
@@ -626,6 +625,27 @@ class DashboardController extends Controller
         }
 
         return $byRegion->sortByDesc('total')->all();
+    }
+
+    /**
+     * Registered participant counts per city, scoped to a single region when
+     * one is given. Blank cities are excluded rather than grouped under
+     * "Unspecified" — most existing participants registered before the city
+     * field existed, and lumping them in would dwarf every real city.
+     */
+    private function participantsByCityChart(?string $region = null): array
+    {
+        return User::query()
+            ->where('role', User::ROLE_PARTICIPANT)
+            ->when($region, fn ($q) => $q->where('region', $region))
+            ->whereNotNull('city')
+            ->where('city', '!=', '')
+            ->selectRaw('city, count(*) as total')
+            ->groupBy('city')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row) => ['city' => $row->city, 'total' => (int) $row->total])
+            ->all();
     }
 
     /**

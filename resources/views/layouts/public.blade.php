@@ -16,47 +16,47 @@
     </head>
     <body class="font-sans antialiased bg-gray-50 text-gray-900">
         <div class="min-h-screen flex flex-col">
-            <header class="fixed top-0 inset-x-0 z-30">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
-                    <div class="flex items-center justify-between gap-4 rounded-2xl bg-[#E2762D]/55 backdrop-blur-xl backdrop-saturate-0 backdrop-brightness-125 border border-[#E2762D]/45 shadow-lg px-4 sm:px-6 py-2.5">
-                        <a href="{{ route('home') }}" class="flex items-center gap-2.5 min-w-0">
-                            <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training IMS Logo') }}" class="h-9 w-9 object-contain shrink-0">
-                            <span class="text-sm sm:text-base font-bold text-[#152A4E] truncate">{{ __('OCD Training IMS') }}</span>
-                        </a>
+            <header class="fixed top-0 inset-x-0 z-30 bg-[#E2762D] shadow-md">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+                    <a href="{{ route('home') }}" class="flex items-center gap-2 min-w-0">
+                        <svg class="w-5 h-5 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955a1.5 1.5 0 012.122 0L22.28 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                        </svg>
+                        <span class="text-sm sm:text-base font-bold text-white truncate">{{ __('Home') }}</span>
+                    </a>
 
-                        <nav class="flex items-center gap-1 sm:gap-2 shrink-0">
-                            <a href="{{ route('home') }}#trainings"
-                                @click="
-                                    const target = document.getElementById('trainings');
-                                    if (target) {
-                                        $event.preventDefault();
-                                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                    }
-                                "
-                                class="inline-flex items-center rounded-2xl px-4 py-2 text-sm font-semibold text-[#152A4E] hover:bg-white/40 transition">
-                                {{ __('Browse Trainings') }}
+                    <nav class="flex items-center gap-1 sm:gap-2 shrink-0">
+                        <a href="{{ route('home') }}#trainings"
+                            @click="
+                                const target = document.getElementById('trainings');
+                                if (target) {
+                                    $event.preventDefault();
+                                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                            "
+                            class="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition">
+                            {{ __('Browse Trainings') }}
+                        </a>
+                        <a href="{{ route('about') }}"
+                            class="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition">
+                            {{ __('About Us') }}
+                        </a>
+                        @auth
+                            <a href="{{ route(Auth::user()->isParticipant() ? 'dashboard' : 'admin.dashboard') }}"
+                                class="inline-flex items-center rounded-md bg-[#152A4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152A4E]/90 transition">
+                                {{ __('Go to Dashboard') }}
                             </a>
-                            <a href="{{ route('public.training-requests.create') }}"
-                                class="inline-flex items-center rounded-2xl px-4 py-2 text-sm font-semibold text-[#152A4E] hover:bg-white/40 transition">
-                                {{ __('Request Technical Assistance') }}
+                        @else
+                            <a href="{{ route('login') }}"
+                                class="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition">
+                                {{ __('Log In') }}
                             </a>
-                            @auth
-                                <a href="{{ route(Auth::user()->isParticipant() ? 'dashboard' : 'admin.dashboard') }}"
-                                    class="inline-flex items-center rounded-2xl bg-[#152A4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152A4E]/90 transition">
-                                    {{ __('Go to Dashboard') }}
-                                </a>
-                            @else
-                                <a href="{{ route('login') }}"
-                                    class="inline-flex items-center rounded-2xl px-4 py-2 text-sm font-semibold text-[#152A4E] hover:bg-white/40 transition">
-                                    {{ __('Log In') }}
-                                </a>
-                                <a href="{{ route('register') }}"
-                                    class="inline-flex items-center rounded-2xl px-4 py-2 text-sm font-semibold text-[#152A4E] hover:bg-white/40 transition">
-                                    {{ __('Register') }}
-                                </a>
-                            @endauth
-                        </nav>
-                    </div>
+                            <a href="{{ route('register') }}"
+                                class="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition">
+                                {{ __('Register') }}
+                            </a>
+                        @endauth
+                    </nav>
                 </div>
             </header>
 
@@ -70,7 +70,7 @@
                         <img src="{{ asset('images/ocd-seal.png') }}" alt="{{ __('OCD Seal') }}" class="h-8 w-8 object-contain">
                         <span class="text-xs">{{ __('Office of Civil Defense — Training Information Management System') }}</span>
                     </div>
-                    <span class="text-xs">&copy; {{ date('Y') }} {{ __('OCD Training IMS. All rights reserved.') }}</span>
+                    <span class="text-xs">&copy; {{ date('Y') }} {{ __('ICTS-SDIMD Training IMS. All rights reserved.') }}</span>
                 </div>
             </footer>
         </div>

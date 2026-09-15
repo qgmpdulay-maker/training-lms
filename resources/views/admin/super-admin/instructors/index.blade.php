@@ -118,10 +118,15 @@
                         @if ($complaintsOnly)
                             <input type="hidden" name="complaints_only" value="1">
                         @endif
-                        <input type="text" name="instructors_q" value="{{ $instructorSearch }}" placeholder="{{ __('Search name, training, certificate, agency, or LGU…') }}"
-                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-72">
+                        <div class="relative">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                            <input type="text" name="instructors_q" value="{{ $instructorSearch }}" placeholder="{{ __('Search name, training, certificate, agency, or LGU…') }}"
+                                class="rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm pl-10 py-2.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-72">
+                        </div>
                         <button type="submit"
-                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
                             {{ __('Search') }}
                         </button>
                     </form>

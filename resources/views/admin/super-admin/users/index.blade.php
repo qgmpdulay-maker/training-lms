@@ -158,27 +158,33 @@
 
             <!-- Current Admins -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <div class="flex items-center justify-between flex-wrap gap-3 mb-1">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">{{ __('Current Admins') }}</h2>
-                    <form data-live-form data-live-section="admins" data-live-target="admins-results"
-                        method="GET" action="{{ route('admin.users.index') }}" class="flex items-center flex-wrap gap-2">
-                        <input type="hidden" name="_section" value="admins">
-                        <input type="hidden" name="participants_q" value="{{ $participantSearch }}">
-                        <input type="text" name="admins_q" value="{{ $adminSearch }}" placeholder="{{ __('Search name, email, or organization…') }}"
-                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-72">
+                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Current Admins') }}</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Regional admins and super admins with access to the admin dashboard.') }}</p>
+
+                <form data-live-form data-live-section="admins" data-live-target="admins-results"
+                    method="GET" action="{{ route('admin.users.index') }}" class="w-full mb-5">
+                    <input type="hidden" name="_section" value="admins">
+                    <input type="hidden" name="participants_q" value="{{ $participantSearch }}">
+                    <div class="flex items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
+                        <div class="relative flex-1">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                            <input type="text" name="admins_q" value="{{ $adminSearch }}" placeholder="{{ __('Search name, email, or organization…') }}"
+                                class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
+                        </div>
                         <button type="submit"
-                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                            class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
                             {{ __('Search') }}
                         </button>
-                        @if ($adminSearch !== '')
-                            <a href="{{ route('admin.users.index', array_filter(['participants_q' => $participantSearch ?: null])) }}"
-                                class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
-                                {{ __('Clear') }}
-                            </a>
-                        @endif
-                    </form>
-                </div>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Regional admins and super admins with access to the admin dashboard.') }}</p>
+                    </div>
+                    @if ($adminSearch !== '')
+                        <a href="{{ route('admin.users.index', array_filter(['participants_q' => $participantSearch ?: null])) }}"
+                            class="inline-block mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                            {{ __('Clear') }}
+                        </a>
+                    @endif
+                </form>
 
                 <div id="admins-results">
                     @include('admin.partials.manage-admins-results')
@@ -187,27 +193,33 @@
 
             <!-- Participants -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <div class="flex items-center justify-between flex-wrap gap-3 mb-1">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">{{ __('Participants') }}</h2>
-                    <form data-live-form data-live-section="participants" data-live-target="participants-results"
-                        method="GET" action="{{ route('admin.users.index') }}" class="flex items-center flex-wrap gap-2">
-                        <input type="hidden" name="_section" value="participants">
-                        <input type="hidden" name="admins_q" value="{{ $adminSearch }}">
-                        <input type="text" name="participants_q" value="{{ $participantSearch }}" placeholder="{{ __('Search name, email, or organization…') }}"
-                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E] w-72">
+                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Participants') }}</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Elevate a participant to Regional Admin by assigning them a region.') }}</p>
+
+                <form data-live-form data-live-section="participants" data-live-target="participants-results"
+                    method="GET" action="{{ route('admin.users.index') }}" class="w-full mb-5">
+                    <input type="hidden" name="_section" value="participants">
+                    <input type="hidden" name="admins_q" value="{{ $adminSearch }}">
+                    <div class="flex items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
+                        <div class="relative flex-1">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                            <input type="text" name="participants_q" value="{{ $participantSearch }}" placeholder="{{ __('Search name, email, or organization…') }}"
+                                class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
+                        </div>
                         <button type="submit"
-                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                            class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
                             {{ __('Search') }}
                         </button>
-                        @if ($participantSearch !== '')
-                            <a href="{{ route('admin.users.index', array_filter(['admins_q' => $adminSearch ?: null])) }}"
-                                class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
-                                {{ __('Clear') }}
-                            </a>
-                        @endif
-                    </form>
-                </div>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Elevate a participant to Regional Admin by assigning them a region.') }}</p>
+                    </div>
+                    @if ($participantSearch !== '')
+                        <a href="{{ route('admin.users.index', array_filter(['admins_q' => $adminSearch ?: null])) }}"
+                            class="inline-block mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+                            {{ __('Clear') }}
+                        </a>
+                    @endif
+                </form>
 
                 <div id="participants-results">
                     @include('admin.partials.manage-participants-results')

@@ -25,7 +25,7 @@
                     {{ __('Office of Civil Defense') }}
                 </span>
                 <h1 class="text-4xl sm:text-6xl font-bold text-white leading-tight max-w-4xl mx-auto">
-                    {{ __('Disaster Risk Reduction & Management Trainings') }}
+                    {{ __('Training Information Management System') }}
                 </h1>
                 <p class="text-sm text-white/70 max-w-2xl mx-auto mt-5">
                     {{ __('Browse the trainings currently being offered. Log in or register as a participant to join a training and track your progress.') }}
@@ -204,63 +204,6 @@
                         </template>
                     </div>
                 </div>
-            </div>
-
-        </div>
-    </div>
-
-    <div class="pb-12 sm:pb-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-            <!-- Mission / Vision -->
-            <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#152A4E] via-[#1E3A66] to-[#0D1B33] p-6 sm:p-10">
-                <img src="{{ asset('images/ocd-seal.png') }}" alt=""
-                    class="absolute -right-12 -bottom-12 w-56 h-56 object-contain opacity-[0.08] pointer-events-none">
-
-                <div class="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
-                    <div>
-                        <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase mb-2">{{ __('Vision') }}</p>
-                        <p class="text-sm text-white/80 leading-relaxed">
-                            {{ __('OCD is the premier organization in Civil Defense and Disaster Risk Reduction and Management towards building a safe, secured and resilient Filipino nation by 2030.') }}
-                        </p>
-                    </div>
-
-                    <div>
-                        <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase mb-2">{{ __('Mission') }}</p>
-                        <p class="text-sm text-white/80 leading-relaxed">
-                            {{ __('To lead in the administration of comprehensive national Civil Defense and Disaster Risk Reduction and Management programs for adaptive, safer, and disaster resilient communities towards sustainable development.') }}
-                        </p>
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase mb-2">{{ __('Quality Policy') }}</p>
-                        <p class="text-sm text-white/80 leading-relaxed mb-3">
-                            {{ __('The Office of Civil Defense commits to:') }}
-                        </p>
-                        <ul class="text-sm text-white/80 leading-relaxed space-y-1 mb-3">
-                            <li>{{ __('I. Uphold a culture of excellence, professionalism, integrity, and commitment;') }}</li>
-                            <li>{{ __('II. Comply with legal and applicable requirements; and') }}</li>
-                            <li>{{ __('III. Ensure continual improvement of its quality management system') }}</li>
-                        </ul>
-                        <p class="text-sm text-white/80 leading-relaxed">
-                            {{ __("...to meet the highest level of stakeholder satisfaction in the administration of the country's comprehensive civil defense and disaster risk reduction and management program for an adaptive, safer, and resilient Filipino community.") }}
-                        </p>
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase mb-2">{{ __('Core Values') }}</p>
-                        <p class="text-sm font-semibold text-white">
-                            <span class="text-[#E2762D]">E</span>xcellence,
-                            <span class="text-[#E2762D]">P</span>rofessionalism,
-                            <span class="text-[#E2762D]">I</span>ntegrity,
-                            <span class="text-[#E2762D]">C</span>ommitment
-                        </p>
-                    </div>
-                </div>
-
-                <p class="relative z-10 text-center text-xs tracking-[0.15em] uppercase text-white/50 mt-8">
-                    {{ __('Serving the Nation, Protecting the People') }}
-                </p>
             </div>
 
         </div>
