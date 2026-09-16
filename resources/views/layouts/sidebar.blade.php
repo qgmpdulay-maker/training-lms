@@ -6,14 +6,14 @@
     x-cloak
     :class="[
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-        sidebarCollapsed ? 'lg:w-20' : 'lg:w-72',
+        sidebarCollapsed ? 'lg:w-20' : 'lg:w-80',
     ]"
-    class="fixed inset-y-0 start-0 z-50 flex w-72 shrink-0 flex-col bg-[#03055A] transition-all duration-200 ease-in-out lg:static">
+    class="fixed inset-y-0 start-0 z-50 flex w-80 shrink-0 flex-col bg-[#03055A] transition-all duration-200 ease-in-out lg:sticky lg:inset-y-auto lg:top-0 lg:h-screen">
 
     <div class="flex h-20 shrink-0 items-center gap-3 px-5 border-b border-white/10">
         <a href="{{ route(Auth::user()->isParticipant() ? 'dashboard' : 'admin.dashboard') }}" class="flex items-center gap-2.5 min-w-0">
-            <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training IMS Logo') }}" class="h-12 w-12 object-contain shrink-0">
-            <span class="text-sm font-semibold text-white truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ __('OCD Training IMS') }}</span>
+            <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training IMS Logo') }}" class="h-11 w-11 object-contain shrink-0">
+            <span class="text-sm font-semibold text-white truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ __('ICTS-SDIMD Training IMS') }}</span>
         </a>
 
         <button @click="sidebarCollapsed = ! sidebarCollapsed" class="ms-auto hidden lg:flex text-white/60 hover:text-white shrink-0">

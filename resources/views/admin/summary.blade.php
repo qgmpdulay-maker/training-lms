@@ -168,7 +168,7 @@
                                     <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                                     </svg>
-                                    <input type="text" name="participants_q" value="{{ $participantSearch }}" placeholder="{{ __('Search name, type, agency, email, or contact no.…') }}"
+                                    <input type="text" name="participants_q" value="{{ $participantSearch }}" placeholder="{{ __('Search name, type, agency, or email…') }}"
                                         class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
                                 </div>
                                 <button type="submit"

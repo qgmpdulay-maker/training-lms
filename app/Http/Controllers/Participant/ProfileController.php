@@ -34,13 +34,7 @@ class ProfileController extends Controller
             unset($validated['picture']);
         }
 
-        $request->user()->fill($validated);
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
-
-        $request->user()->save();
+        $request->user()->fill($validated)->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }

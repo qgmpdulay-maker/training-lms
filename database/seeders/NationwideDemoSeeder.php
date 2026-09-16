@@ -124,7 +124,6 @@ class NationwideDemoSeeder extends Seeder
                         : $this->fakeOrganization($region),
                     'agency' => "OCD Regional Office - {$region}",
                     'region' => $region,
-                    'mobile_number' => '09'.random_int(100000000, 999999999),
                     'email' => $email,
                     'password' => $passwordHash,
                     'role' => 'participant',

@@ -159,7 +159,6 @@ class DemoEnrichmentSeeder extends Seeder
                 'organization' => $person['org'],
                 'agency' => $person['org'],
                 'region' => 'NCR',
-                'mobile_number' => '09'.str_pad((string) random_int(100000000, 999999999), 9, '0', STR_PAD_LEFT),
             ]);
             $user->forceFill(['email_verified_at' => now()])->save();
             $created->push($user);
@@ -267,7 +266,7 @@ class DemoEnrichmentSeeder extends Seeder
             'category' => $data['category'],
             'requesting_agency' => $data['agency'],
             'contact_person' => $data['participants']->first()?->name ?? $admin->name,
-            'contact_number' => $data['participants']->first()?->mobile_number ?? '09171234567',
+            'contact_number' => '09171234567',
             'contact_email' => $data['participants']->first()?->email ?? $admin->email,
             'number_of_participants' => $data['participants']->count(),
             'preferred_date' => now()->addDays($data['days'])->toDateString(),

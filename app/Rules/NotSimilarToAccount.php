@@ -63,10 +63,6 @@ class NotSimilarToAccount implements ValidationRule
             $strings[] = Str::before($this->account->email, '@');
         }
 
-        if ($this->account->mobile_number) {
-            $strings[] = $this->account->mobile_number;
-        }
-
         return $strings;
     }
 }

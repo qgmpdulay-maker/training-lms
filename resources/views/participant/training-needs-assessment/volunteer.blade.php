@@ -23,7 +23,7 @@
             showForm: {{ $existing ? 'false' : 'true' }},
             fullName: {{ Js::from($profile['full_name'] ?? auth()->user()->name) }},
             position: {{ Js::from($profile['position'] ?? '') }},
-            contactNumber: {{ Js::from($profile['contact_number'] ?? auth()->user()->mobile_number ?? '') }},
+            contactNumber: {{ Js::from($profile['contact_number'] ?? '') }},
             groupName: {{ Js::from($profile['group_name'] ?? auth()->user()->organization ?? '') }},
             level: {{ Js::from($profile['level'] ?? '') }},
             accreditationStatus: {{ Js::from($profile['accreditation_status'] ?? '') }},

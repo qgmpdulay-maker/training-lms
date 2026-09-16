@@ -10,7 +10,7 @@
         </div>
 
         <button type="button" x-show="!editing" x-cloak @click="editing = true"
-            class="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[#152A4E]/8 dark:bg-white/10 px-3.5 py-2 text-sm font-semibold text-[#152A4E] dark:text-white hover:bg-[#152A4E]/15 dark:hover:bg-white/20 transition">
+            class="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[#152A4E] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#1E3A66] transition">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
             </svg>
@@ -78,10 +78,10 @@
             </div>
         </div>
 
-        <!-- Participant Type -->
+        <!-- Participant Type — locked; only OCD staff change this, not the participant -->
         <div>
             <label for="participant_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Participant Type') }}</label>
-            <select id="participant_type" name="participant_type" required :disabled="!editing"
+            <select id="participant_type" disabled
                 class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
                 @foreach ([
                     'Academe', 'Artisanal Fisherfolk', 'Barangay', 'Children',
@@ -91,86 +91,52 @@
                     'Municipal Government', 'N&RDRRMC', 'National Government', 'OCD Personnel',
                     'Others', 'Persons with Disabilities', 'Private Sector', 'Volunteers',
                 ] as $type)
-                    <option value="{{ $type }}" {{ old('participant_type', $user->participant_type) == $type ? 'selected' : '' }}>
+                    <option value="{{ $type }}" {{ strcasecmp((string) $user->participant_type, $type) === 0 ? 'selected' : '' }}>
                         {{ $type }}
                     </option>
                 @endforeach
             </select>
-            <x-input-error class="mt-1" :messages="$errors->get('participant_type')" />
         </div>
 
-        <!-- Agency/Organization (participant's own org) -->
+        <!-- Agency/Organization — locked; only OCD staff change this, not the participant -->
         <div>
             <label for="organization" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Agency/Organization') }}</label>
-            <input id="organization" name="organization" type="text" required :disabled="!editing"
-                value="{{ old('organization', $user->organization) }}"
+            <input id="organization" type="text" disabled
+                value="{{ $user->organization }}"
                 class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
-            <x-input-error class="mt-1" :messages="$errors->get('organization')" />
         </div>
 
-        <!-- Agency (OCD Region) -->
+        <!-- Region / OCD Regional Office — locked; regional & super admins are tied to an OCD
+             regional office, while a participant's own location is just their region -->
         <div>
-            <label for="agency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('OCD Regional Office') }}</label>
-            <select id="agency" name="agency" required :disabled="!editing"
-                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
-                @foreach ([
-                    'OCD-NCR: National Capital Region',
-                    'OCD-CAR: Cordillera Administrative Region',
-                    'OCD-Region I: Ilocos Region',
-                    'OCD-Region II: Cagayan Valley',
-                    'OCD-Region III: Central Luzon',
-                    'OCD-Region IV-A: CALABARZON',
-                    'OCD-Region IV-B: MIMAROPA',
-                    'OCD-Region V: Bicol Region',
-                    'OCD-Region VI: Western Visayas',
-                    'OCD-Region VII: Central Visayas',
-                    'OCD-Region VIII: Eastern Visayas',
-                    'OCD-Region IX: Zamboanga Peninsula',
-                    'OCD-Region X: Northern Mindanao',
-                    'OCD-Region XI: Davao Region',
-                    'OCD-Region XII: SOCCSKSARGEN',
-                    'OCD-Region XIII: Caraga',
-                    'OCD-NIR: Negros Island Region',
-                ] as $agencyOption)
-                    <option value="{{ $agencyOption }}" {{ old('agency', $user->agency) == $agencyOption ? 'selected' : '' }}>
-                        {{ $agencyOption }}
-                    </option>
-                @endforeach
-            </select>
-            <x-input-error class="mt-1" :messages="$errors->get('agency')" />
+            @if (Auth::user()->isParticipant())
+                <label for="region" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Region') }}</label>
+                <input id="region" type="text" disabled
+                    value="{{ $user->region }}"
+                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
+            @else
+                @php
+                    // Derived from the admin's `region` column (the authoritative
+                    // value used everywhere else — dashboards, filtering, the topbar
+                    // chip) rather than the stored `agency` string, which for older
+                    // accounts doesn't reliably match one of the option labels below
+                    // (e.g. "OCD Regional Office III" vs "OCD-Region III: Central
+                    // Luzon") and would silently display the wrong region.
+                    $ocdOfficeLabel = collect(config('regions.agency_map'))->search($user->region) ?: $user->region;
+                @endphp
+                <label for="agency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('OCD Regional Office') }}</label>
+                <input id="agency" type="text" disabled
+                    value="{{ $ocdOfficeLabel }}"
+                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
+            @endif
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <!-- Mobile Number -->
-            <div>
-                <label for="mobile_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Mobile Number') }}</label>
-                <input id="mobile_number" name="mobile_number" type="text" required :disabled="!editing"
-                    value="{{ old('mobile_number', $user->mobile_number) }}"
-                    inputmode="numeric" pattern="\d*" maxlength="11" autocomplete="tel"
-                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
-                <x-input-error class="mt-1" :messages="$errors->get('mobile_number')" />
-            </div>
-
-            <!-- Landline -->
-            <div>
-                <label for="landline_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Landline Number') }}</label>
-                <input id="landline_number" name="landline_number" type="text" :disabled="!editing"
-                    value="{{ old('landline_number', $user->landline_number) }}"
-                    inputmode="numeric" pattern="\d*" maxlength="10" autocomplete="off"
-                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
-                <x-input-error class="mt-1" :messages="$errors->get('landline_number')" />
-            </div>
-        </div>
-
-        <!-- Email -->
+        <!-- Email — locked; contact Super Admin to change -->
         <div>
             <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ __('Email') }}</label>
-            <input id="email" name="email" type="email" required autocomplete="username" :disabled="!editing"
-                value="{{ old('email', $user->email) }}"
+            <input id="email" type="email" disabled
+                value="{{ $user->email }}"
                 class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:border-[#152A4E] focus:ring-[#152A4E] text-base py-3 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400">
-            <x-input-error class="mt-1" :messages="$errors->get('email')" />
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
                 <div class="mt-2">
@@ -192,7 +158,7 @@
 
         <div class="flex items-center gap-4 pt-2" x-show="editing" x-cloak>
             <button type="submit"
-                class="bg-[#152A4E]/70 hover:bg-[#152A4E]/85 backdrop-blur-xl backdrop-saturate-150 border border-white/10 text-white text-sm font-semibold rounded-lg px-6 py-3 shadow-lg transition">
+                class="bg-[#152A4E] hover:bg-[#1E3A66] text-white text-sm font-semibold rounded-lg px-6 py-3 shadow-sm transition">
                 {{ __('Save Changes') }}
             </button>
 

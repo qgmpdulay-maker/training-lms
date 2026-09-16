@@ -93,7 +93,6 @@ class DemoDataSeeder extends Seeder
                 'organization' => self::ORGANIZATIONS[$i % count(self::ORGANIZATIONS)],
                 'agency' => self::ORGANIZATIONS[$i % count(self::ORGANIZATIONS)],
                 'region' => 'Region III',
-                'mobile_number' => '09'.str_pad((string) random_int(100000000, 999999999), 9, '0', STR_PAD_LEFT),
             ]);
             $user->forceFill(['email_verified_at' => now()])->save();
 
@@ -109,7 +108,7 @@ class DemoDataSeeder extends Seeder
                     'training_title' => $training['title'],
                     'requesting_agency' => $user->organization,
                     'contact_person' => $user->name,
-                    'contact_number' => $user->mobile_number,
+                    'contact_number' => '09'.str_pad((string) random_int(100000000, 999999999), 9, '0', STR_PAD_LEFT),
                     'contact_email' => $user->email,
                     'number_of_participants' => random_int(1, 25),
                     'preferred_date' => now()->addDays($daysOffset)->toDateString(),

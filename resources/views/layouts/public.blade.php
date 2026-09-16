@@ -18,11 +18,9 @@
         <div class="min-h-screen flex flex-col">
             <header class="fixed top-0 inset-x-0 z-30 bg-[#E2762D] shadow-md">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-                    <a href="{{ route('home') }}" class="flex items-center gap-2 min-w-0">
-                        <svg class="w-5 h-5 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955a1.5 1.5 0 012.122 0L22.28 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                        </svg>
-                        <span class="text-sm sm:text-base font-bold text-white truncate">{{ __('Home') }}</span>
+                    <a href="{{ route('home') }}" class="flex items-center gap-2.5 min-w-0">
+                        <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training IMS Logo') }}" class="h-9 w-9 object-contain shrink-0">
+                        <span class="text-sm font-semibold text-white truncate">{{ __('Home') }}</span>
                     </a>
 
                     <nav class="flex items-center gap-1 sm:gap-2 shrink-0">

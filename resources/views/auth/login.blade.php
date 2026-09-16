@@ -100,7 +100,7 @@
 
                             <!-- Submit -->
                             <button type="submit"
-                                class="w-full bg-[#152A4E]/70 hover:bg-[#152A4E]/85 backdrop-blur-xl backdrop-saturate-150 border border-white/10 text-white text-sm font-semibold rounded-lg py-3 shadow-lg transition">
+                                class="w-full bg-[#152A4E] hover:bg-[#1E3A66] text-white text-sm font-semibold rounded-lg py-3 shadow-sm transition">
                                 {{ __('Sign In') }}
                             </button>
                         </form>

@@ -15,7 +15,7 @@
                     <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Generate a printable ID card with your participant details.') }}</p>
                 </div>
                 <a href="{{ route('profile.id-card') }}" target="_blank"
-                    class="shrink-0 inline-flex items-center justify-center bg-[#152A4E]/70 hover:bg-[#152A4E]/85 backdrop-blur-xl backdrop-saturate-150 border border-white/10 text-white text-sm font-semibold rounded-lg px-6 py-3 shadow-lg transition">
+                    class="shrink-0 inline-flex items-center justify-center bg-[#152A4E] hover:bg-[#1E3A66] text-white text-sm font-semibold rounded-lg px-6 py-3 shadow-sm transition">
                     {{ __('Generate ID') }}
                 </a>
             </div>

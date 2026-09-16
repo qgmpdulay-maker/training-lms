@@ -71,8 +71,7 @@ class SummaryController extends Controller
                             ->orWhere('email', 'like', "%{$participantSearch}%")
                             ->orWhere('organization', 'like', "%{$participantSearch}%")
                             ->orWhere('agency', 'like', "%{$participantSearch}%")
-                            ->orWhere('participant_type', 'like', "%{$participantSearch}%")
-                            ->orWhere('mobile_number', 'like', "%{$participantSearch}%");
+                            ->orWhere('participant_type', 'like', "%{$participantSearch}%");
                     });
                 })
                 ->orderBy('name')
