@@ -82,13 +82,14 @@
 
             <!-- Pending Approvals -->
             @if ($pendingAccounts->isNotEmpty())
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-amber-200 dark:border-amber-800 shadow-sm p-6 sm:p-8">
-                    <div class="flex items-center gap-2 mb-1">
-                        <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">{{ __('Pending Approvals') }}</h2>
-                        <span class="inline-flex items-center text-xs font-semibold rounded-full border px-2.5 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700">
+                <x-chart-card body-class="p-6 sm:p-8"
+                    border-class="border-amber-200 dark:border-amber-800"
+                    :title="__('Pending Approvals')">
+                    <x-slot:action>
+                        <span class="inline-flex items-center text-xs font-bold rounded-full px-2.5 py-1 bg-amber-400 text-[#152A4E]">
                             {{ $pendingAccounts->count() }}
                         </span>
-                    </div>
+                    </x-slot:action>
 
                     <div x-data="{ activeRegion: @js($pendingAccountsByRegion->keys()->first()) }">
                         <div class="flex items-center gap-1 overflow-x-auto bg-gray-100 dark:bg-gray-900/40 rounded-xl p-1.5">
@@ -153,13 +154,13 @@
                             </div>
                         @endforeach
                     </div>
-                </div>
+                </x-chart-card>
             @endif
 
             <!-- Current Admins -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Current Admins') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Regional admins and super admins with access to the admin dashboard.') }}</p>
+            <x-chart-card body-class="p-6 sm:p-8"
+                :title="__('Current Admins')"
+                :subtitle="__('Regional admins and super admins with access to the admin dashboard.')">
 
                 <form data-live-form data-live-section="admins" data-live-target="admins-results"
                     method="GET" action="{{ route('admin.users.index') }}" class="w-full mb-5">
@@ -189,12 +190,12 @@
                 <div id="admins-results">
                     @include('admin.partials.manage-admins-results')
                 </div>
-            </div>
+            </x-chart-card>
 
             <!-- Participants -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Participants') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Elevate a participant to Regional Admin by assigning them a region.') }}</p>
+            <x-chart-card body-class="p-6 sm:p-8"
+                :title="__('Participants')"
+                :subtitle="__('Elevate a participant to Regional Admin by assigning them a region.')">
 
                 <form data-live-form data-live-section="participants" data-live-target="participants-results"
                     method="GET" action="{{ route('admin.users.index') }}" class="w-full mb-5">
@@ -224,7 +225,7 @@
                 <div id="participants-results">
                     @include('admin.partials.manage-participants-results')
                 </div>
-            </div>
+            </x-chart-card>
 
         </div>
     </div>

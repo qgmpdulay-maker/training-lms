@@ -25,11 +25,9 @@
             @endif
 
             @if ($preview)
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <h1 class="text-2xl font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Preview Import') }}</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                        {{ __(':count training record(s) parsed for :region. Review below, then confirm to save them.', ['count' => count($preview['rows']), 'region' => $preview['region']]) }}
-                    </p>
+                <x-chart-card body-class="p-6 sm:p-8"
+                    :title="__('Preview Import')"
+                    :subtitle="__(':count training record(s) parsed for :region. Review below, then confirm to save them.', ['count' => count($preview['rows']), 'region' => $preview['region']])">
 
                     @if (! empty($preview['warnings']))
                         <div class="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 mb-6">
@@ -85,7 +83,7 @@
                             </button>
                         </form>
                     </div>
-                </div>
+                </x-chart-card>
             @else
                 {{-- Import parsing is purely positional (see AtarImportParser's class
                      doc) — it reads by column INDEX, not header text, so getting the
@@ -129,11 +127,9 @@
                     </a>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <h1 class="text-2xl font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Import Training Database') }}</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-8">
-                        {{ __('Upload the CDTI Training Database CSV export for a region. You\'ll get a preview to review before anything is saved.') }}
-                    </p>
+                <x-chart-card body-class="p-6 sm:p-8"
+                    :title="__('Import Training Database')"
+                    :subtitle="__('Upload the CDTI Training Database CSV export for a region. You\'ll get a preview to review before anything is saved.')">
 
                     <form method="POST" action="{{ route('admin.atar-records.import.store') }}" enctype="multipart/form-data" class="space-y-5">
                         @csrf
@@ -164,7 +160,7 @@
                             </button>
                         </div>
                     </form>
-                </div>
+                </x-chart-card>
             @endif
         </div>
     </div>

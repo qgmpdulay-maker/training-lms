@@ -56,9 +56,10 @@
 
             <div class="grid grid-cols-1 gap-6">
                 <!-- Needs Assessment per LGU / Organization (moved from the Needs Assessment tab) -->
-                <div id="needs-assessment-by-organization" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <h3 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Needs Assessment per LGU / Organization') }}</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Training Needs Assessment submissions grouped by the participant\'s LGU or organization.') }}</p>
+                <x-chart-card id="needs-assessment-by-organization" class="scroll-mt-24"
+                    body-class="p-6 sm:p-8"
+                    :title="__('Needs Assessment per LGU / Organization')"
+                    :subtitle="__('Training Needs Assessment submissions grouped by the participant\'s LGU or organization.')">
 
                     @if ($needsAssessmentByOrganization->isEmpty())
                         <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
@@ -92,7 +93,7 @@
                             {{ $needsAssessmentByOrganization->links() }}
                         </div>
                     @endif
-                </div>
+                </x-chart-card>
 
                 @include('admin.partials.graduates-by-lgu')
             </div>

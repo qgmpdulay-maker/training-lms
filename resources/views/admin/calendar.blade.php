@@ -29,9 +29,9 @@
             @endif
 
             @if ($filters !== null)
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Filter') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Narrow the agenda below by region or a search for a specific training/agency.') }}</p>
+                <x-chart-card body-class="p-6 sm:p-8"
+                    :title="__('Filter')"
+                    :subtitle="__('Narrow the agenda below by region or a search for a specific training/agency.')">
 
                     <form method="GET" action="{{ route('admin.calendar') }}">
                         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
@@ -63,9 +63,11 @@
                             </a>
                         @endif
                     </form>
-                </div>
+                </x-chart-card>
             @else
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 sm:p-5">
+                <x-chart-card body-class="p-4 sm:p-5"
+                    :title="__('Filter')"
+                    :subtitle="__(':region training schedule.', ['region' => Auth::user()->region])">
                     <form method="GET" action="{{ route('admin.calendar') }}" class="flex items-center gap-3">
                         <x-input-label for="search" :value="__('Search')" class="sr-only" />
                         <div class="relative flex-1 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
@@ -81,13 +83,7 @@
                             </a>
                         @endif
                     </form>
-                    <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-3">
-                        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                        </svg>
-                        <span>{{ __(':region training schedule.', ['region' => Auth::user()->region]) }}</span>
-                    </div>
-                </div>
+                </x-chart-card>
             @endif
 
             <div class="flex items-center gap-4 flex-wrap text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -122,8 +118,10 @@
                     </div>
 
                     @foreach ($groupedByMonth as $month => $entries)
-                        <div x-show="activeMonth === @js($month)" x-cloak class="mt-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                            <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-3">{{ $month }}</h2>
+                        {{-- Blade does not compile @js() inside a component attribute, so the
+                             Alpine expression is built in PHP and bound with ":x-show". --}}
+                        <x-chart-card :x-show="'activeMonth === ' . json_encode($month)" x-cloak class="mt-5"
+                            body-class="p-6 sm:p-8" :title="$month">
                             <ul class="space-y-2">
                                 @php $categoryShort = ['apb' => 'APB', 'ta' => 'TA']; @endphp
                                 @foreach ($entries as $request)
@@ -140,7 +138,7 @@
                                     </li>
                                 @endforeach
                             </ul>
-                        </div>
+                        </x-chart-card>
                     @endforeach
                 </div>
             @endif

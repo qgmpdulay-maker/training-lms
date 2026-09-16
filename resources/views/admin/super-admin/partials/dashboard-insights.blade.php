@@ -4,9 +4,7 @@
     submitDashboardFilter() in dashboard.blade.php).
 --}}
 @if (count($insights) > 0)
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-        <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Summary & Insights') }}</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Auto-generated from the charts above.') }}</p>
+    <x-chart-card :title="__('Summary & Insights')" :subtitle="__('Auto-generated from the charts above.')">
         <ul class="space-y-3">
             @foreach ($insights as $insight)
                 <li class="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-300">
@@ -17,5 +15,5 @@
                 </li>
             @endforeach
         </ul>
-    </div>
+    </x-chart-card>
 @endif

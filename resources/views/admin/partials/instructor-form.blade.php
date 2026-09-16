@@ -1,6 +1,6 @@
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Add Instructor') }}</h2>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Instructor ratings are computed automatically from L1 Evaluation data once exactly one instructor is on file for a given training type.') }}</p>
+<x-chart-card body-class="p-6 sm:p-8"
+    :title="__('Add Instructor')"
+    :subtitle="__('Instructor ratings are computed automatically from L1 Evaluation data once exactly one instructor is on file for a given training type.')">
 
     <form method="POST" action="{{ route('admin.instructors.store') }}" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         @csrf
@@ -126,4 +126,4 @@
             </button>
         </div>
     </form>
-</div>
+</x-chart-card>

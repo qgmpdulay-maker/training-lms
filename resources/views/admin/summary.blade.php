@@ -57,25 +57,23 @@
                 </div>
             @endif
 
-            <div id="training-requests" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+            <x-chart-card id="training-requests" class="scroll-mt-24" body-class="p-6 sm:p-8"
+                :title="__('Training Requests')">
+                <x-slot:description>
+                    @php
+                        $regionPhrase = Auth::user()->isAdmin()
+                            ? __('for :region', ['region' => Auth::user()->region])
+                            : ($selectedRegion ? __('for :region', ['region' => $selectedRegion]) : __('across all regions'));
+                    @endphp
+                    @if ($statusDefaulted)
+                        {{ __('Newly received training requests :region, most recent first, so nothing gets missed. Use the status filter to review requests that are being reviewed, approved, completed, or not approved. Click Manage to update status, certificate details, or move date and venue.', ['region' => $regionPhrase]) }}
+                    @elseif ($selectedStatus === 'all')
+                        {{ __('Every training request on record :region, most recent first. Click Manage to update its status, certificate details, or move its date and venue.', ['region' => $regionPhrase]) }}
+                    @else
+                        {{ __('Training requests marked ":status" :region, most recent first. Click Manage to update status, certificate details, or move date and venue.', ['status' => $statusLabels[$selectedStatus] ?? $selectedStatus, 'region' => $regionPhrase]) }}
+                    @endif
+                </x-slot:description>
                 <div class="mb-5">
-                    <div class="mb-4">
-                        <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Training Requests') }}</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                            @php
-                                $regionPhrase = Auth::user()->isAdmin()
-                                    ? __('for :region', ['region' => Auth::user()->region])
-                                    : ($selectedRegion ? __('for :region', ['region' => $selectedRegion]) : __('across all regions'));
-                            @endphp
-                            @if ($statusDefaulted)
-                                {{ __('Newly received training requests :region, most recent first, so nothing gets missed. Use the status filter to review requests that are being reviewed, approved, completed, or not approved. Click Manage to update status, certificate details, or move date and venue.', ['region' => $regionPhrase]) }}
-                            @elseif ($selectedStatus === 'all')
-                                {{ __('Every training request on record :region, most recent first. Click Manage to update its status, certificate details, or move its date and venue.', ['region' => $regionPhrase]) }}
-                            @else
-                                {{ __('Training requests marked ":status" :region, most recent first. Click Manage to update status, certificate details, or move date and venue.', ['status' => $statusLabels[$selectedStatus] ?? $selectedStatus, 'region' => $regionPhrase]) }}
-                            @endif
-                        </p>
-                    </div>
                     <form id="training-requests-form" data-live-form data-live-section="training-requests" data-live-target="training-requests-results"
                         method="GET" action="{{ route('admin.summary') }}#training-requests" class="w-full">
                         <input type="hidden" name="_section" value="training-requests">
@@ -128,23 +126,21 @@
                 <div id="training-requests-results">
                     @include('admin.partials.summary-training-requests')
                 </div>
-            </div>
+            </x-chart-card>
 
             @if (Auth::user()->isAdmin() || Auth::user()->isSuperAdmin())
-                <div id="registered-participants" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                <x-chart-card id="registered-participants" class="scroll-mt-24" body-class="p-6 sm:p-8"
+                    :title="__('Registered Participants')">
+                    <x-slot:description>
+                        @if (Auth::user()->isAdmin())
+                            {{ __('Participants registered under :region.', ['region' => Auth::user()->region]) }}
+                        @elseif ($selectedRegion)
+                            {{ __('Participants registered under :region.', ['region' => $selectedRegion]) }}
+                        @else
+                            {{ __('Participants registered across all regions.') }}
+                        @endif
+                    </x-slot:description>
                     <div class="mb-5">
-                        <div class="mb-4">
-                            <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Registered Participants') }}</h2>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                @if (Auth::user()->isAdmin())
-                                    {{ __('Participants registered under :region.', ['region' => Auth::user()->region]) }}
-                                @elseif ($selectedRegion)
-                                    {{ __('Participants registered under :region.', ['region' => $selectedRegion]) }}
-                                @else
-                                    {{ __('Participants registered across all regions.') }}
-                                @endif
-                            </p>
-                        </div>
                         <form id="participants-form" data-live-form data-live-section="participants" data-live-target="participants-results"
                             method="GET" action="{{ route('admin.summary') }}#registered-participants" class="w-full">
                             <input type="hidden" name="_section" value="participants">
@@ -188,24 +184,22 @@
                     <div id="participants-results">
                         @include('admin.partials.summary-participants')
                     </div>
-                </div>
+                </x-chart-card>
             @endif
 
             @if (Auth::user()->isAdmin() || Auth::user()->isSuperAdmin())
-                <div id="evaluations" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                <x-chart-card id="evaluations" class="scroll-mt-24" body-class="p-6 sm:p-8"
+                    :title="__('Evaluations')">
+                    <x-slot:description>
+                        @if (Auth::user()->isAdmin())
+                            {{ __('Evaluations participants have submitted for trainings in :region.', ['region' => Auth::user()->region]) }}
+                        @elseif ($selectedRegion)
+                            {{ __('Evaluations participants have submitted for trainings in :region.', ['region' => $selectedRegion]) }}
+                        @else
+                            {{ __('Evaluations participants have submitted, across all regions. Open a training\'s Manage page for the full breakdown.') }}
+                        @endif
+                    </x-slot:description>
                     <div class="mb-5">
-                        <div class="mb-4">
-                            <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Evaluations') }}</h2>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                @if (Auth::user()->isAdmin())
-                                    {{ __('Evaluations participants have submitted for trainings in :region.', ['region' => Auth::user()->region]) }}
-                                @elseif ($selectedRegion)
-                                    {{ __('Evaluations participants have submitted for trainings in :region.', ['region' => $selectedRegion]) }}
-                                @else
-                                    {{ __('Evaluations participants have submitted, across all regions. Open a training\'s Manage page for the full breakdown.') }}
-                                @endif
-                            </p>
-                        </div>
                         <form id="evaluations-form" data-live-form data-live-section="evaluations" data-live-target="evaluations-results"
                             method="GET" action="{{ route('admin.summary') }}#evaluations" class="w-full">
                             <input type="hidden" name="_section" value="evaluations">
@@ -249,22 +243,20 @@
                     <div id="evaluations-results">
                         @include('admin.partials.summary-evaluations')
                     </div>
-                </div>
+                </x-chart-card>
             @endif
 
             @if (Auth::user()->isSuperAdmin())
-                <div id="instructors" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+                <x-chart-card id="instructors" class="scroll-mt-24" body-class="p-6 sm:p-8"
+                    :title="__('Instructors')">
+                    <x-slot:description>
+                        @if ($selectedRegion)
+                            {{ __('Instructors on file for :region. Click a name for their full profile, deployment history, and complaints on record.', ['region' => $selectedRegion]) }}
+                        @else
+                            {{ __('Instructors on file across all regions. Click a name for their full profile, deployment history, and complaints on record.') }}
+                        @endif
+                    </x-slot:description>
                     <div class="mb-5">
-                        <div class="mb-4">
-                            <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Instructors') }}</h2>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                @if ($selectedRegion)
-                                    {{ __('Instructors on file for :region. Click a name for their full profile, deployment history, and complaints on record.', ['region' => $selectedRegion]) }}
-                                @else
-                                    {{ __('Instructors on file across all regions. Click a name for their full profile, deployment history, and complaints on record.') }}
-                                @endif
-                            </p>
-                        </div>
                         <form id="instructors-form" data-live-form data-live-section="instructors" data-live-target="instructors-results"
                             method="GET" action="{{ route('admin.summary') }}#instructors" class="w-full">
                             <input type="hidden" name="_section" value="instructors">
@@ -308,7 +300,7 @@
                     <div id="instructors-results">
                         @include('admin.partials.summary-instructors')
                     </div>
-                </div>
+                </x-chart-card>
             @endif
 
         </div>

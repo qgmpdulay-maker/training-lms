@@ -97,9 +97,9 @@
                 @csrf
 
                 <!-- Training -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('1. Which training is this?') }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">{{ __('Pick an existing Technical Assistance training, or type in a new one (e.g. an APB training).') }}</p>
+                <x-chart-card body-class="p-6 sm:p-8"
+                    :title="__('1. Which training is this?')"
+                    :subtitle="__('Pick an existing Technical Assistance training, or type in a new one (e.g. an APB training).')">
 
                     <x-input-error :messages="$errors->get('training_slug')" class="mb-2" />
                     <x-input-error :messages="$errors->get('custom_training_title')" class="mb-2" />
@@ -180,11 +180,10 @@
                             x-model="customTrainingTitle" />
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('This will be scheduled as an APB training since it isn\'t part of the OCD Technical Assistance catalog.') }}</p>
                     </div>
-                </div>
+                </x-chart-card>
 
                 <!-- Details -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8 space-y-5">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('2. Training details') }}</h2>
+                <x-chart-card body-class="p-6 sm:p-8 space-y-5" :title="__('2. Training details')">
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
@@ -248,11 +247,10 @@
                             class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#152A4E] focus:ring-[#152A4E]">{{ old('purpose') }}</textarea>
                         <x-input-error :messages="$errors->get('purpose')" class="mt-1" />
                     </div>
-                </div>
+                </x-chart-card>
 
                 <!-- Schedule -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8 space-y-5">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('3. Schedule') }}</h2>
+                <x-chart-card body-class="p-6 sm:p-8 space-y-5" :title="__('3. Schedule')">
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
                         <div>
@@ -277,17 +275,17 @@
                             <x-input-error :messages="$errors->get('number_of_participants')" class="mt-1" />
                         </div>
                     </div>
-                </div>
+                </x-chart-card>
 
                 <!-- Participants -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <div class="flex items-center justify-between gap-3 mb-1">
-                        <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">{{ __('4. Select Participants') }}</h2>
-                        <span class="text-xs font-semibold text-[#152A4E] dark:text-white shrink-0" x-show="selectedParticipants.length" x-cloak>
+                <x-chart-card body-class="p-6 sm:p-8"
+                    :title="__('4. Select Participants')"
+                    :subtitle="__('Optional — participants can be pulled from any region, independent of the training\'s own region above. Leave empty to just set a participant count.')">
+                    <x-slot:action>
+                        <span class="text-xs font-semibold text-white" x-show="selectedParticipants.length" x-cloak>
                             <span x-text="selectedParticipants.length"></span> {{ __('selected') }}
                         </span>
-                    </div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Optional — participants can be pulled from any region, independent of the training\'s own region above. Leave empty to just set a participant count.') }}</p>
+                    </x-slot:action>
 
                     <template x-for="participant in selectedParticipants" :key="participant.id">
                         <input type="hidden" name="participant_ids[]" :value="participant.id">
@@ -348,7 +346,7 @@
                         </div>
                     </div>
                     <x-input-error :messages="$errors->get('participant_ids')" class="mt-2" />
-                </div>
+                </x-chart-card>
 
                 <div class="flex justify-end">
                     <button type="submit"

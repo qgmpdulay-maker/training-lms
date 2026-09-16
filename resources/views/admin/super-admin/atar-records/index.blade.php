@@ -50,7 +50,7 @@
                 </select>
             </form>
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+            <x-chart-card body-class="" :title="__('All ATAR Records')">
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm text-left">
                         <thead class="bg-gray-50 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400">
@@ -91,7 +91,7 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </x-chart-card>
 
             {{ $records->links() }}
         </div>

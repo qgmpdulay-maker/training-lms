@@ -46,24 +46,18 @@
             @endif
 
             <!-- ATAR -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <div class="flex flex-wrap items-start justify-between gap-4 mb-5">
-                    <div>
-                        <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('ATAR') }}</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                            {{ __('Blank template, then upload each completed ATAR below.') }}
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <a href="{{ route('admin.tools.atar-template') }}" target="_blank"
-                            class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border border-gray-200 dark:border-gray-600 text-[#152A4E] dark:text-white px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
-                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 12m0 0l4.5-4.5M12 12V3" />
-                            </svg>
-                            {{ __('ATAR Template') }}
-                        </a>
-                    </div>
-                </div>
+            <x-chart-card body-class="p-6 sm:p-8"
+                :title="__('ATAR')"
+                :subtitle="__('Blank template, then upload each completed ATAR below.')">
+                <x-slot:action>
+                    <a href="{{ route('admin.tools.atar-template') }}" target="_blank"
+                        class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border border-white/30 text-white px-3 py-2 hover:bg-white/10 transition whitespace-nowrap">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 12m0 0l4.5-4.5M12 12V3" />
+                        </svg>
+                        {{ __('ATAR Template') }}
+                    </a>
+                </x-slot:action>
 
                 <div class="mb-5">
                     <form data-live-form data-live-section="files" data-live-target="files-section"
@@ -97,14 +91,14 @@
                 <div id="files-section">
                     @include('admin.partials.files-table')
                 </div>
-            </div>
+            </x-chart-card>
 
             <!-- Evaluation Computation (L1 / L2) -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Evaluation Computation (L1 / L2)') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                    {{ __('Combines the admin-entered evaluation with what participants submitted themselves. Pick a training below, then expand a session to see its L1 and L2 results.') }}
-                </p>
+            <x-chart-card body-class="p-6 sm:p-8"
+                :title="__('Evaluation Computation (L1 / L2)')">
+                <x-slot:description>
+                {{ __('Combines the admin-entered evaluation with what participants submitted themselves. Pick a training below, then expand a session to see its L1 and L2 results.') }}
+                </x-slot:description>
 
                 @if (empty($evaluationsByTraining))
                     <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
@@ -440,7 +434,7 @@
                         @endforeach
                     </div>
                 @endif
-            </div>
+            </x-chart-card>
 
         </div>
     </div>

@@ -6,12 +6,8 @@
 @php
     $atarHasData = count($chartData['atarTrainingsByMode']) > 0;
 @endphp
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-    <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Training Database (ATAR Records)') }}</h3>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        {{ __('Historical accomplishment data imported from Training Database CSV exports, :region.', ['region' => $chartRegionLabel ?? __('all regions')]) }}
-    </p>
-
+<x-chart-card :title="__('Training Database (ATAR Records)')"
+    :subtitle="__('Historical accomplishment data imported from Training Database CSV exports, :region.', ['region' => $chartRegionLabel ?? __('all regions')])">
     @if (! $atarHasData)
         <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No ATAR records imported yet.') }}</p>
     @else
@@ -30,4 +26,4 @@
             </div>
         </div>
     @endif
-</div>
+</x-chart-card>

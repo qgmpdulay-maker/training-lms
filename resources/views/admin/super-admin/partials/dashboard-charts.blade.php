@@ -43,27 +43,23 @@
     </form>
 </div>
 <div class="grid grid-cols-1 gap-6">
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:divide-x lg:divide-gray-100 dark:lg:divide-gray-700">
-            <div>
-                <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Sex') }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings only, :region.', ['region' => $chartRegionLabel]) }}</p>
-                @if ($chartData['graduatesBySex']['male'] + $chartData['graduatesBySex']['female'] > 0)
-                    <div class="h-64 max-w-xs mx-auto"><canvas id="dashGraduatesBySexChart"></canvas></div>
-                @else
-                    <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings yet.') }}</p>
-                @endif
-            </div>
-            <div class="lg:pl-6">
-                <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Age Range') }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings only, :region.', ['region' => $chartRegionLabel]) }}</p>
-                <div class="h-64"><canvas id="dashGraduatesByAgeRangeChart"></canvas></div>
-            </div>
-        </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <x-chart-card :title="__('Graduates by Sex')"
+            :subtitle="__('Completed trainings only, :region.', ['region' => $chartRegionLabel])">
+            @if ($chartData['graduatesBySex']['male'] + $chartData['graduatesBySex']['female'] > 0)
+                <div class="h-64 max-w-xs mx-auto"><canvas id="dashGraduatesBySexChart"></canvas></div>
+            @else
+                <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings yet.') }}</p>
+            @endif
+        </x-chart-card>
+        <x-chart-card :title="__('Graduates by Age Range')"
+            :subtitle="__('Completed trainings only, :region.', ['region' => $chartRegionLabel])">
+            <div class="h-64"><canvas id="dashGraduatesByAgeRangeChart"></canvas></div>
+        </x-chart-card>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-        <div class="flex items-center justify-between flex-wrap gap-3 mb-1">
-            <h3 class="font-bold text-[#152A4E] dark:text-white">{{ __('Graduates by Training') }}</h3>
+    <x-chart-card :title="__('Graduates by Training')"
+        :subtitle="__('Completed trainings only, :region — every course in the catalog is Technical Assistance.', ['region' => $chartRegionLabel])">
+        <x-slot:action>
             <form method="GET" action="{{ route('admin.dashboard') }}" class="flex items-center gap-2" onsubmit="return submitDashboardFilter(this, event)">
                 @if ($chartRegion)
                     <input type="hidden" name="chart_region" value="{{ $chartRegion }}">
@@ -77,30 +73,28 @@
                 @if (! empty($monitoringFilters['until']))
                     <input type="hidden" name="until" value="{{ $monitoringFilters['until'] }}">
                 @endif
-                <label for="year" class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ __('Year') }}</label>
+                <label for="year" class="text-xs font-semibold text-white/70">{{ __('Year') }}</label>
                 <select id="year" name="year" onchange="submitDashboardFilter(this)"
-                    class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                    class="rounded-md border-transparent bg-white text-[#152A4E] text-sm font-semibold py-1.5 focus:border-white focus:ring-2 focus:ring-white/60">
                     @foreach ($availableYears as $yearOption)
                         <option value="{{ $yearOption }}" @selected((string) $year === (string) $yearOption)>{{ $yearOption }}</option>
                     @endforeach
                     <option value="all" @selected($year === 'all')>{{ __('All Years') }}</option>
                 </select>
             </form>
-        </div>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings only, :region — every course in the catalog is Technical Assistance.', ['region' => $chartRegionLabel]) }}</p>
+        </x-slot:action>
         @if (count($chartData['graduatesByTraining']) > 0)
             <div style="height: {{ max(240, count($chartData['graduatesByTraining']) * 34) }}px"><canvas id="dashGraduatesByTrainingChart"></canvas></div>
         @else
             <p class="text-sm text-gray-400 dark:text-gray-500">{{ $year === 'all' ? __('No completed trainings yet.') : __('No completed trainings for :year.', ['year' => $year]) }}</p>
         @endif
-    </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-        <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Most Needed Trainings') }}</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('What the Training Needs Assessment says participants need most, :region.', ['region' => $chartRegionLabel]) }}</p>
+    </x-chart-card>
+    <x-chart-card :title="__('Most Needed Trainings')"
+        :subtitle="__('What the Training Needs Assessment says participants need most, :region.', ['region' => $chartRegionLabel])">
         @if (count($chartData['mostNeededTrainings']) > 0)
             <div style="height: {{ max(240, count($chartData['mostNeededTrainings']) * 34) }}px"><canvas id="dashMostNeededTrainingsChart"></canvas></div>
         @else
             <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No Training Needs Assessment submissions yet.') }}</p>
         @endif
-    </div>
+    </x-chart-card>
 </div>

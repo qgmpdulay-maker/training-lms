@@ -46,89 +46,73 @@
 
             <!-- Charts -->
             <div class="grid grid-cols-1 gap-6">
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:divide-x lg:divide-gray-100 dark:lg:divide-gray-700">
-                        {{-- Requests by Status — hidden per regional admin request (only super admin creates trainings now).
-                        To restore: uncomment this block, change the grid above back to lg:grid-cols-3,
-                        and remove the lg:pl-6 added to "Graduates by Sex" below.
-                        <div>
-                            <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Requests by Status') }}</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('All training requests filed for your region.') }}</p>
-                            <div class="h-64 max-w-xs mx-auto"><canvas id="dashStatusBreakdownChart"></canvas></div>
-                        </div>
-                        --}}
-                        <div>
-                            <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Sex') }}</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings only.') }}</p>
-                            @if ($chartData['graduatesBySex']['male'] + $chartData['graduatesBySex']['female'] > 0)
-                                <div class="h-64 max-w-xs mx-auto"><canvas id="dashGraduatesBySexChart"></canvas></div>
-                            @else
-                                <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings yet.') }}</p>
-                            @endif
-                        </div>
-                        <div class="lg:pl-6">
-                            <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Age Range') }}</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings only.') }}</p>
-                            <div class="h-64"><canvas id="dashGraduatesByAgeRangeChart"></canvas></div>
-                        </div>
-                    </div>
+                {{-- Requests by Status — hidden per regional admin request (only super admin creates trainings now).
+                To restore: add a chart-card component titled "Requests by Status", subtitled
+                "All training requests filed for your region.", wrapping a h-64 max-w-xs mx-auto div
+                with a canvas id="dashStatusBreakdownChart"; then widen the two-up grid below to lg:grid-cols-3. --}}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <x-chart-card :title="__('Graduates by Sex')" :subtitle="__('Completed trainings only.')">
+                        @if ($chartData['graduatesBySex']['male'] + $chartData['graduatesBySex']['female'] > 0)
+                            <div class="h-64 max-w-xs mx-auto"><canvas id="dashGraduatesBySexChart"></canvas></div>
+                        @else
+                            <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings yet.') }}</p>
+                        @endif
+                    </x-chart-card>
+                    <x-chart-card :title="__('Graduates by Age Range')" :subtitle="__('Completed trainings only.')">
+                        <div class="h-64"><canvas id="dashGraduatesByAgeRangeChart"></canvas></div>
+                    </x-chart-card>
                 </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-                    <div class="flex items-center justify-between flex-wrap gap-3 mb-1">
-                        <h3 class="font-bold text-[#152A4E] dark:text-white">{{ __('Graduates by Training') }}</h3>
+                <x-chart-card :title="__('Graduates by Training')"
+                    :subtitle="__('Completed trainings in your region — every course in the catalog is Technical Assistance.')">
+                    <x-slot:action>
                         <form method="GET" action="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                            <label for="year" class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ __('Year') }}</label>
+                            <label for="year" class="text-xs font-semibold text-white/70">{{ __('Year') }}</label>
                             <select id="year" name="year" onchange="this.form.submit()"
-                                class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                class="rounded-md border-transparent bg-white text-[#152A4E] text-sm font-semibold py-1.5 focus:border-white focus:ring-2 focus:ring-white/60">
                                 @foreach ($availableYears as $yearOption)
                                     <option value="{{ $yearOption }}" @selected((string) $year === (string) $yearOption)>{{ $yearOption }}</option>
                                 @endforeach
                                 <option value="all" @selected($year === 'all')>{{ __('All Years') }}</option>
                             </select>
                         </form>
-                    </div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Completed trainings in your region — every course in the catalog is Technical Assistance.') }}</p>
+                    </x-slot:action>
                     @if (count($chartData['graduatesByTraining']) > 0)
                         <div style="height: {{ max(240, count($chartData['graduatesByTraining']) * 34) }}px"><canvas id="dashGraduatesByTrainingChart"></canvas></div>
                     @else
                         <p class="text-sm text-gray-400 dark:text-gray-500">{{ $year === 'all' ? __('No completed trainings yet.') : __('No completed trainings for :year.', ['year' => $year]) }}</p>
                     @endif
-                </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-                    <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Most Needed Trainings') }}</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('What the Training Needs Assessment says your region\'s participants need most.') }}</p>
+                </x-chart-card>
+                <x-chart-card :title="__('Most Needed Trainings')"
+                    :subtitle="__('What the Training Needs Assessment says your region\'s participants need most.')">
                     @if (count($chartData['mostNeededTrainings']) > 0)
                         <div style="height: {{ max(240, count($chartData['mostNeededTrainings']) * 34) }}px"><canvas id="dashMostNeededTrainingsChart"></canvas></div>
                     @else
                         <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No Training Needs Assessment submissions yet.') }}</p>
                     @endif
-                </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-                    <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Participants by City') }}</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Registered participants in your region, grouped by city.') }}</p>
+                </x-chart-card>
+                <x-chart-card :title="__('Participants by City')"
+                    :subtitle="__('Registered participants in your region, grouped by city.')">
                     @if (count($chartData['participantsByCity']) > 0)
                         <div style="height: {{ max(240, count($chartData['participantsByCity']) * 34) }}px"><canvas id="dashParticipantsByCityChart"></canvas></div>
                     @else
                         <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No participants with a city on file yet.') }}</p>
                     @endif
-                </div>
+                </x-chart-card>
 
                 @include('admin.super-admin.partials.dashboard-atar-charts', ['chartData' => $chartData])
 
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                    <div class="flex items-center justify-between flex-wrap gap-3 px-6 pt-6 pb-4">
-                        <div>
-                            <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Location') }}</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Completed trainings across your region, plotted by LGU / NGA — marker size scales with graduate count.') }}</p>
-                        </div>
+                <x-chart-card :title="__('Graduates by Location')"
+                    :subtitle="__('Completed trainings across your region, plotted by LGU / NGA — marker size scales with graduate count.')"
+                    body-class="pt-4">
+                    <x-slot:action>
                         <a href="{{ route('admin.monitoring.map') }}"
-                            class="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D] dark:hover:text-[#E2762D] transition whitespace-nowrap">
+                            class="inline-flex items-center gap-1 text-xs font-semibold text-white hover:text-[#E2762D] transition whitespace-nowrap">
                             {{ __('View full map & filters') }}
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>
                         </a>
-                    </div>
+                    </x-slot:action>
 
                     @if (count($graduatesByLocation) === 0)
                         <div class="mx-6 mb-6 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
@@ -178,7 +162,7 @@
                             @endif
                         </div>
                     @endif
-                </div>
+                </x-chart-card>
 
                 @include('admin.partials.graduates-by-lgu')
 

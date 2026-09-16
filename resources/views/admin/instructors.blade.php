@@ -20,9 +20,9 @@
             @include('admin.partials.instructor-form')
 
             <!-- Instructor Roster -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Instructor Roster') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Instructors on file for :region.', ['region' => Auth::user()->region]) }}</p>
+            <x-chart-card body-class="p-6 sm:p-8"
+                :title="__('Instructor Roster')"
+                :subtitle="__('Instructors on file for :region.', ['region' => Auth::user()->region])">
 
                 <form id="instructor-roster-form" data-live-form data-live-section="instructor-roster" data-live-target="instructor-roster-results"
                     method="GET" action="{{ route('admin.instructors.index') }}" class="w-full mb-5">
@@ -63,7 +63,7 @@
                 <div id="instructor-roster-results">
                     @include('admin.partials.instructor-roster')
                 </div>
-            </div>
+            </x-chart-card>
 
         </div>
     </div>

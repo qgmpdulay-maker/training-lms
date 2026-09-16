@@ -70,11 +70,9 @@
             @endif
 
             <!-- Instructor Roster, grouped by region -->
-            <div id="instructor-roster" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <div class="flex items-center justify-between flex-wrap gap-3 mb-1">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white">{{ __('Instructor Roster') }}</h2>
-                </div>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Click a name to view their full profile, deployment history, and complaints on record.') }}</p>
+            <x-chart-card id="instructor-roster" class="scroll-mt-24" body-class="p-6 sm:p-8"
+                :title="__('Instructor Roster')"
+                :subtitle="__('Click a name to view their full profile, deployment history, and complaints on record.')">
 
                 <!-- Filters -->
                 <div class="flex items-center flex-wrap gap-3 bg-gray-50 dark:bg-gray-700/40 rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-3 mb-5">
@@ -142,7 +140,7 @@
                 <div id="instructor-roster-results">
                     @include('admin.partials.instructor-roster-results')
                 </div>
-            </div>
+            </x-chart-card>
 
         </div>
     </div>

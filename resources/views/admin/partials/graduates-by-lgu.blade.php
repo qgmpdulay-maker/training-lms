@@ -4,8 +4,7 @@
     title, see DashboardController::graduatesByLgu()) and $region (string
     region code when scoped to one region, or null).
 --}}
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by LGU') }}</h2>
+<x-chart-card :title="__('Graduates by LGU')" body-class="p-6 sm:p-8">
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
         {{ __('Completed trainings grouped by the LGU recorded on Summary.') }}
         {{ __('For a point-level map of graduates by LGU / Volunteers / RDRRMC member agencies, see the') }}
@@ -79,4 +78,4 @@
             @endforeach
         </div>
     @endif
-</div>
+</x-chart-card>

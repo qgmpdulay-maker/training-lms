@@ -8,18 +8,16 @@
 --}}
 <div class="space-y-6">
     <!-- Filter -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8 space-y-5">
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Regional Performance & Graduates Map') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Every training on file is Technical Assistance. Filter by date or training below — use "Filter Charts by Region" above for region.') }}</p>
-            </div>
-            @if ($chartRegion || $monitoringFilters['training_title'] || $monitoringFilters['from'] || $monitoringFilters['until'])
-                <a href="{{ route('admin.dashboard') }}" onclick="return submitDashboardFilterReset(event)" class="shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
+    <x-chart-card body-class="p-6 sm:p-8"
+        :title="__('Regional Performance & Graduates Map')"
+        :subtitle="__('Every training on file is Technical Assistance. Filter by date or training below — use \'Filter Charts by Region\' above for region.')">
+        @if ($chartRegion || $monitoringFilters['training_title'] || $monitoringFilters['from'] || $monitoringFilters['until'])
+            <x-slot:action>
+                <a href="{{ route('admin.dashboard') }}" onclick="return submitDashboardFilterReset(event)" class="text-xs font-semibold text-white/70 hover:text-white transition whitespace-nowrap">
                     {{ __('Reset') }}
                 </a>
-            @endif
-        </div>
+            </x-slot:action>
+        @endif
 
         <form method="GET" action="{{ route('admin.dashboard') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" onsubmit="return submitDashboardFilter(this, event)">
             @if ($chartRegion)
@@ -51,7 +49,7 @@
                 </div>
             </div>
         </form>
-    </div>
+    </x-chart-card>
 
     <!-- Regional Performance stat cards -->
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -93,8 +91,7 @@
     @endif
 
     <!-- Region table -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-        <h3 class="text-lg font-bold text-[#152A4E] dark:text-white mb-5">{{ __('Overall Training Data (OCDROs and Central)') }}</h3>
+    <x-chart-card body-class="p-6 sm:p-8" :title="__('Overall Training Data (OCDROs and Central)')">
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead>
@@ -137,14 +134,12 @@
                 </tbody>
             </table>
         </div>
-    </div>
+    </x-chart-card>
 
     <!-- Map -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div class="px-6 sm:px-8 pt-6 sm:pt-8 pb-4">
-            <h3 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Graduates by Location') }}</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Marker size scales with graduate count — hover a marker for its details, or hover anywhere in a region to see that region\'s totals.') }}</p>
-        </div>
+    <x-chart-card body-class="pt-4"
+        :title="__('Graduates by Location')"
+        :subtitle="__('Marker size scales with graduate count — hover a marker for its details, or hover anywhere in a region to see that region\'s totals.')">
 
         @if (empty($mapPoints))
             <div class="mx-6 sm:mx-8 mb-6 sm:mb-8 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
@@ -194,5 +189,5 @@
                 @endif
             </div>
         @endif
-    </div>
+    </x-chart-card>
 </div>

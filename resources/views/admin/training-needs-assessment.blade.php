@@ -17,17 +17,17 @@
                 </div>
             @endif
 
-            <div id="tna-submissions" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('TNA Submissions') }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                    @if (Auth::user()->isAdmin())
-                        {{ __('Training Needs Assessments submitted by participants in :region, most recent first.', ['region' => Auth::user()->region]) }}
-                    @elseif ($selectedRegion)
-                        {{ __('Training Needs Assessments submitted by participants in :region, most recent first.', ['region' => $selectedRegion]) }}
-                    @else
-                        {{ __('Every Training Needs Assessment participants have submitted, across all regions, most recent first.') }}
-                    @endif
-                </p>
+            <x-chart-card id="tna-submissions" class="scroll-mt-24" body-class="p-6 sm:p-8"
+                :title="__('TNA Submissions')">
+                <x-slot:description>
+                @if (Auth::user()->isAdmin())
+                    {{ __('Training Needs Assessments submitted by participants in :region, most recent first.', ['region' => Auth::user()->region]) }}
+                @elseif ($selectedRegion)
+                    {{ __('Training Needs Assessments submitted by participants in :region, most recent first.', ['region' => $selectedRegion]) }}
+                @else
+                    {{ __('Every Training Needs Assessment participants have submitted, across all regions, most recent first.') }}
+                @endif
+                </x-slot:description>
 
                 <form data-live-form data-live-section="tna-submissions" data-live-target="tna-submissions-results"
                     method="GET" action="{{ route('admin.training-needs-assessment') }}#tna-submissions" class="w-full mb-5">
@@ -70,7 +70,7 @@
                 <div id="tna-submissions-results">
                     @include('admin.partials.tna-submissions-results')
                 </div>
-            </div>
+            </x-chart-card>
 
         </div>
     </div>
