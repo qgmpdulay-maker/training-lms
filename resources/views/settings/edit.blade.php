@@ -17,6 +17,8 @@
                 </div>
             @endif
 
+            {{-- old() is whatever was last submitted, so it's passed to Alpine through
+                 Js::from() (a safely escaped JavaScript string), never pasted in raw. --}}
             <form method="POST" action="{{ route('settings.update') }}"
                 x-data="{ theme: {{ Js::from(old('theme', $user->theme) ?? '') }}, locale: {{ Js::from(old('locale', $user->locale) ?? '') }} }"
                 x-effect="document.documentElement.classList.toggle('dark', theme === 'dark')">

@@ -39,6 +39,9 @@ class ProfileController extends Controller
 
         $request->user()->fill($validated)->save();
 
+        // The replaced picture is no longer used by anyone (every upload gets
+        // its own random file name), so delete it instead of letting old
+        // uploads pile up on the server's limited disk space.
         if ($previousPicture) {
             Storage::disk('public')->delete($previousPicture);
         }

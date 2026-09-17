@@ -187,6 +187,7 @@ class InstructorController extends Controller
             'certificate_file_path' => $validated['certificate_file']->store('instructors/certificates', 'public'),
         ]);
 
+        // Delete the scan this upload replaced so unused files don't pile up.
         if ($previousFile) {
             Storage::disk('public')->delete($previousFile);
         }
@@ -212,6 +213,7 @@ class InstructorController extends Controller
             'photo_path' => $validated['photo']->store('instructors/photos', 'public'),
         ]);
 
+        // Delete the photo this upload replaced so unused files don't pile up.
         if ($previousPhoto) {
             Storage::disk('public')->delete($previousPhoto);
         }

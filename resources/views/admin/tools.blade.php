@@ -127,6 +127,10 @@
                             <div x-show="activeTraining === @js($trainingTitle)" x-cloak class="mt-5">
                                 <div class="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
                                     @foreach ($sessions as $session)
+                                        {{-- One collapsible row per training session. evaluationSession() (script at the
+                                             bottom of this page) remembers whether the row is open and, the first time it
+                                             is opened, downloads that session's full results from the admin.tools.evaluation
+                                             route. Only this summary line is rendered up front, which keeps the page small. --}}
                                         <div x-data="evaluationSession(@js(route('admin.tools.evaluation', $session['training_request_id'])))">
                                             <button type="button" @click="toggle()"
                                                 class="w-full flex items-center justify-between gap-4 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
@@ -158,6 +162,8 @@
                                                 </div>
                                             </button>
 
+                                            {{-- Placeholder the downloaded results are inserted into (shows "Loading…"
+                                                 until they arrive). data-error is the message shown if the download fails. --}}
                                             <div x-show="open" x-cloak x-ref="details" class="bg-gray-50/60 dark:bg-gray-900/20"
                                                 data-error="{{ __("Couldn't load this session's results. Collapse and expand it to try again.") }}">
                                                 <p class="px-6 pb-6 pt-1 text-sm text-gray-400">{{ __('Loading…') }}</p>
@@ -180,13 +186,18 @@
         // Each session's full L1/L2 breakdown is fetched the first time it's
         // expanded rather than rendered up front — rendering all of them made
         // this page tens of megabytes of HTML.
+        //
+        // Used as x-data="evaluationSession(url)" on every session row;
+        // url is that session's admin.tools.evaluation route.
         window.evaluationSession = function (url) {
             return {
-                open: false,
-                loaded: false,
+                open: false,   // whether the row is currently expanded
+                loaded: false, // whether its results have already been downloaded
                 toggle() {
                     this.open = !this.open;
 
+                    // Nothing to download when collapsing, or when this
+                    // session's results were already loaded earlier.
                     if (!this.open || this.loaded) {
                         return;
                     }
@@ -202,10 +213,14 @@
                             return response.text();
                         })
                         .then((html) => {
+                            // Put the results into the row, then let Alpine
+                            // activate the tabs inside the newly added HTML.
                             details.innerHTML = html;
                             window.Alpine.initTree(details);
                         })
                         .catch(() => {
+                            // Show the error message and allow a retry the
+                            // next time the row is expanded.
                             this.loaded = false;
                             const message = document.createElement('p');
                             message.className = 'px-6 pb-6 pt-1 text-sm text-red-500';

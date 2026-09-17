@@ -82,6 +82,9 @@ class MonitoringController extends Controller
      * Per-region rollup plus a "Central (All OCDROs)" total row — feeds the
      * Regional Performance table on the Super Admin dashboard.
      *
+     * Takes the trainings the dashboard already loaded (rather than the
+     * filters) so the same query isn't run twice on one page load.
+     *
      * @param  Collection<int, TrainingRequest>  $trainings  already filtered via completedTrainings()
      */
     public static function regionalData(Collection $trainings): array

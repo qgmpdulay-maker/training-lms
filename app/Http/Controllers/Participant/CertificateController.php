@@ -24,15 +24,22 @@ class CertificateController extends Controller
     }
 
     /**
-     * The certificate's own participant, Super Admin, or a Regional Admin
-     * for either the participant's region or the training's region — the
-     * same people who can already see it listed in Summary.
+     * Sends one certificate PDF to the browser (opens in a new tab).
+     *
+     * Certificate files are private — they can't be opened by typing a
+     * /storage/... address — so every certificate link in the app points
+     * here instead. Allowed viewers: the certificate's own participant,
+     * the Super Admin, or a Regional Admin for either the participant's
+     * region or the training's region — the same people who can already see
+     * it listed in Summary. Anyone else gets 403 (forbidden); a missing file
+     * gets 404 (not found).
      */
     public function download(Request $request, Certificate $certificate): StreamedResponse
     {
         $user = $request->user();
         $certificate->loadMissing('user', 'trainingRequest');
 
+        // Who is allowed to open this certificate (see the list above).
         $canView = $certificate->user_id === $user->id
             || $user->isSuperAdmin()
             || ($user->isAdmin() && $user->region !== null
@@ -40,8 +47,9 @@ class CertificateController extends Controller
 
         abort_unless($canView, 403);
 
-        // Certificates issued before they moved to the private disk may
-        // still be sitting on the public one.
+        // New certificates are saved on the private disk (storage/app/private).
+        // Certificates issued before that change may still be sitting on the
+        // public disk (public/storage), so look in both, private first.
         $disk = collect(['local', 'public'])->first(fn (string $disk) => Storage::disk($disk)->exists($certificate->file_path));
 
         abort_unless($disk, 404);

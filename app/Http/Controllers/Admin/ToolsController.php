@@ -72,6 +72,7 @@ class ToolsController extends Controller
 
         $trainingRequest->save();
 
+        // Delete the ATAR file this upload replaced so unused files don't pile up.
         if ($previousFile) {
             Storage::disk('public')->delete($previousFile);
         }
@@ -82,12 +83,22 @@ class ToolsController extends Controller
     /**
      * One session's full L1/L2 breakdown, fetched when its row on the
      * Evaluation Computation list is first expanded.
+     *
+     * The Tools page used to render every session's full breakdown up front
+     * (26 MB of HTML, ~90 MB of server memory with the demo data). It now
+     * shows only the collapsed rows, and the browser calls this route for a
+     * session the first time someone opens it (see the evaluationSession()
+     * script at the bottom of admin/tools.blade.php). Returns just the HTML
+     * fragment in admin/partials/evaluation-session-details.blade.php.
      */
     public function evaluationDetails(Request $request, TrainingRequest $trainingRequest): View
     {
+        // Regional Admins may only open sessions from their own region —
+        // the same rule as every other Tools action.
         $user = $request->user();
         abort_if($user->isAdmin() && $trainingRequest->region !== $user->region, 403);
 
+        // Everything the breakdown needs for this one session, in a few queries.
         $trainingRequest->load(['trainingEvaluation', 'participantEvaluations.user:id,name', 'instructors'])
             ->loadCount('participants');
 
@@ -129,7 +140,9 @@ class ToolsController extends Controller
         return TrainingRequest::where(fn ($query) => $query->whereHas('trainingEvaluation')->orWhereHas('participantEvaluations'))
             ->when($region, fn ($query) => $query->where('region', $region))
             // Only what the collapsed session rows show — each session's full
-            // breakdown is built on demand by evaluationDetails().
+            // breakdown is built on demand by evaluationDetails(). Evaluations
+            // load just the columns the row needs, and participants are only
+            // counted (in SQL) rather than loaded.
             ->with(['trainingEvaluation', 'participantEvaluations:id,training_request_id,module_ratings,updated_at'])
             ->withCount('participants')
             ->orderByDesc('preferred_date')

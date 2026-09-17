@@ -122,6 +122,8 @@ class EvaluationController extends Controller
 
         $isOwner = $trainingRequest->user_id === $user->id;
 
+        // Asks the database "is this user on the roster?" directly, instead of
+        // loading every participant of the training into memory to search it.
         abort_unless($isOwner || $trainingRequest->participants()->whereKey($user->id)->exists(), 403);
         abort_unless($trainingRequest->status === TrainingRequest::STATUS_COMPLETED, 403);
 
@@ -131,6 +133,10 @@ class EvaluationController extends Controller
     /**
      * Roll every participant's rating of each instructor, across every
      * training they've been assigned to, into that instructor's profile.
+     *
+     * Reads only the instructor_ratings column of all evaluations, once,
+     * then groups the ratings by instructor and saves each average — rather
+     * than re-reading every full evaluation row once per instructor.
      */
     private function reflectInstructorRatings(array $instructorIds): void
     {
@@ -138,6 +144,8 @@ class EvaluationController extends Controller
             return;
         }
 
+        // Every individual rating given to one of these instructors, grouped
+        // by instructor ID. Blank or non-numeric ratings are ignored.
         $ratingsByInstructor = ParticipantEvaluation::whereNotNull('instructor_ratings')
             ->pluck('instructor_ratings')
             ->flatten(1)

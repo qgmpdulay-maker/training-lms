@@ -16,6 +16,9 @@ use Illuminate\View\View;
 
 class OtpVerificationController extends Controller
 {
+    // Security: how many wrong 6-digit codes one registration may submit
+    // before verification is locked, and how long that lock lasts (15 min).
+    // Without this, all one million possible codes could be tried.
     private const MAX_ATTEMPTS = 5;
 
     private const LOCKOUT_SECONDS = 900;

@@ -13,6 +13,9 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
+    // Rate-limited (limits defined in AppServiceProvider): every registration
+    // emails a code, so unlimited submissions could flood someone's inbox or
+    // use up the Gmail sending quota.
     Route::post('register', [RegisteredUserController::class, 'store'])
         ->middleware('throttle:registration');
 

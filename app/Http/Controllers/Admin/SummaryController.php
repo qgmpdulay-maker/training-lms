@@ -78,6 +78,7 @@ class SummaryController extends Controller
                 // regions (e.g. trained in Region III, now registered under NCR)
                 // keeps every certificate they've earned, and their new region's
                 // admin should still be able to view all of them here.
+                // Loaded for the whole page in one query (not one per participant).
                 ->with(['certificates' => fn ($query) => $query->with('trainingRequest')->orderByDesc('issued_on')])
                 ->orderBy('name')
                 ->paginate(10, ['*'], 'participants')

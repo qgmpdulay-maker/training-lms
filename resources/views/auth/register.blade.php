@@ -110,6 +110,9 @@
                         {{ __('Create a Participant Account') }}
                     </h1>
 
+                    {{-- Security: old() is whatever the visitor last submitted, so each value is
+                         passed to Alpine through Js::from() (a safely escaped JavaScript string)
+                         rather than pasted inside quotes, where a typed quote could inject script. --}}
                     <form method="POST" action="{{ route('register') }}"
                         x-data="{
                             participantType: {{ Js::from(old('participant_type') ?? '') }},

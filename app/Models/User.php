@@ -78,6 +78,10 @@ class User extends Authenticatable
     }
 
     /**
+     * Every certificate issued to this user (one per completed training).
+     * Lets pages such as Summary load all participants' certificates in a
+     * single query instead of one query per participant.
+     *
      * @return HasMany<Certificate>
      */
     public function certificates(): HasMany

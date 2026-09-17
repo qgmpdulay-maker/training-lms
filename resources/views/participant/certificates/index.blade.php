@@ -26,6 +26,7 @@
                                     </p>
                                     <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ __('Certificate Code') }}: {{ $certificate->code }}</p>
                                 </div>
+                                {{-- Certificates are private files: this link goes through the certificates.download route, which checks the viewer may see it. --}}
                                 <a href="{{ route('certificates.download', $certificate) }}" target="_blank"
                                     class="shrink-0 inline-flex items-center gap-1.5 bg-[#152A4E]/70 hover:bg-[#152A4E]/85 backdrop-blur-xl backdrop-saturate-150 border border-white/10 text-white text-xs font-semibold rounded-md px-4 py-2 shadow-lg transition whitespace-nowrap">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

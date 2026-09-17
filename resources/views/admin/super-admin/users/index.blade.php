@@ -131,6 +131,11 @@
                                                 <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->agency ?? $account->city ?? '—' }}</td>
                                                 <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->created_at->format('M j, Y') }}</td>
                                                 <td class="py-3 pr-4 text-right whitespace-nowrap">
+                                                    {{-- Security: the applicant's name is typed by the public, so it goes
+                                                         through Js::from(), which turns it into a safely escaped JavaScript
+                                                         string. Pasting it straight inside confirm('...') let a name
+                                                         containing a quote run its own JavaScript in the Super Admin's
+                                                         browser (stored XSS). --}}
                                                     <form method="POST" action="{{ route('admin.users.reject', $account) }}" class="inline"
                                                         onsubmit="return confirm({{ Js::from(__('Reject the account for :name?', ['name' => $account->name])) }});">
                                                         @csrf

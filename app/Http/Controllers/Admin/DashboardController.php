@@ -30,6 +30,9 @@ class DashboardController extends Controller
         $year = $request->query('year', (string) now()->year);
 
         if (! $user->isSuperAdmin()) {
+            // Loaded once and reused by every chart below (year-filtered in
+            // memory, not re-queried). withCount adds a participants_count
+            // number per training instead of loading each participant's row.
             $completed = TrainingRequest::completed()->where('region', $user->region)->withCount('participants')->get();
 
             $availableYears = $this->availableYears($user->region);
@@ -88,6 +91,10 @@ class DashboardController extends Controller
             ]);
         }
 
+        // Every completed training nationwide, loaded once and reused by the
+        // charts below (filtered in memory by region/year rather than
+        // re-queried). withCount adds a participants_count number per
+        // training instead of loading each participant's full row.
         $completed = TrainingRequest::completed()->withCount('participants')->get();
 
         // One shared region filter for the five overview charts below, also
@@ -119,6 +126,8 @@ class DashboardController extends Controller
             'from' => $request->query('from') ?: null,
             'until' => $request->query('until') ?: null,
         ];
+        // The Regional Performance table reuses these same filtered trainings
+        // instead of running the identical query a second time.
         $monitoringTrainings = MonitoringController::completedTrainings($monitoringFilters)->get();
         $regionalData = MonitoringController::regionalData($monitoringTrainings);
 
@@ -598,6 +607,9 @@ class DashboardController extends Controller
      * entirely from ATAR CSV imports (which deliberately leave `lgu` blank
      * instead of guessing it from the training title) would otherwise vanish
      * from this chart as if it had no completed trainings at all.
+     *
+     * Uses the completed trainings index() already loaded, reading each
+     * training's participants_count rather than loading its whole roster.
      *
      * @param  Collection<int, TrainingRequest>  $completed  loaded withCount('participants')
      * @return array<string, array{total: int, lgus: array}>

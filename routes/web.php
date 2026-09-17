@@ -53,6 +53,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/training-requests/{trainingRequest}/evaluation', [ParticipantEvaluationController::class, 'update'])->name('training-requests.evaluation.update');
 
     Route::get('/certificates', [CertificateController::class, 'index'])->name('certificates.index');
+    // Opens one certificate PDF. Certificates are private files, so every
+    // certificate link goes through here, and the controller checks the
+    // viewer is allowed to see it (owner, Super Admin, or that region's admin).
     Route::get('/certificates/{certificate}', [CertificateController::class, 'download'])->name('certificates.download');
 });
 
@@ -64,6 +67,9 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     Route::patch('/summary/{trainingRequest}', [SummaryController::class, 'update'])->name('summary.update');
     Route::get('/tools', [ToolsController::class, 'index'])->name('tools');
     Route::post('/tools/{trainingRequest}/files', [ToolsController::class, 'uploadFiles'])->name('tools.files');
+    // Returns one session's L1/L2 evaluation breakdown as an HTML fragment.
+    // The Tools page fetches it when a session row is first expanded, instead
+    // of rendering every session's breakdown up front.
     Route::get('/tools/evaluations/{trainingRequest}', [ToolsController::class, 'evaluationDetails'])->name('tools.evaluation');
     Route::get('/tools/atar-template', [ToolsController::class, 'downloadAtarTemplate'])->name('tools.atar-template');
     Route::get('/tools/certificate-template', [ToolsController::class, 'downloadCertificateTemplate'])->name('tools.certificate-template');

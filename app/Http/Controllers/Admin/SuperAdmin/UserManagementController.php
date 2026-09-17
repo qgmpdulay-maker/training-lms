@@ -77,6 +77,10 @@ class UserManagementController extends Controller
 
     public function approve(PendingRegistration $registration): RedirectResponse
     {
+        // Security: only a registration that is still pending AND has proven
+        // it owns its email address (OTP verified) can become a real account.
+        // The approval list already hides unverified ones; this also blocks a
+        // hand-crafted request that tries to approve one anyway.
         abort_unless($registration->status === PendingRegistration::STATUS_PENDING && $registration->email_verified_at !== null, 403);
 
         $user = $registration->approve();

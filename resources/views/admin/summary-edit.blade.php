@@ -204,6 +204,8 @@
                                             {{ $certificate->user->name }}
                                             <span class="text-gray-400 text-xs">{{ $certificate->code }}</span>
                                         </span>
+                                        {{-- Certificates are private files: this link goes through the
+                                             certificates.download route, which checks the viewer may see it. --}}
                                         <a href="{{ route('certificates.download', $certificate) }}" target="_blank"
                                             class="shrink-0 text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">{{ __('Download') }}</a>
                                     </li>
@@ -232,6 +234,7 @@
                                     this.searchResults = [];
                                     return;
                                 }
+                                {{-- Js::from() writes the region as a safely escaped JavaScript string. --}}
                                 const params = new URLSearchParams({ region: {{ Js::from($record->region ?? '') }}, q: this.participantSearch });
                                 fetch('{{ route('admin.trainings.participants') }}?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                                     .then(response => response.json())

@@ -66,6 +66,7 @@
                         <div class="sm:col-span-2">
                             <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">{{ __('Certificate') }}</dt>
                             <dd class="text-sm">
+                                {{-- Certificates are private files: this link goes through the certificates.download route, which checks the viewer may see it. --}}
                                 <a href="{{ route('certificates.download', $certificate) }}" target="_blank"
                                     class="no-print inline-flex items-center gap-1.5 font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

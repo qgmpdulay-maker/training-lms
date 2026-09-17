@@ -38,6 +38,9 @@ class TrainingRequestController extends Controller
         $user = Auth::user();
         $isOwner = $trainingRequest->user_id === $user->id;
 
+        // Only the submitter or someone on the roster may view this training.
+        // The roster check asks the database directly instead of loading every
+        // participant into memory.
         abort_unless($isOwner || $trainingRequest->participants()->whereKey($user->id)->exists(), 403);
 
         return view('participant.training-requests.show', compact('trainingRequest'));

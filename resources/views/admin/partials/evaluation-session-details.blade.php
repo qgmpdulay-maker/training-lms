@@ -1,4 +1,15 @@
+{{--
+    Full L1/L2 evaluation results for ONE training session, shown when its row
+    is expanded on the Tools page (Evaluation Computation section).
+
+    Not rendered with the Tools page itself: the browser downloads this fragment
+    from ToolsController::evaluationDetails() the first time the row is opened.
+    $session is built by ToolsController::sessionSummary().
+
+    The results are split into tabs; a tab only appears when there is data for it.
+--}}
 @php
+    // Which tabs have data to show for this session.
     $hasL1 = $session['modules']->isNotEmpty();
     $hasDistribution = $hasL1 && $session['modules']->contains(fn ($module) => $module['participant_responses'] > 0);
     $hasTrainerSummary = $hasL1 && $session['trainer_ratings_by_module']->isNotEmpty();
@@ -6,6 +17,7 @@
     $hasPerTaker = ! empty($session['module_matrix_columns']);
     $hasL2 = $session['pretest_stats']['count'] > 0 || $session['posttest_stats']['count'] > 0;
 
+    // Tab key => label shown on the tab button; tabs without data are dropped.
     $evalTabs = collect([
         'l1' => ['label' => 'Module & Trainer Ratings', 'show' => $hasL1],
         'distribution' => ['label' => 'Level 1 Reaction Evaluation Report', 'show' => $hasDistribution],
@@ -19,6 +31,7 @@
 @if ($evalTabs->isEmpty())
     <p class="px-6 pb-6 pt-1 text-sm text-gray-400">{{ __('No evaluation data recorded for this session yet.') }}</p>
 @else
+    {{-- Tab bar. activeEvalTab is the tab currently shown (starts on the first available one). --}}
     <div x-data="{ activeEvalTab: @js($evalTabs->keys()->first()) }" class="px-6 pb-6 pt-1">
         <div class="flex items-center gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700 mb-5">
             @foreach ($evalTabs as $key => $tab)
@@ -32,6 +45,7 @@
             @endforeach
         </div>
 
+        {{-- Tab: average module and trainer ratings — admin-entered values beside the participants' average. --}}
         @if ($hasL1)
             <div x-show="activeEvalTab === 'l1'" x-cloak>
                 <div class="max-h-[28rem] overflow-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -68,6 +82,7 @@
             </div>
         @endif
 
+        {{-- Tab: how many participants gave each 1–5 rating per module, with their anonymous comments. --}}
         @if ($hasDistribution)
             <div x-show="activeEvalTab === 'distribution'" x-cloak>
                 <div class="max-h-[28rem] overflow-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -118,6 +133,7 @@
             </div>
         @endif
 
+        {{-- Tab: trainer rating per module, pooling admin and participant ratings, with the 1–5 breakdown. --}}
         @if ($hasTrainerSummary)
             <div x-show="activeEvalTab === 'trainerSummary'" x-cloak class="max-h-[28rem] overflow-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <table class="min-w-full text-sm">
@@ -154,6 +170,7 @@
             </div>
         @endif
 
+        {{-- Tab: each instructor's overall rating from participants, with the 1–5 breakdown and comments. --}}
         @if ($hasTrainerRatings)
             <div x-show="activeEvalTab === 'trainerRatings'" x-cloak class="max-h-[28rem] overflow-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <table class="min-w-full text-sm">
@@ -197,6 +214,7 @@
             </div>
         @endif
 
+        {{-- Tab: one row per participant showing the module and trainer rating they gave for every module. --}}
         @if ($hasPerTaker)
             <div x-show="activeEvalTab === 'perTaker'" x-cloak>
                 <p class="text-xs text-gray-400 mb-2 sm:hidden">{{ __('Scroll to see every module — the taker column stays put.') }}</p>
@@ -234,6 +252,7 @@
             </div>
         @endif
 
+        {{-- Tab: pre-test vs post-test score statistics (mean, median, mode, lowest, highest, number of takers). --}}
         @if ($hasL2)
             <div x-show="activeEvalTab === 'l2'" x-cloak class="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <table class="min-w-full text-sm">

@@ -30,6 +30,8 @@
                 </div>
             @endif
 
+            {{-- Values re-filled after a failed submit (old()) are passed to Alpine through
+                 Js::from() — a safely escaped JavaScript string — never pasted in raw. --}}
             <form
                 method="POST" action="{{ route('admin.trainings.store') }}" class="space-y-6"
                 x-data="{
