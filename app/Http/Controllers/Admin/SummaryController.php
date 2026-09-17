@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Certificate;
 use App\Models\Instructor;
 use App\Models\ParticipantEvaluation;
 use App\Models\TrainingRequest;
@@ -74,25 +73,17 @@ class SummaryController extends Controller
                             ->orWhere('participant_type', 'like', "%{$participantSearch}%");
                     });
                 })
+                // Every certificate this participant has ever earned —
+                // deliberately not region-scoped: a participant who transferred
+                // regions (e.g. trained in Region III, now registered under NCR)
+                // keeps every certificate they've earned, and their new region's
+                // admin should still be able to view all of them here.
+                ->with(['certificates' => fn ($query) => $query->with('trainingRequest')->orderByDesc('issued_on')])
                 ->orderBy('name')
                 ->paginate(10, ['*'], 'participants')
                 ->withQueryString()
                 ->fragment('registered-participants')
             : null;
-
-        $participants?->getCollection()->transform(function (User $participant) {
-            // Every certificate this participant has ever earned —
-            // deliberately not region-scoped: a participant who transferred
-            // regions (e.g. trained in Region III, now registered under NCR)
-            // keeps every certificate they've earned, and their new region's
-            // admin should still be able to view all of them here.
-            $participant->certificates = Certificate::where('user_id', $participant->id)
-                ->with('trainingRequest')
-                ->orderByDesc('issued_on')
-                ->get();
-
-            return $participant;
-        });
 
         $instructorSearch = trim((string) $request->query('instructors_q'));
 

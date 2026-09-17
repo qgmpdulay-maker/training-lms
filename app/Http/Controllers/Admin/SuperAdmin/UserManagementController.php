@@ -77,7 +77,7 @@ class UserManagementController extends Controller
 
     public function approve(PendingRegistration $registration): RedirectResponse
     {
-        abort_unless($registration->status === PendingRegistration::STATUS_PENDING, 403);
+        abort_unless($registration->status === PendingRegistration::STATUS_PENDING && $registration->email_verified_at !== null, 403);
 
         $user = $registration->approve();
 

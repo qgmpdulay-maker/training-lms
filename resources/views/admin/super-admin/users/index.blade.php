@@ -132,7 +132,7 @@
                                                 <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $account->created_at->format('M j, Y') }}</td>
                                                 <td class="py-3 pr-4 text-right whitespace-nowrap">
                                                     <form method="POST" action="{{ route('admin.users.reject', $account) }}" class="inline"
-                                                        onsubmit="return confirm('{{ __('Reject the account for :name?', ['name' => $account->name]) }}');">
+                                                        onsubmit="return confirm({{ Js::from(__('Reject the account for :name?', ['name' => $account->name])) }});">
                                                         @csrf
                                                         <button type="submit"
                                                             class="inline-flex items-center justify-center border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold rounded-md px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 transition whitespace-nowrap">

@@ -204,7 +204,7 @@
                                             {{ $certificate->user->name }}
                                             <span class="text-gray-400 text-xs">{{ $certificate->code }}</span>
                                         </span>
-                                        <a href="{{ asset('storage/'.$certificate->file_path) }}" target="_blank"
+                                        <a href="{{ route('certificates.download', $certificate) }}" target="_blank"
                                             class="shrink-0 text-xs font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">{{ __('Download') }}</a>
                                     </li>
                                 @endforeach
@@ -232,7 +232,7 @@
                                     this.searchResults = [];
                                     return;
                                 }
-                                const params = new URLSearchParams({ region: '{{ $record->region }}', q: this.participantSearch });
+                                const params = new URLSearchParams({ region: {{ Js::from($record->region ?? '') }}, q: this.participantSearch });
                                 fetch('{{ route('admin.trainings.participants') }}?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                                     .then(response => response.json())
                                     .then(data => this.searchResults = data);

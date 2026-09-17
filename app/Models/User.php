@@ -78,6 +78,14 @@ class User extends Authenticatable
     }
 
     /**
+     * @return HasMany<Certificate>
+     */
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(Certificate::class);
+    }
+
+    /**
      * @return HasMany<TrainingNeedsAssessment>
      */
     public function trainingNeedsAssessments(): HasMany

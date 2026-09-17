@@ -33,10 +33,10 @@
             <form
                 method="POST" action="{{ route('admin.trainings.store') }}" class="space-y-6"
                 x-data="{
-                    trainingType: '{{ old('training_type', 'catalog') }}',
-                    trainingSlug: '{{ old('training_slug', $preselected['slug'] ?? '') }}',
-                    customTrainingTitle: '{{ old('custom_training_title', '') }}',
-                    region: '{{ old('region', '') }}',
+                    trainingType: {{ Js::from(old('training_type', 'catalog') ?? '') }},
+                    trainingSlug: {{ Js::from(old('training_slug', $preselected['slug'] ?? '') ?? '') }},
+                    customTrainingTitle: {{ Js::from(old('custom_training_title', '') ?? '') }},
+                    region: {{ Js::from(old('region', '') ?? '') }},
                     trainings: {{ Js::from($trainings) }},
                     trainingSearch: '',
                     trainingCategory: 'All',
@@ -60,7 +60,7 @@
                     participantLastPage: 1,
                     participantTotal: 0,
                     selectedParticipants: @js($selectedParticipants->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'organization' => $p->organization, 'region' => $p->region])->values()),
-                    numberOfParticipants: '{{ old('number_of_participants', '') }}',
+                    numberOfParticipants: {{ Js::from((string) (old('number_of_participants', '') ?? '')) }},
                     searchParticipants() {
                         const params = new URLSearchParams({ region: this.participantRegionFilter, q: this.participantSearch, page: this.participantPage });
                         fetch('{{ route('admin.trainings.participants') }}?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })

@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class InstructorController extends Controller
@@ -180,9 +181,15 @@ class InstructorController extends Controller
             'certificate_file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ]);
 
+        $previousFile = $instructor->certificate_file_path;
+
         $instructor->update([
             'certificate_file_path' => $validated['certificate_file']->store('instructors/certificates', 'public'),
         ]);
+
+        if ($previousFile) {
+            Storage::disk('public')->delete($previousFile);
+        }
 
         return Redirect::back()->with('status', "Certificate uploaded for {$instructor->name}.");
     }
@@ -199,9 +206,15 @@ class InstructorController extends Controller
             'photo' => ['required', 'image', 'max:2048'],
         ]);
 
+        $previousPhoto = $instructor->photo_path;
+
         $instructor->update([
             'photo_path' => $validated['photo']->store('instructors/photos', 'public'),
         ]);
+
+        if ($previousPhoto) {
+            Storage::disk('public')->delete($previousPhoto);
+        }
 
         return Redirect::back()->with('status', "Photo updated for {$instructor->name}.");
     }

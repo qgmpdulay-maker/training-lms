@@ -37,9 +37,8 @@ class TrainingRequestController extends Controller
     {
         $user = Auth::user();
         $isOwner = $trainingRequest->user_id === $user->id;
-        $isParticipant = $trainingRequest->participants->contains($user->id);
 
-        abort_unless($isOwner || $isParticipant, 403);
+        abort_unless($isOwner || $trainingRequest->participants()->whereKey($user->id)->exists(), 403);
 
         return view('participant.training-requests.show', compact('trainingRequest'));
     }

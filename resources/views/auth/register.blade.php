@@ -112,9 +112,9 @@
 
                     <form method="POST" action="{{ route('register') }}"
                         x-data="{
-                            participantType: '{{ old('participant_type') }}',
-                            city: '{{ old('city') }}',
-                            region: '{{ old('region') }}',
+                            participantType: {{ Js::from(old('participant_type') ?? '') }},
+                            city: {{ Js::from(old('city') ?? '') }},
+                            region: {{ Js::from(old('region') ?? '') }},
                             showCityOptions: false,
                             cityRegionMap: {{ Js::from(config('regions.city_region_map')) }},
                             pickCity(option) {

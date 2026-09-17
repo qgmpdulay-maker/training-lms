@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/training-requests/{trainingRequest}/evaluation', [ParticipantEvaluationController::class, 'update'])->name('training-requests.evaluation.update');
 
     Route::get('/certificates', [CertificateController::class, 'index'])->name('certificates.index');
+    Route::get('/certificates/{certificate}', [CertificateController::class, 'download'])->name('certificates.download');
 });
 
 Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -63,6 +64,7 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     Route::patch('/summary/{trainingRequest}', [SummaryController::class, 'update'])->name('summary.update');
     Route::get('/tools', [ToolsController::class, 'index'])->name('tools');
     Route::post('/tools/{trainingRequest}/files', [ToolsController::class, 'uploadFiles'])->name('tools.files');
+    Route::get('/tools/evaluations/{trainingRequest}', [ToolsController::class, 'evaluationDetails'])->name('tools.evaluation');
     Route::get('/tools/atar-template', [ToolsController::class, 'downloadAtarTemplate'])->name('tools.atar-template');
     Route::get('/tools/certificate-template', [ToolsController::class, 'downloadCertificateTemplate'])->name('tools.certificate-template');
     Route::get('/evaluations/{trainingRequest}/edit', [EvaluationController::class, 'edit'])->name('evaluations.edit');

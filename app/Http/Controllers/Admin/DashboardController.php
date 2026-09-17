@@ -30,14 +30,10 @@ class DashboardController extends Controller
         $year = $request->query('year', (string) now()->year);
 
         if (! $user->isSuperAdmin()) {
-            $completed = TrainingRequest::completed()->where('region', $user->region)->get();
+            $completed = TrainingRequest::completed()->where('region', $user->region)->withCount('participants')->get();
 
             $availableYears = $this->availableYears($user->region);
-            $graduatesByTrainingCompleted = TrainingRequest::completed()
-                ->where('region', $user->region)
-                ->when($year !== 'all', fn ($q) => $q->whereYear('preferred_date', $year))
-                ->get();
-            $graduatesByTraining = $this->graduatesByTrainingChart($graduatesByTrainingCompleted);
+            $graduatesByTraining = $this->graduatesByTrainingChart($this->inYear($completed, $year));
             $requestsByTraining = $this->requestsByTrainingChart($user->region);
             $statusBreakdown = $this->statusBreakdownChart($user->region);
             $graduatesBySex = [
@@ -56,7 +52,7 @@ class DashboardController extends Controller
                 'year' => $year,
                 'availableYears' => $availableYears,
                 'region' => $user->region,
-                'graduatesByLgu' => $this->graduatesByLgu($user->region),
+                'graduatesByLgu' => $this->graduatesByLgu($completed),
                 'stats' => [
                     'instructors' => Instructor::where('region', $user->region)->count(),
                     'tna_submissions' => TrainingNeedsAssessment::whereHas('user', fn ($q) => $q->where('region', $user->region))->count(),
@@ -92,7 +88,7 @@ class DashboardController extends Controller
             ]);
         }
 
-        $completed = TrainingRequest::completed()->get();
+        $completed = TrainingRequest::completed()->withCount('participants')->get();
 
         // One shared region filter for the five overview charts below, also
         // reused by $monitoringFilters['regions'] further down for the
@@ -102,11 +98,7 @@ class DashboardController extends Controller
         $completedForCharts = $completed->when($chartRegion, fn ($c) => $c->where('region', $chartRegion));
 
         $availableYears = $this->availableYears();
-        $graduatesByTrainingCompleted = TrainingRequest::completed()
-            ->when($year !== 'all', fn ($q) => $q->whereYear('preferred_date', $year))
-            ->when($chartRegion, fn ($q) => $q->where('region', $chartRegion))
-            ->get();
-        $graduatesByTraining = $this->graduatesByTrainingChart($graduatesByTrainingCompleted);
+        $graduatesByTraining = $this->graduatesByTrainingChart($this->inYear($completedForCharts, $year));
         $requestsByTraining = $this->requestsByTrainingChart();
         $statusBreakdown = $this->statusBreakdownChart($chartRegion);
         $graduatesByRegion = $this->graduatesByRegionChart($completed);
@@ -128,7 +120,7 @@ class DashboardController extends Controller
             'until' => $request->query('until') ?: null,
         ];
         $monitoringTrainings = MonitoringController::completedTrainings($monitoringFilters)->get();
-        $regionalData = MonitoringController::regionalData($monitoringFilters);
+        $regionalData = MonitoringController::regionalData($monitoringTrainings);
 
         // Needs Assessment used to show its own "What Training Is Needed" chart
         // and a per-organization breakdown table — the chart duplicated
@@ -217,7 +209,7 @@ class DashboardController extends Controller
             'mapPoints' => $mapPoints,
             'needsAssessmentByOrganization' => $needsAssessmentByOrganization,
             'region' => null,
-            'graduatesByLgu' => $this->graduatesByLgu(),
+            'graduatesByLgu' => $this->graduatesByLgu($completed),
         ]);
     }
 
@@ -408,6 +400,19 @@ class DashboardController extends Controller
     }
 
     /**
+     * Narrows already-loaded completed trainings to one year in memory, so the
+     * year-scoped chart doesn't re-query rows the dashboard already holds.
+     *
+     * @param  Collection<int, TrainingRequest>  $completed
+     */
+    private function inYear(Collection $completed, string $year): Collection
+    {
+        return $year === 'all'
+            ? $completed
+            : $completed->filter(fn (TrainingRequest $t) => $t->preferred_date?->year === (int) $year);
+    }
+
+    /**
      * Every year with at least one completed training on file (region-scoped
      * when given), plus the current year so it's always selectable even
      * before any :year data exists — feeds the Graduates by Training year
@@ -545,7 +550,11 @@ class DashboardController extends Controller
      */
     private function needsAssessmentByOrganization(Request $request): LengthAwarePaginator
     {
-        $submissions = TrainingNeedsAssessment::with('user')->get();
+        // Skips the large answers/category_scores JSON columns — only the
+        // recommendation and the submitter's organization/region are used.
+        $submissions = TrainingNeedsAssessment::select(['id', 'user_id', 'recommended_training_title'])
+            ->with('user:id,organization,region')
+            ->get();
 
         $rows = $submissions
             ->groupBy(fn (TrainingNeedsAssessment $tna) => $tna->user->organization ?: 'Unspecified organization')
@@ -590,15 +599,11 @@ class DashboardController extends Controller
      * instead of guessing it from the training title) would otherwise vanish
      * from this chart as if it had no completed trainings at all.
      *
+     * @param  Collection<int, TrainingRequest>  $completed  loaded withCount('participants')
      * @return array<string, array{total: int, lgus: array}>
      */
-    private function graduatesByLgu(?string $region = null): array
+    private function graduatesByLgu(Collection $completed): array
     {
-        $completed = TrainingRequest::where('status', TrainingRequest::STATUS_COMPLETED)
-            ->when($region, fn ($query) => $query->where('region', $region))
-            ->with('participants')
-            ->get();
-
         $byRegion = $completed
             ->filter(fn (TrainingRequest $r) => filled($r->lgu))
             ->groupBy(fn (TrainingRequest $r) => $r->region ?: __('Unspecified Region'))
@@ -606,7 +611,7 @@ class DashboardController extends Controller
                 $lgus = $records->groupBy('lgu')
                     ->map(fn ($lguRecords, $lgu) => [
                         'lgu' => $lgu,
-                        'total' => $lguRecords->sum(fn (TrainingRequest $r) => max($r->participants->count(), 1)),
+                        'total' => $lguRecords->sum(fn (TrainingRequest $r) => max($r->participants_count, 1)),
                     ])
                     ->sortByDesc('total')
                     ->values()
@@ -710,10 +715,6 @@ class DashboardController extends Controller
      */
     private function atarGraduatesBySectorChart(?string $region = null): array
     {
-        $records = AtarRecord::query()
-            ->when($region, fn ($q) => $q->where('region', $region))
-            ->get();
-
         $sectors = [
             'graduates_rdrrmc' => 'RDRRMC',
             'graduates_lgu' => 'LGU',
@@ -726,8 +727,16 @@ class DashboardController extends Controller
             'graduates_others' => 'Others',
         ];
 
+        // Summed in SQL instead of loading every ATAR row (with its long
+        // narrative text columns) just to add up nine numbers.
+        $totals = AtarRecord::query()
+            ->when($region, fn ($q) => $q->where('region', $region))
+            ->selectRaw(collect(array_keys($sectors))->map(fn (string $column) => "COALESCE(SUM({$column}), 0) AS {$column}")->implode(', '))
+            ->toBase()
+            ->first();
+
         return collect($sectors)
-            ->map(fn (string $label, string $column) => ['sector' => $label, 'graduates' => (int) $records->sum($column)])
+            ->map(fn (string $label, string $column) => ['sector' => $label, 'graduates' => (int) $totals->{$column}])
             ->filter(fn (array $row) => $row['graduates'] > 0)
             ->sortByDesc('graduates')
             ->values()

@@ -81,11 +81,11 @@ class MonitoringController extends Controller
     /**
      * Per-region rollup plus a "Central (All OCDROs)" total row — feeds the
      * Regional Performance table on the Super Admin dashboard.
+     *
+     * @param  Collection<int, TrainingRequest>  $trainings  already filtered via completedTrainings()
      */
-    public static function regionalData(array $filters): array
+    public static function regionalData(Collection $trainings): array
     {
-        $trainings = static::completedTrainings($filters)->get();
-
         $rows = collect(config('regions.list'))
             ->map(function (string $region) use ($trainings) {
                 $regionTrainings = $trainings->where('region', $region);

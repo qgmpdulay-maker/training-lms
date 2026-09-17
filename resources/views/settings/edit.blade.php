@@ -18,7 +18,7 @@
             @endif
 
             <form method="POST" action="{{ route('settings.update') }}"
-                x-data="{ theme: '{{ old('theme', $user->theme) }}', locale: '{{ old('locale', $user->locale) }}' }"
+                x-data="{ theme: {{ Js::from(old('theme', $user->theme) ?? '') }}, locale: {{ Js::from(old('locale', $user->locale) ?? '') }} }"
                 x-effect="document.documentElement.classList.toggle('dark', theme === 'dark')">
                 @csrf
                 @method('PATCH')

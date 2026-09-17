@@ -91,9 +91,12 @@ class CertificateService
 
         // The code itself can contain spaces (e.g. "OCD CENTRAL"), which
         // isn't safe as a literal filename/URL segment — the stored `code`
-        // keeps the human-readable format, the file path doesn't.
+        // keeps the human-readable format, the file path doesn't. Stored on
+        // the private disk: codes are sequential and guessable, so a public
+        // file would let anyone enumerate every participant's certificate.
+        // Served through CertificateController::download() instead.
         $path = 'certificates/'.Str::slug($code).'.pdf';
-        Storage::disk('public')->put($path, $pdf->output());
+        Storage::disk('local')->put($path, $pdf->output());
 
         return Certificate::create([
             'training_request_id' => $trainingRequest->id,

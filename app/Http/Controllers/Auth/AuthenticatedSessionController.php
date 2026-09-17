@@ -33,6 +33,11 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        // Must run before the pending-registration check below — otherwise a
+        // locked-out attacker could keep guessing, since that check reveals a
+        // correct password without ever reaching authenticate()'s throttle.
+        $request->ensureIsNotRateLimited();
+
         $registration = PendingRegistration::whereIn('status', [
             PendingRegistration::STATUS_PENDING,
             PendingRegistration::STATUS_REJECTED,

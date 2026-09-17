@@ -10,11 +10,16 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class OtpVerificationController extends Controller
 {
+    private const MAX_ATTEMPTS = 5;
+
+    private const LOCKOUT_SECONDS = 900;
+
     /**
      * Display the OTP entry form for whichever registration this browser
      * session is mid-verifying (see the "pending_registration_id" flash set
@@ -40,12 +45,28 @@ class OtpVerificationController extends Controller
             'code' => ['required', 'string', 'size:6'],
         ]);
 
+        // Keyed to the registration rather than the IP, and deliberately not
+        // reset by "Resend", so a 6-digit code can't be brute-forced by
+        // rotating IPs or requesting fresh codes.
+        $attemptsKey = 'otp-verify:'.$registration->id;
+
+        if (RateLimiter::tooManyAttempts($attemptsKey, self::MAX_ATTEMPTS)) {
+            throw ValidationException::withMessages([
+                'code' => __('Too many incorrect codes. Try again in :minutes minute(s).', [
+                    'minutes' => ceil(RateLimiter::availableIn($attemptsKey) / 60),
+                ]),
+            ]);
+        }
+
         if (! $registration->verifyOtp($request->string('code'))) {
+            RateLimiter::hit($attemptsKey, self::LOCKOUT_SECONDS);
+
             throw ValidationException::withMessages([
                 'code' => __('That code is invalid or has expired. Request a new one below.'),
             ]);
         }
 
+        RateLimiter::clear($attemptsKey);
         $registration->markEmailVerified();
         $request->session()->forget('pending_registration_id');
 

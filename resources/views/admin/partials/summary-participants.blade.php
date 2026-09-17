@@ -68,7 +68,7 @@
                                                     @foreach ($participant->certificates as $certificate)
                                                         <div class="flex gap-5 border border-gray-100 dark:border-gray-700 rounded-lg p-5">
                                                             <div class="shrink-0 w-36 h-36 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700 flex items-center justify-center">
-                                                                <a href="{{ asset('storage/'.$certificate->file_path) }}" target="_blank" class="flex flex-col items-center gap-1 text-red-400 hover:text-red-500 transition">
+                                                                <a href="{{ route('certificates.download', $certificate) }}" target="_blank" class="flex flex-col items-center gap-1 text-red-400 hover:text-red-500 transition">
                                                                     <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                                                                     </svg>
@@ -95,7 +95,7 @@
                                                                     <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5">{{ __('Earned in :region', ['region' => $certificate->trainingRequest->region]) }}</p>
                                                                 @endif
 
-                                                                <a href="{{ asset('storage/'.$certificate->file_path) }}" target="_blank"
+                                                                <a href="{{ route('certificates.download', $certificate) }}" target="_blank"
                                                                     class="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-full pl-2 pr-2.5 py-1 hover:bg-green-100 dark:hover:bg-green-900/50 transition">
                                                                     <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

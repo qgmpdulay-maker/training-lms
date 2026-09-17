@@ -54,10 +54,22 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // A previous attempt under this email (still pending, or rejected and
-        // trying again) is replaced rather than blocked — only a real,
-        // already-approved account (checked above via unique:users) stops
-        // someone from registering.
+        // A previous attempt under this email (abandoned before OTP
+        // verification, or rejected and trying again) is replaced rather than
+        // blocked. One that's already verified and sitting in the approval
+        // queue is not — otherwise anyone who knows the address could reset
+        // it and knock the real applicant out of the queue.
+        $awaitingApproval = PendingRegistration::where('email', $validated['email'])
+            ->where('status', PendingRegistration::STATUS_PENDING)
+            ->whereNotNull('email_verified_at')
+            ->exists();
+
+        if ($awaitingApproval) {
+            throw ValidationException::withMessages([
+                'email' => __('This email already has a registration awaiting Super Admin approval.'),
+            ]);
+        }
+
         $registration = PendingRegistration::updateOrCreate(
             ['email' => $validated['email']],
             [

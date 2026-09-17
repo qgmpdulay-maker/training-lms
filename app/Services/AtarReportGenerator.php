@@ -237,9 +237,11 @@ class AtarReportGenerator
         $certificates = $trainingRequest->certificates()->with('user')->get();
 
         if ($certificates->isEmpty()) {
+            $batch = $this->batchNumber($trainingRequest);
+
             $graduates = $participants->values()
                 ->map(fn (User $user, int $index) => [
-                    'code' => $this->placeholderCertificateCode($trainingRequest, $index + 1),
+                    'code' => $this->placeholderCertificateCode($trainingRequest, $batch, $index + 1),
                     'name' => $user->name,
                     'gender' => $user->sex,
                     'agency' => $user->organization ?: $user->agency,
@@ -293,16 +295,23 @@ class AtarReportGenerator
      * CertificateService::generateForTrainingRequest()'s own query, so this
      * lines up with what a real certificate for this training would get.
      */
-    private function placeholderCertificateCode(TrainingRequest $trainingRequest, int $sequence): string
+    private function placeholderCertificateCode(TrainingRequest $trainingRequest, int $batch, int $sequence): string
     {
-        $batch = TrainingRequest::where('training_slug', $trainingRequest->training_slug)
-            ->where('status', TrainingRequest::STATUS_COMPLETED)
-            ->where('preferred_date', '<', $trainingRequest->preferred_date)
-            ->count() + 1;
-
         $year = (int) ($trainingRequest->preferred_date?->format('Y') ?? now()->year);
 
         return $this->certificates->generateCode($trainingRequest->training_title, $trainingRequest->region, $batch, $year, $sequence);
+    }
+
+    /**
+     * Same for every participant on the training, so it's computed once per
+     * report rather than once per roster row.
+     */
+    private function batchNumber(TrainingRequest $trainingRequest): int
+    {
+        return TrainingRequest::where('training_slug', $trainingRequest->training_slug)
+            ->where('status', TrainingRequest::STATUS_COMPLETED)
+            ->where('preferred_date', '<', $trainingRequest->preferred_date)
+            ->count() + 1;
     }
 
     /**

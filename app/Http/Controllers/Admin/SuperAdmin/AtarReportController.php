@@ -300,11 +300,15 @@ class AtarReportController extends Controller
         // for deletion, and any newly-uploaded files are appended after that.
         $photos = $atarReport->photos ?? [];
 
-        if (! empty($validated['remove_photos'])) {
-            foreach ($validated['remove_photos'] as $path) {
-                Storage::disk('public')->delete($path);
-            }
-            $photos = collect($photos)->reject(fn ($path) => in_array($path, $validated['remove_photos'], true))->values()->all();
+        // Only paths already on this report may be deleted — remove_photos
+        // comes straight from the form, and without this check any file on
+        // the public disk (certificates, other reports' photos) could be
+        // deleted by submitting its path.
+        $removals = array_values(array_intersect($validated['remove_photos'] ?? [], $photos));
+
+        if ($removals !== []) {
+            Storage::disk('public')->delete($removals);
+            $photos = array_values(array_diff($photos, $removals));
         }
 
         if ($request->hasFile('photos')) {

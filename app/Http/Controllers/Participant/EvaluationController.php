@@ -121,9 +121,8 @@ class EvaluationController extends Controller
         $user = $request->user();
 
         $isOwner = $trainingRequest->user_id === $user->id;
-        $isParticipant = $trainingRequest->participants->contains($user->id);
 
-        abort_unless($isOwner || $isParticipant, 403);
+        abort_unless($isOwner || $trainingRequest->participants()->whereKey($user->id)->exists(), 403);
         abort_unless($trainingRequest->status === TrainingRequest::STATUS_COMPLETED, 403);
 
         return $user;
@@ -135,20 +134,19 @@ class EvaluationController extends Controller
      */
     private function reflectInstructorRatings(array $instructorIds): void
     {
-        foreach ($instructorIds as $instructorId) {
-            $ratings = ParticipantEvaluation::get()
-                ->pluck('instructor_ratings')
-                ->filter()
-                ->flatten(1)
-                ->where('instructor_id', $instructorId)
-                ->pluck('rating')
-                ->filter(fn ($r) => is_numeric($r));
+        if ($instructorIds === []) {
+            return;
+        }
 
-            if ($ratings->isEmpty()) {
-                continue;
-            }
+        $ratingsByInstructor = ParticipantEvaluation::whereNotNull('instructor_ratings')
+            ->pluck('instructor_ratings')
+            ->flatten(1)
+            ->whereIn('instructor_id', $instructorIds)
+            ->filter(fn ($row) => is_numeric($row['rating'] ?? null))
+            ->groupBy('instructor_id');
 
-            Instructor::whereKey($instructorId)->update(['rating' => round($ratings->avg(), 2)]);
+        foreach ($ratingsByInstructor as $instructorId => $rows) {
+            Instructor::whereKey($instructorId)->update(['rating' => round($rows->avg('rating'), 2)]);
         }
     }
 }
