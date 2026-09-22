@@ -100,24 +100,31 @@
         @endif
     </x-chart-card>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <x-chart-card :title="__('APB vs Technical Assistance')"
-            :subtitle="__('Completed trainings and the graduates they produced, :region.', ['region' => $chartRegionLabel])">
-            @if (collect($chartData['categoryComparison'])->sum('trainings') > 0)
-                <div class="h-64"><canvas id="dashCategoryComparisonChart"></canvas></div>
-            @else
-                <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings yet.') }}</p>
-            @endif
-        </x-chart-card>
-        <x-chart-card :title="__('Three-Year Trend')"
-            :subtitle="__('Graduates per training over the last three years, :region — top ten by total.', ['region' => $chartRegionLabel])">
-            @if (count($chartData['threeYearTrend']['trainings']) > 0)
-                <div class="h-64"><canvas id="dashThreeYearTrendChart"></canvas></div>
-            @else
-                <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings in the last three years.') }}</p>
-            @endif
-        </x-chart-card>
-    </div>
+    <x-chart-card :title="__('APB vs Technical Assistance')"
+        :subtitle="__('Completed trainings and the graduates they produced, :region.', ['region' => $chartRegionLabel])">
+        @if (collect($chartData['categoryComparison'])->sum('trainings') > 0)
+            {{-- Only two groups, so the canvas is capped rather than stretched
+                 across the full card width. --}}
+            <div class="h-64 max-w-2xl mx-auto"><canvas id="dashCategoryComparisonChart"></canvas></div>
+        @else
+            <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings yet.') }}</p>
+        @endif
+    </x-chart-card>
+
+    {{-- Full width and height-scaled: three bars per training, and the titles
+         are long enough that a half-width card clipped them. Same approach as
+         "Graduates by Training" above, with more room per row for the extra
+         two series. --}}
+    <x-chart-card :title="__('Three-Year Trend')"
+        :subtitle="__('Graduates per training over the last three years, :region — top ten by total.', ['region' => $chartRegionLabel])">
+        @if (count($chartData['threeYearTrend']['trainings']) > 0)
+            <div style="height: {{ max(320, count($chartData['threeYearTrend']['trainings']) * 76) }}px">
+                <canvas id="dashThreeYearTrendChart"></canvas>
+            </div>
+        @else
+            <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings in the last three years.') }}</p>
+        @endif
+    </x-chart-card>
 
     <x-chart-card :title="__('Most Needed Trainings')"
         :subtitle="__('What the Training Needs Assessment says participants need most, :region.', ['region' => $chartRegionLabel])">

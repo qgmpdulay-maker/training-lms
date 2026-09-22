@@ -320,7 +320,32 @@
                         indexAxis: 'y',
                         maintainAspectRatio: false,
                         plugins: { legend: { position: 'bottom' } },
-                        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+                        scales: {
+                            x: { beginAtZero: true, ticks: { precision: 0 } },
+                            y: {
+                                ticks: {
+                                    autoSkip: false,
+                                    crossAlign: 'far',
+                                    // Training titles run long — the longest in
+                                    // the catalog needs ~265px on one line. Wrap
+                                    // at the space nearest the middle instead of
+                                    // reserving an ever-wider gutter, so a longer
+                                    // title added later still fits.
+                                    callback: function (value) {
+                                        const label = this.getLabelForValue(value);
+                                        if (label.length <= 30) {
+                                            return label;
+                                        }
+                                        const middle = Math.floor(label.length / 2);
+                                        let breakAt = label.lastIndexOf(' ', middle);
+                                        if (breakAt < 10) {
+                                            breakAt = label.indexOf(' ', middle);
+                                        }
+                                        return breakAt > 0 ? [label.slice(0, breakAt), label.slice(breakAt + 1)] : label;
+                                    },
+                                },
+                            },
+                        },
                     },
                 }));
             }
