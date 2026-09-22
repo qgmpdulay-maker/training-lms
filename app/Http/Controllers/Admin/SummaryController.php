@@ -40,8 +40,11 @@ class SummaryController extends Controller
         $search = trim((string) $request->query('q'));
         $region = $user->isSuperAdmin() ? $request->query('region') : null;
 
-        $records = TrainingRequest::with(['user', 'participants'])
-            ->when($user->isAdmin(), fn ($query) => $query->where('region', $user->region))
+        // Super Admin only: they schedule trainings and are the ones who move a
+        // training to Completed, which is what issues the participants'
+        // certificates. A Regional Admin reads their region's data from the
+        // sections below instead, so this query is skipped for them entirely.
+        $records = ! $user->isSuperAdmin() ? null : TrainingRequest::with(['user', 'participants'])
             ->when($region, fn ($query) => $query->where('region', $region))
             ->when(! $showAllStatuses, fn ($query) => $query->where('status', $status))
             ->when($search !== '', function ($query) use ($search) {
@@ -157,6 +160,8 @@ class SummaryController extends Controller
         ];
 
         if ($request->ajax() && isset($sectionPartials[$request->query('_section')])) {
+            abort_if($request->query('_section') === 'training-requests' && ! $user->isSuperAdmin(), 403);
+
             return view($sectionPartials[$request->query('_section')], $payload);
         }
 

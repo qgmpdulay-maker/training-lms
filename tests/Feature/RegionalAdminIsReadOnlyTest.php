@@ -141,4 +141,44 @@ class RegionalAdminIsReadOnlyTest extends TestCase
 
         $this->assertSame(TrainingRequest::STATUS_APPROVED, $record->fresh()->status);
     }
+
+    public function test_the_trainings_list_is_super_admin_only(): void
+    {
+        $record = $this->request();
+
+        // Scheduling trainings and marking them Completed — which issues the
+        // certificates — belongs to the Super Admin, so the list lives on
+        // their Summary only.
+        $this->actingAs($this->regionalAdmin())
+            ->get(route('admin.summary'))
+            ->assertOk()
+            ->assertDontSee($record->training_title)
+            ->assertDontSee('Trainings marked', false);
+
+        $this->actingAs(User::factory()->superAdmin()->create())
+            ->get(route('admin.summary'))
+            ->assertOk()
+            ->assertSee($record->training_title);
+    }
+
+    public function test_regional_admins_cannot_fetch_the_trainings_fragment_either(): void
+    {
+        $this->request();
+
+        $this->actingAs($this->regionalAdmin())
+            ->get(route('admin.summary', ['_section' => 'training-requests']), [
+                'X-Requested-With' => 'XMLHttpRequest',
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_regional_admins_still_see_the_rest_of_summary(): void
+    {
+        $participant = User::factory()->create(['name' => 'Maria Santos', 'region' => 'Region III']);
+
+        $this->actingAs($this->regionalAdmin())
+            ->get(route('admin.summary'))
+            ->assertOk()
+            ->assertSee($participant->name);
+    }
 }
