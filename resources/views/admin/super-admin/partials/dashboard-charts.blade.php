@@ -100,12 +100,39 @@
         @endif
     </x-chart-card>
 
+    {{-- Two charts, one per measure, each on its own zero-based axis. A single
+         grouped chart needed twin axes to keep the trainings bars visible
+         against ~17x more graduates, and that made 270 trainings and 4,592
+         graduates draw at the same height — which read as if they were equal.
+         The comparison that matters is APB against TA within a measure, not
+         trainings against graduates. --}}
     <x-chart-card :title="__('APB vs Technical Assistance')"
-        :subtitle="__('Completed trainings and the graduates they produced, :region.', ['region' => $chartRegionLabel])">
+        :subtitle="__('Completed trainings and the graduates they produced, :region. Each measure has its own scale.', ['region' => $chartRegionLabel])">
         @if (collect($chartData['categoryComparison'])->sum('trainings') > 0)
-            {{-- Only two groups, so the canvas is capped rather than stretched
-                 across the full card width. --}}
-            <div class="h-64 max-w-2xl mx-auto"><canvas id="dashCategoryComparisonChart"></canvas></div>
+            @php $comparison = collect($chartData['categoryComparison']); @endphp
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2 text-center">{{ __('Trainings Conducted') }}</p>
+                    <div class="h-56"><canvas id="dashCategoryTrainingsChart"></canvas></div>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2 text-center">{{ __('Graduates Produced') }}</p>
+                    <div class="h-56"><canvas id="dashCategoryGraduatesChart"></canvas></div>
+                </div>
+            </div>
+
+            {{-- The figure the two charts can't show on their own. --}}
+            <div class="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
+                @foreach ($comparison as $row)
+                    <div class="text-center">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">{{ $row['label'] }}</p>
+                        <p class="text-lg font-bold text-[#152A4E] dark:text-white tabular-nums">
+                            {{ $row['trainings'] > 0 ? number_format($row['graduates'] / $row['trainings'], 1) : '—' }}
+                        </p>
+                        <p class="text-xs text-gray-400">{{ __('graduates per training') }}</p>
+                    </div>
+                @endforeach
+            </div>
         @else
             <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings yet.') }}</p>
         @endif

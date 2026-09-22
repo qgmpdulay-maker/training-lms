@@ -275,30 +275,38 @@
                 }));
             }
 
+            // One chart per measure, each zero-based on its own scale. Same
+            // colour per category across both, so APB is the same bar in each.
             const categoryComparison = chartData.categoryComparison || [];
-            const categoryEl = document.getElementById('dashCategoryComparisonChart');
-            if (categoryEl && categoryComparison.length) {
-                dashboardChartInstances.push(new Chart(categoryEl, {
-                    type: 'bar',
-                    data: {
-                        labels: categoryComparison.map(row => row.label),
-                        datasets: [
-                            // Separate axes: graduates outnumber trainings by
-                            // roughly 17x, so on one scale the training bars
-                            // would be invisible.
-                            { label: 'Trainings', data: categoryComparison.map(row => row.trainings), backgroundColor: brandNavy, borderRadius: 4, yAxisID: 'y' },
-                            { label: 'Graduates', data: categoryComparison.map(row => row.graduates), backgroundColor: brandOrange, borderRadius: 4, yAxisID: 'y1' },
-                        ],
-                    },
-                    options: {
-                        maintainAspectRatio: false,
-                        plugins: { legend: { position: 'bottom' } },
-                        scales: {
-                            y: { beginAtZero: true, position: 'left', ticks: { precision: 0 }, title: { display: true, text: 'Trainings' } },
-                            y1: { beginAtZero: true, position: 'right', ticks: { precision: 0 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Graduates' } },
+            if (categoryComparison.length) {
+                const categoryColours = categoryComparison.map((row, i) => i === 0 ? brandNavy : brandOrange);
+
+                [
+                    { id: 'dashCategoryTrainingsChart', key: 'trainings', axis: 'Trainings' },
+                    { id: 'dashCategoryGraduatesChart', key: 'graduates', axis: 'Graduates' },
+                ].forEach(function (spec) {
+                    const el = document.getElementById(spec.id);
+                    if (!el) {
+                        return;
+                    }
+                    dashboardChartInstances.push(new Chart(el, {
+                        type: 'bar',
+                        data: {
+                            labels: categoryComparison.map(row => row.label),
+                            datasets: [{
+                                label: spec.axis,
+                                data: categoryComparison.map(row => row[spec.key]),
+                                backgroundColor: categoryColours,
+                                borderRadius: 4,
+                            }],
                         },
-                    },
-                }));
+                        options: {
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: spec.axis } } },
+                        },
+                    }));
+                });
             }
 
             // One training at a time. The dropdown lives in the card header
