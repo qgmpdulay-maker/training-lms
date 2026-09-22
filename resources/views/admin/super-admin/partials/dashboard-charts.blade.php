@@ -111,16 +111,23 @@
         @endif
     </x-chart-card>
 
-    {{-- Full width and height-scaled: three bars per training, and the titles
-         are long enough that a half-width card clipped them. Same approach as
-         "Graduates by Training" above, with more room per row for the extra
-         two series. --}}
+    {{-- One training at a time, chosen from the header dropdown. Plotting all
+         28 at once left each bar a few pixels tall and clipped the longer
+         titles; the switch is client-side because every training's figures are
+         already in the payload. --}}
     <x-chart-card :title="__('Three-Year Trend')"
-        :subtitle="__('Graduates per training over the last three years, :region — top ten by total.', ['region' => $chartRegionLabel])">
+        :subtitle="__('Graduates for one training over the last three years, :region.', ['region' => $chartRegionLabel])">
         @if (count($chartData['threeYearTrend']['trainings']) > 0)
-            <div style="height: {{ max(320, count($chartData['threeYearTrend']['trainings']) * 76) }}px">
-                <canvas id="dashThreeYearTrendChart"></canvas>
-            </div>
+            <x-slot:action>
+                <label for="trend_training" class="sr-only">{{ __('Training') }}</label>
+                <select id="trend_training"
+                    class="max-w-[16rem] rounded-md border-transparent bg-white text-[#152A4E] text-sm font-semibold py-1.5 focus:border-white focus:ring-2 focus:ring-white/60">
+                    @foreach ($chartData['threeYearTrend']['trainings'] as $index => $row)
+                        <option value="{{ $index }}">{{ $row['training'] }}</option>
+                    @endforeach
+                </select>
+            </x-slot:action>
+            <div class="h-64"><canvas id="dashThreeYearTrendChart"></canvas></div>
         @else
             <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings in the last three years.') }}</p>
         @endif

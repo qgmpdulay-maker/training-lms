@@ -301,53 +301,47 @@
                 }));
             }
 
+            // One training at a time. The dropdown lives in the card header
+            // and swaps the dataset in place — no refetch, since every
+            // training's three-year figures are already here.
             const trend = chartData.threeYearTrend || { years: [], trainings: [] };
             const trendEl = document.getElementById('dashThreeYearTrendChart');
+            const trendPicker = document.getElementById('trend_training');
             if (trendEl && trend.trainings.length) {
                 const trendColours = [brandNavy, brandBlue, brandOrange];
-                dashboardChartInstances.push(new Chart(trendEl, {
+                const trendChart = new Chart(trendEl, {
                     type: 'bar',
                     data: {
-                        labels: trend.trainings.map(row => row.training),
-                        datasets: trend.years.map((year, index) => ({
-                            label: String(year),
-                            data: trend.trainings.map(row => row.graduates[index]),
-                            backgroundColor: trendColours[index % trendColours.length],
+                        labels: trend.years.map(String),
+                        datasets: [{
+                            label: trend.trainings[0].training,
+                            data: trend.trainings[0].graduates,
+                            backgroundColor: trend.years.map((year, i) => trendColours[i % trendColours.length]),
                             borderRadius: 4,
-                        })),
+                        }],
                     },
                     options: {
-                        indexAxis: 'y',
                         maintainAspectRatio: false,
-                        plugins: { legend: { position: 'bottom' } },
-                        scales: {
-                            x: { beginAtZero: true, ticks: { precision: 0 } },
-                            y: {
-                                ticks: {
-                                    autoSkip: false,
-                                    crossAlign: 'far',
-                                    // Training titles run long — the longest in
-                                    // the catalog needs ~265px on one line. Wrap
-                                    // at the space nearest the middle instead of
-                                    // reserving an ever-wider gutter, so a longer
-                                    // title added later still fits.
-                                    callback: function (value) {
-                                        const label = this.getLabelForValue(value);
-                                        if (label.length <= 30) {
-                                            return label;
-                                        }
-                                        const middle = Math.floor(label.length / 2);
-                                        let breakAt = label.lastIndexOf(' ', middle);
-                                        if (breakAt < 10) {
-                                            breakAt = label.indexOf(' ', middle);
-                                        }
-                                        return breakAt > 0 ? [label.slice(0, breakAt), label.slice(breakAt + 1)] : label;
-                                    },
-                                },
-                            },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { title: (items) => items[0].label } },
                         },
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'Graduates' } } },
                     },
-                }));
+                });
+                dashboardChartInstances.push(trendChart);
+
+                if (trendPicker) {
+                    trendPicker.addEventListener('change', function () {
+                        const row = trend.trainings[Number(this.value)];
+                        if (!row) {
+                            return;
+                        }
+                        trendChart.data.datasets[0].label = row.training;
+                        trendChart.data.datasets[0].data = row.graduates;
+                        trendChart.update();
+                    });
+                }
             }
 
             const mostNeededChartEl = document.getElementById('dashMostNeededTrainingsChart');

@@ -586,10 +586,12 @@ class DashboardController extends Controller
 
     /**
      * Graduates per training over the last three years, so a course that is
-     * quietly tailing off is visible next to one that is growing.
+     * quietly tailing off is easy to spot.
      *
-     * Limited to the ten biggest trainings by three-year total — the catalog is
-     * long enough that plotting all of them is unreadable.
+     * Returns every training rather than a top slice: the chart shows one at a
+     * time, picked from a dropdown, so all of them need to be available to the
+     * browser. Ordered by three-year total, which makes the busiest training
+     * the sensible default selection.
      *
      * @return array{years: array<int, int>, trainings: array<int, array{training: string, graduates: array<int, int>}>}
      */
@@ -608,8 +610,7 @@ class DashboardController extends Controller
             ->map(fn (Collection $group) => $years
                 ->map(fn (int $year) => (int) ($group->firstWhere('year', $year)->graduates_total ?? 0))
                 ->all())
-            ->sortByDesc(fn (array $graduates) => array_sum($graduates))
-            ->take(10);
+            ->sortByDesc(fn (array $graduates) => array_sum($graduates));
 
         return [
             'years' => $years->all(),
