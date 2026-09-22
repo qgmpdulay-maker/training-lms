@@ -11,8 +11,10 @@ use App\Services\CertificateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SummaryController extends Controller
 {
@@ -187,6 +189,39 @@ class SummaryController extends Controller
             'regions' => config('regions.list'),
             'availableInstructors' => $availableInstructors,
         ]);
+    }
+
+    /**
+     * Opens one of the two files a public requester uploaded with their
+     * request — the completed Training Needs Assessment, or a scanned signed
+     * request letter (see PublicTrainingRequestController::store()).
+     *
+     * These are private files, so they can't be opened by typing a
+     * /storage/... address. Viewers are the same people who can already open
+     * this request in Summary: Super Admin, or a Regional Admin for the
+     * request's own region. Anything else gets 403; a request with no such
+     * file (or a missing file on disk) gets 404.
+     */
+    public function attachment(Request $request, TrainingRequest $trainingRequest, string $type): StreamedResponse
+    {
+        abort_if($request->user()->isAdmin() && $trainingRequest->region !== $request->user()->region, 403);
+
+        $path = match ($type) {
+            'tna' => $trainingRequest->tna_file_path,
+            'letter' => $trainingRequest->signed_letter_path,
+            default => null,
+        };
+
+        abort_unless($path, 404);
+
+        // Requests filed before these uploads moved to the private disk may
+        // still have their files sitting in public/storage, so look in both,
+        // private first — same approach as Participant\CertificateController.
+        $disk = collect(['local', 'public'])->first(fn (string $disk) => Storage::disk($disk)->exists($path));
+
+        abort_unless($disk, 404);
+
+        return Storage::disk($disk)->response($path);
     }
 
     public function update(Request $request, TrainingRequest $trainingRequest): RedirectResponse

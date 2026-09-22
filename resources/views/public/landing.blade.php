@@ -28,7 +28,7 @@
                     {{ __('Training Information Management System') }}
                 </h1>
                 <p class="text-sm text-white/70 max-w-2xl mx-auto mt-5">
-                    {{ __('Browse the trainings currently being offered. Log in or register as a participant to join a training and track your progress.') }}
+                    {{ __('Browse the trainings currently being offered. LGUs and national government agencies can request a training without an account — participants log in or register to join a training and track their progress.') }}
                 </p>
             </div>
         </section>
@@ -40,7 +40,7 @@
                 <div id="trainings" class="mb-8 scroll-mt-24">
                     <div class="mb-5">
                         <h2 class="text-2xl sm:text-3xl font-bold text-[#152A4E]">{{ __('Available Trainings') }}</h2>
-                        <p class="text-sm text-gray-500 mt-1.5 whitespace-nowrap">{{ __('Trainings currently being offered. Details will be updated as they become available.') }}</p>
+                        <p class="text-sm text-gray-500 mt-1.5">{{ __('Trainings currently being offered. Details will be updated as they become available.') }}</p>
                     </div>
 
                     <div class="flex flex-col sm:flex-row gap-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-2">
@@ -88,7 +88,7 @@
                             }
                         }" x-init="$nextTick(() => checkScroll())" @resize.window="checkScroll()">
                             <div class="flex items-center gap-4 mb-5">
-                                <h3 class="text-xl sm:text-2xl font-bold text-[#152A4E] whitespace-nowrap" x-text="group.category"></h3>
+                                <h3 class="text-xl sm:text-2xl font-bold text-[#152A4E] sm:whitespace-nowrap" x-text="group.category"></h3>
                                 <span class="h-px flex-1 bg-gradient-to-r from-[#152A4E]/25 via-[#E2762D]/25 to-transparent"></span>
                             </div>
 
@@ -168,7 +168,11 @@
                         @click.outside="selected = null" @keydown.escape.window="selected = null"
                         class="relative w-full max-w-2xl min-h-[36rem] max-h-[85vh] flex flex-col bg-white/80 backdrop-blur-xl backdrop-saturate-150 border border-white/60 rounded-xl shadow-xl overflow-hidden">
                         <template x-if="selected">
-                            <div class="flex flex-col h-full">
+                            {{-- flex-1, not h-full: the panel's height comes from min-h-[36rem],
+                                 and a percentage height can't resolve against a min-height, so
+                                 h-full collapsed this to content height and stranded the footer
+                                 mid-panel. min-h-0 lets the scroll area shrink instead of pushing. --}}
+                            <div class="flex flex-col flex-1 min-h-0">
                                 <div class="flex items-start justify-between gap-4 p-8 pb-0">
                                     <span class="inline-block w-fit text-xs font-semibold tracking-wide uppercase text-[#152A4E] bg-[#152A4E]/8 rounded-full px-3 py-1.5"
                                         x-text="selected.category"></span>
@@ -194,11 +198,20 @@
                                         <span x-text="selected.hours"></span> {{ __('training hours') }}
                                     </span>
 
-                                    @auth
-                                        <a href="{{ route(Auth::user()->isParticipant() ? 'trainings.index' : 'admin.dashboard') }}" class="inline-flex items-center rounded-lg bg-[#152A4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#152A4E]/90 transition shrink-0">
-                                            {{ __('Go to Dashboard') }}
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        @auth
+                                            <a href="{{ route(Auth::user()->isParticipant() ? 'trainings.index' : 'admin.dashboard') }}" class="inline-flex items-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#152A4E] border border-[#152A4E]/20 hover:bg-gray-50 transition">
+                                                {{ __('Go to Dashboard') }}
+                                            </a>
+                                        @endauth
+
+                                        {{-- Any visitor can file a request for this training — no login required.
+                                             Carries the slug through so the form opens with it preselected. --}}
+                                        <a :href="'{{ route('public.training-requests.create') }}?training=' + selected.slug"
+                                            class="inline-flex items-center rounded-lg bg-[#152A4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#152A4E]/90 transition">
+                                            {{ __('Request this Training') }}
                                         </a>
-                                    @endauth
+                                    </div>
                                 </div>
                             </div>
                         </template>

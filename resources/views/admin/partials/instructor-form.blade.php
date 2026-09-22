@@ -1,3 +1,6 @@
+{{-- Managing instructors is Super Admin only; Regional Admins see the roster
+     below this card but can't add to it. --}}
+@if (Auth::user()->isSuperAdmin())
 <x-chart-card body-class="p-6 sm:p-8"
     :title="__('Add Instructor')"
     :subtitle="__('Instructor ratings are computed automatically from L1 Evaluation data once exactly one instructor is on file for a given training type.')">
@@ -127,3 +130,4 @@
         </div>
     </form>
 </x-chart-card>
+@endif

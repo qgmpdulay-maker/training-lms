@@ -99,6 +99,7 @@
                                                             @endif
 
                                                             @php $uploadInputId = 'instructor-cert-'.$instructor->id; @endphp
+                                                            @if (Auth::user()->isSuperAdmin())
                                                             <form method="POST" action="{{ route('admin.instructors.certificate', $instructor) }}" enctype="multipart/form-data" class="mt-3">
                                                                 @csrf
                                                                 <input type="file" name="certificate_file" id="{{ $uploadInputId }}" accept=".pdf,.jpg,.jpeg,.png" class="hidden" onchange="this.form.submit()">
@@ -110,6 +111,7 @@
                                                                     {{ $instructor->certificate_file_path ? __('Replace file') : __('Upload file') }}
                                                                 </label>
                                                             </form>
+                                                            @endif
                                                         </div>
                                                     </div>
                                                 </div>

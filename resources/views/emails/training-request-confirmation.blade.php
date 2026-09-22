@@ -32,8 +32,12 @@
             </table>
 
             <p style="margin: 20px 0 0; font-size: 14px;">
-                CDTI will get in touch using the contact details you provided. You can check the status of this
-                request anytime under "My Requests" in the training portal.
+                CDTI will get in touch using the contact details you provided.
+                @if ($trainingRequest->source === \App\Models\TrainingRequest::SOURCE_PUBLIC_PORTAL)
+                    No account is needed — quote the reference number above in any follow-up about this request.
+                @else
+                    You can check the status of this request anytime under "My Requests" in the training portal.
+                @endif
             </p>
         </div>
         <div style="height: 6px; background: linear-gradient(to right, #152A4E, #E2762D);"></div>

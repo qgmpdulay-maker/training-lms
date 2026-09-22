@@ -18,9 +18,14 @@
                     {{ $trainingRequest->user->name ?? $trainingRequest->requesting_agency }} &middot; {{ $trainingRequest->preferred_date->format('F j, Y') }}
                 </p>
 
+                @php $canEdit = Auth::user()->isSuperAdmin(); @endphp
+
                 <form method="POST" action="{{ route('admin.evaluations.update', $trainingRequest) }}" class="space-y-8">
                     @csrf
                     @method('PUT')
+
+                    {{-- Evaluations are Super Admin only; Regional Admins read them. --}}
+                    <fieldset @disabled(! $canEdit) class="space-y-8 min-w-0">
 
                     <!-- L2: Pre/Post Test -->
                     <div>
@@ -108,12 +113,16 @@
                         </div>
                     </div>
 
-                    <div class="flex justify-end">
-                        <button type="submit"
-                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition">
-                            {{ __('Save Evaluation') }}
-                        </button>
-                    </div>
+                    </fieldset>
+
+                    @if ($canEdit)
+                        <div class="flex justify-end">
+                            <button type="submit"
+                                class="inline-flex items-center justify-center bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition">
+                                {{ __('Save Evaluation') }}
+                            </button>
+                        </div>
+                    @endif
                 </form>
             </div>
 

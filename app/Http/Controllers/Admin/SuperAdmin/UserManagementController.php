@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Mail\AccountApproved;
 use App\Mail\AccountRejected;
+use App\Models\Organization;
 use App\Models\PendingRegistration;
 use App\Models\User;
 use App\Rules\NotSimilarToAccount;
@@ -49,9 +50,16 @@ class UserManagementController extends Controller
 
         $participants = User::where('role', User::ROLE_PARTICIPANT)
             ->tap(fn ($q) => $searchScope($q, $participantSearch))
+            ->with('assignedOrganization')
             ->orderBy('name')
             ->paginate(15, ['*'], 'participants')
             ->withQueryString();
+
+        // Organizations to assign people into, plus a suggested match per
+        // unassigned participant — see suggestOrganizations() for why the
+        // suggestion is only ever a starting point.
+        $organizations = Organization::orderBy('name')->get(['id', 'name', 'type', 'region']);
+        $suggestedOrganizations = self::suggestOrganizations($participants->getCollection(), $organizations);
 
         $admins = User::whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])
             ->tap(fn ($q) => $searchScope($q, $adminSearch))
@@ -69,10 +77,71 @@ class UserManagementController extends Controller
         }
 
         if ($request->ajax() && $request->query('_section') === 'participants') {
-            return view('admin.partials.manage-participants-results', compact('participants', 'participantSearch', 'regions'));
+            return view('admin.partials.manage-participants-results', compact('participants', 'participantSearch', 'regions', 'organizations', 'suggestedOrganizations'));
         }
 
-        return view('admin.super-admin.users.index', compact('pendingAccounts', 'pendingAccountsByRegion', 'participants', 'admins', 'regions', 'adminSearch', 'participantSearch'));
+        return view('admin.super-admin.users.index', compact('pendingAccounts', 'pendingAccountsByRegion', 'participants', 'admins', 'regions', 'adminSearch', 'participantSearch', 'organizations', 'suggestedOrganizations'));
+    }
+
+    /**
+     * Best-guess organization for each unassigned participant, based on the
+     * freetext they typed about themselves at signup.
+     *
+     * This is a convenience for the Super Admin, never an authority: the
+     * freetext is unverified, so the suggestion is pre-selected in the picker
+     * but still has to be confirmed. Matching is deliberately crude (one name
+     * containing the other) — anything cleverer would invite trusting it.
+     *
+     * @param  \Illuminate\Support\Collection<int, User>  $participants
+     * @param  \Illuminate\Support\Collection<int, Organization>  $organizations
+     * @return array<int, int> participant id => organization id
+     */
+    private static function suggestOrganizations($participants, $organizations): array
+    {
+        $suggestions = [];
+
+        foreach ($participants as $participant) {
+            if ($participant->organization_id || ! $participant->organization) {
+                continue;
+            }
+
+            $typed = mb_strtolower(trim($participant->organization));
+
+            $match = $organizations->first(function (Organization $organization) use ($typed) {
+                $name = mb_strtolower($organization->name);
+
+                return $name === $typed || str_contains($name, $typed) || str_contains($typed, $name);
+            });
+
+            if ($match) {
+                $suggestions[$participant->id] = $match->id;
+            }
+        }
+
+        return $suggestions;
+    }
+
+    /**
+     * Place an approved user into an organization, or clear their membership
+     * by submitting an empty organization.
+     */
+    public function assignOrganization(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'organization_id' => ['nullable', 'integer', 'exists:organizations,id'],
+            'position' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $user->organization_id = $validated['organization_id'] ?? null;
+        // Position only means something inside an organization.
+        $user->position = $user->organization_id ? ($validated['position'] ?? null) : null;
+        $user->save();
+
+        $message = $user->organization_id
+            ? "{$user->name} was assigned to ".$user->assignedOrganization->name.'.'
+            : "{$user->name}'s organization was cleared.";
+
+        return Redirect::route('admin.users.index')->with('status', $message);
     }
 
     public function approve(PendingRegistration $registration): RedirectResponse

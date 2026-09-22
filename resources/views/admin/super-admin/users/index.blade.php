@@ -200,7 +200,7 @@
             <!-- Participants -->
             <x-chart-card body-class="p-6 sm:p-8"
                 :title="__('Participants')"
-                :subtitle="__('Elevate a participant to Regional Admin by assigning them a region.')">
+                :subtitle="__('Assign participants to an organization, or elevate one to Regional Admin.')">
 
                 <form data-live-form data-live-section="participants" data-live-target="participants-results"
                     method="GET" action="{{ route('admin.users.index') }}" class="w-full mb-5">

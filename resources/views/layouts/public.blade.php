@@ -16,45 +16,50 @@
     </head>
     <body class="font-sans antialiased bg-gray-50 text-gray-900">
         <div class="min-h-screen flex flex-col">
-            <header class="fixed top-0 inset-x-0 z-30 bg-[#E2762D] shadow-md">
+            {{-- Below `sm` the five links total ~400px, wider than a 375px phone,
+                 so they collapse into a menu panel and only the logo and the
+                 primary action stay in the bar. --}}
+            <header x-data="{ open: false }" class="fixed top-0 inset-x-0 z-30 bg-[#E2762D] shadow-md">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
                     <a href="{{ route('home') }}" class="flex items-center gap-2.5 min-w-0">
                         <img src="{{ asset('images/Training-LMS-Logo.png') }}" alt="{{ __('Training IMS Logo') }}" class="h-9 w-9 object-contain shrink-0">
                         <span class="text-sm font-semibold text-white truncate">{{ __('Home') }}</span>
                     </a>
 
-                    <nav class="flex items-center gap-1 sm:gap-2 shrink-0">
-                        <a href="{{ route('home') }}#trainings"
-                            @click="
-                                const target = document.getElementById('trainings');
-                                if (target) {
-                                    $event.preventDefault();
-                                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                }
-                            "
-                            class="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition">
-                            {{ __('Browse Trainings') }}
+                    <nav class="hidden sm:flex items-center gap-1 sm:gap-2 shrink-0">
+                        @include('partials.public-nav-links')
+
+                        {{-- The primary action for this site's audience (agencies/LGUs), so it
+                             sits last where a primary action belongs and carries an outline the
+                             plain links don't. Outlined rather than filled: a solid white block
+                             here outweighs even the logo. Open to everyone, logged in or not —
+                             the requester is the agency, not an account. --}}
+                        <span class="w-px h-5 bg-white/25 mx-1" aria-hidden="true"></span>
+                        <a href="{{ route('public.training-requests.create') }}"
+                            class="inline-flex items-center rounded-md border border-white/60 px-4 py-2 text-sm font-semibold text-white hover:bg-white hover:text-[#C25E1E] hover:border-white transition">
+                            {{ __('Request Training') }}
                         </a>
-                        <a href="{{ route('about') }}"
-                            class="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition">
-                            {{ __('About Us') }}
-                        </a>
-                        @auth
-                            <a href="{{ route(Auth::user()->isParticipant() ? 'dashboard' : 'admin.dashboard') }}"
-                                class="inline-flex items-center rounded-md bg-[#152A4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152A4E]/90 transition">
-                                {{ __('Go to Dashboard') }}
-                            </a>
-                        @else
-                            <a href="{{ route('login') }}"
-                                class="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition">
-                                {{ __('Log In') }}
-                            </a>
-                            <a href="{{ route('register') }}"
-                                class="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition">
-                                {{ __('Register') }}
-                            </a>
-                        @endauth
                     </nav>
+
+                    <div class="flex sm:hidden items-center gap-2 shrink-0">
+                        <a href="{{ route('public.training-requests.create') }}"
+                            class="inline-flex items-center rounded-md border border-white/60 px-3 py-1.5 text-xs font-semibold text-white transition">
+                            {{ __('Request Training') }}
+                        </a>
+                        <button type="button" @click="open = ! open"
+                            :aria-expanded="open ? 'true' : 'false'" aria-label="{{ __('Menu') }}"
+                            class="inline-flex items-center justify-center rounded-md p-2 text-white hover:bg-white/15 transition">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path x-show="! open" stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                                <path x-show="open" x-cloak stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div x-show="open" x-cloak @click.outside="open = false"
+                    class="sm:hidden border-t border-white/20 px-4 py-2">
+                    @include('partials.public-nav-links', ['itemClass' => 'block rounded-md px-3 py-2.5 text-sm font-semibold text-white hover:bg-white/15 transition'])
                 </div>
             </header>
 
