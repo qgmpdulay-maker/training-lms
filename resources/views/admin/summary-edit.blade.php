@@ -71,13 +71,12 @@
                 </dl>
             </div>
 
-            @if ($record->purpose || $record->signature_name || $record->tna_file_path || $record->signed_letter_path)
-                <!-- What the requesting agency/LGU filed. Read-only: an admin
-                     reviews this, they don't rewrite the request on the
-                     requester's behalf. -->
+            @if ($record->purpose || $record->signature_name)
+                <!-- Why this training was asked for, and who signed it off.
+                     Read-only: an admin reviews this, they don't rewrite it. -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __("The Requester's Submission") }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Filed by the requesting agency — shown as submitted.') }}</p>
+                    <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Background') }}</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">{{ __('Recorded when this training was scheduled.') }}</p>
 
                     <dl class="space-y-4 text-sm">
                         @if ($record->purpose)
@@ -104,31 +103,6 @@
                             </div>
                         </div>
 
-                        @if ($record->tna_file_path || $record->signed_letter_path)
-                            <div>
-                                <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1.5">{{ __('Attachments') }}</dt>
-                                <dd class="flex flex-wrap gap-2">
-                                    @if ($record->tna_file_path)
-                                        <a href="{{ route('admin.summary.attachment', [$record, 'tna']) }}" target="_blank"
-                                            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 px-3 py-2 text-xs font-semibold text-[#152A4E] dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5A3.375 3.375 0 0010.125 2.25H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                                            </svg>
-                                            {{ __('Training Needs Assessment') }}
-                                        </a>
-                                    @endif
-                                    @if ($record->signed_letter_path)
-                                        <a href="{{ route('admin.summary.attachment', [$record, 'letter']) }}" target="_blank"
-                                            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 px-3 py-2 text-xs font-semibold text-[#152A4E] dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                                            </svg>
-                                            {{ __('Signed Request Letter') }}
-                                        </a>
-                                    @endif
-                                </dd>
-                            </div>
-                        @endif
                     </dl>
                 </div>
             @endif

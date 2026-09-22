@@ -28,7 +28,7 @@
                     {{ __('Training Information Management System') }}
                 </h1>
                 <p class="text-sm text-white/70 max-w-2xl mx-auto mt-5">
-                    {{ __('Browse the trainings currently being offered. LGUs and national government agencies can request a training without an account — participants log in or register to join a training and track their progress.') }}
+                    {{ __('Browse the trainings currently being offered. Log in or register as a participant to join a training and track your progress.') }}
                 </p>
             </div>
         </section>
@@ -198,20 +198,11 @@
                                         <span x-text="selected.hours"></span> {{ __('training hours') }}
                                     </span>
 
-                                    <div class="flex items-center gap-2 shrink-0">
-                                        @auth
-                                            <a href="{{ route(Auth::user()->isParticipant() ? 'trainings.index' : 'admin.dashboard') }}" class="inline-flex items-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#152A4E] border border-[#152A4E]/20 hover:bg-gray-50 transition">
-                                                {{ __('Go to Dashboard') }}
-                                            </a>
-                                        @endauth
-
-                                        {{-- Any visitor can file a request for this training — no login required.
-                                             Carries the slug through so the form opens with it preselected. --}}
-                                        <a :href="'{{ route('public.training-requests.create') }}?training=' + selected.slug"
-                                            class="inline-flex items-center rounded-lg bg-[#152A4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#152A4E]/90 transition">
-                                            {{ __('Request this Training') }}
+                                    @auth
+                                        <a href="{{ route(Auth::user()->isParticipant() ? 'trainings.index' : 'admin.dashboard') }}" class="inline-flex items-center rounded-lg bg-[#152A4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#152A4E]/90 transition shrink-0">
+                                            {{ __('Go to Dashboard') }}
                                         </a>
-                                    </div>
+                                    @endauth
                                 </div>
                             </div>
                         </template>

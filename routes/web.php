@@ -22,24 +22,11 @@ use App\Http\Controllers\Participant\TrainingCatalogController;
 use App\Http\Controllers\Participant\TrainingNeedsAssessmentController;
 use App\Http\Controllers\Participant\TrainingRequestController;
 use App\Http\Controllers\PublicTrainingCatalogController;
-use App\Http\Controllers\PublicTrainingRequestController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicTrainingCatalogController::class, 'index'])->name('home');
 Route::view('/about', 'public.about')->name('about');
-
-// Public, unauthenticated Technical Assistance request portal — the requester
-// is the Agency/LGU itself, so there's no login, no account, and no auth
-// middleware here. See PublicTrainingRequestController for the full flow.
-// The POST is throttled because it's open to the internet: 5 submissions per
-// minute per IP, enough for a real agency retrying a failed upload and far
-// too few to flood the review queue.
-Route::get('/request-training', [PublicTrainingRequestController::class, 'create'])->name('public.training-requests.create');
-Route::post('/request-training', [PublicTrainingRequestController::class, 'store'])
-    ->middleware('throttle:5,1')
-    ->name('public.training-requests.store');
-Route::get('/request-training/submitted', [PublicTrainingRequestController::class, 'submitted'])->name('public.training-requests.submitted');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
@@ -83,10 +70,6 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
 
     Route::get('/summary', [SummaryController::class, 'index'])->name('summary');
     Route::get('/summary/{trainingRequest}/edit', [SummaryController::class, 'edit'])->name('summary.edit');
-    // Opens the TNA or signed request letter a public requester uploaded.
-    // Those files are private (storage/app/private), so they're served here
-    // with a region check rather than linked straight from /storage.
-    Route::get('/summary/{trainingRequest}/attachment/{type}', [SummaryController::class, 'attachment'])->name('summary.attachment');
     Route::get('/tools', [ToolsController::class, 'index'])->name('tools');
     // Returns one session's L1/L2 evaluation breakdown as an HTML fragment.
     // The Tools page fetches it when a session row is first expanded, instead
