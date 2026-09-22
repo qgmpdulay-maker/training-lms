@@ -19,6 +19,17 @@
 
             <x-chart-card id="tna-submissions" class="scroll-mt-24" body-class="p-6 sm:p-8"
                 :title="__('TNA Submissions')">
+                <x-slot:action>
+                    {{-- For agencies that would rather fill it in on paper and
+                         hand it back to their Regional Office. --}}
+                    <a href="{{ route('admin.tools.tna-template') }}" target="_blank"
+                        class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border border-white/30 text-white px-3 py-2 hover:bg-white/10 transition whitespace-nowrap">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 12m0 0l4.5-4.5M12 12V3" />
+                        </svg>
+                        {{ __('Blank TNA Form') }}
+                    </a>
+                </x-slot:action>
                 <x-slot:description>
                 @if (Auth::user()->isAdmin())
                     {{ __('Training Needs Assessments submitted by participants in :region, most recent first.', ['region' => Auth::user()->region]) }}

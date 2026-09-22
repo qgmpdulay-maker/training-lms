@@ -33,6 +33,9 @@ class ParticipantDeploymentTest extends TestCase
         ]);
         $training->save();
         $training->participants()->sync([$participant->id]);
+        // What SummaryController does when a training is marked Completed, so
+        // the fixture carries real graduate counts rather than zeros.
+        $training->syncGraduateCountsFromParticipants();
 
         return $participant->refresh();
     }
@@ -202,5 +205,40 @@ class ParticipantDeploymentTest extends TestCase
         // A fragment, not the whole page — that's what keeps the page from
         // reloading and losing the admin's scroll position.
         $response->assertDontSee('Graduate Deployments');
+    }
+
+    public function test_the_map_counts_deployed_graduates_per_person_not_per_deployment(): void
+    {
+        $graduate = $this->graduate();
+        $alsoDeployed = $this->graduate();
+        $neverDeployed = $this->graduate();
+
+        // Three deployments for one person — they are still one deployed graduate.
+        foreach (['Mayon Operations', 'RDANA', 'EOC Augmentation'] as $index => $operation) {
+            $graduate->deployments()->create($this->payload([
+                'deployment' => $operation,
+                'deployment_date' => now()->subMonths($index + 1)->toDateString(),
+            ]));
+        }
+        $alsoDeployed->deployments()->create($this->payload());
+
+        $trainings = \App\Http\Controllers\Admin\SuperAdmin\MonitoringController::completedTrainings([])->get();
+        $summary = \App\Http\Controllers\Admin\SuperAdmin\MonitoringController::summary($trainings);
+
+        $this->assertSame(2, $summary['deployed']);
+        $this->assertGreaterThan(0, $summary['graduates']);
+
+        $points = \App\Http\Controllers\Admin\SuperAdmin\MonitoringController::mapPoints($trainings);
+        $this->assertSame(2, collect($points)->sum('deployed'));
+        $this->assertNotNull($neverDeployed->fresh());
+    }
+
+    public function test_the_deployed_count_is_zero_when_nobody_has_been_sent_out(): void
+    {
+        $this->graduate();
+
+        $trainings = \App\Http\Controllers\Admin\SuperAdmin\MonitoringController::completedTrainings([])->get();
+
+        $this->assertSame(0, \App\Http\Controllers\Admin\SuperAdmin\MonitoringController::summary($trainings)['deployed']);
     }
 }

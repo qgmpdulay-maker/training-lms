@@ -107,6 +107,20 @@ class ToolsController extends Controller
         ]);
     }
 
+    /**
+     * Blank Training Needs Assessment for agencies that can't (or would rather
+     * not) fill it in online — print, complete by hand, return to the Regional
+     * Office. Deliberately generic: the real per-LGU templates are still to
+     * come from CDTI, so this mirrors the online form's sections rather than
+     * inventing content for participant types that aren't mapped yet.
+     */
+    public function downloadTnaTemplate(): Response
+    {
+        return Pdf::loadView('pdf.tna-template')
+            ->setPaper('a4', 'portrait')
+            ->download('training-needs-assessment-form.pdf');
+    }
+
     public function downloadAtarTemplate(): Response
     {
         return Pdf::loadView('pdf.atar-template')

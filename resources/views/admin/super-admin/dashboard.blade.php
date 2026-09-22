@@ -253,6 +253,78 @@
             }
 
             const mostNeededTrainings = chartData.mostNeededTrainings;
+            // Requested vs Accomplished — running totals, so the two lines
+            // only ever climb and the gap between them is the backlog.
+            const rva = chartData.requestedVsAccomplished || [];
+            const rvaEl = document.getElementById('dashRequestedVsAccomplishedChart');
+            if (rvaEl && rva.length) {
+                dashboardChartInstances.push(new Chart(rvaEl, {
+                    type: 'bar',
+                    data: {
+                        labels: rva.map(row => row.month),
+                        datasets: [
+                            { label: 'Requested (cumulative)', data: rva.map(row => row.requested), backgroundColor: brandNavy, borderRadius: 4 },
+                            { label: 'Accomplished (cumulative)', data: rva.map(row => row.accomplished), backgroundColor: brandOrange, borderRadius: 4 },
+                        ],
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                    },
+                }));
+            }
+
+            const categoryComparison = chartData.categoryComparison || [];
+            const categoryEl = document.getElementById('dashCategoryComparisonChart');
+            if (categoryEl && categoryComparison.length) {
+                dashboardChartInstances.push(new Chart(categoryEl, {
+                    type: 'bar',
+                    data: {
+                        labels: categoryComparison.map(row => row.label),
+                        datasets: [
+                            // Separate axes: graduates outnumber trainings by
+                            // roughly 17x, so on one scale the training bars
+                            // would be invisible.
+                            { label: 'Trainings', data: categoryComparison.map(row => row.trainings), backgroundColor: brandNavy, borderRadius: 4, yAxisID: 'y' },
+                            { label: 'Graduates', data: categoryComparison.map(row => row.graduates), backgroundColor: brandOrange, borderRadius: 4, yAxisID: 'y1' },
+                        ],
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: {
+                            y: { beginAtZero: true, position: 'left', ticks: { precision: 0 }, title: { display: true, text: 'Trainings' } },
+                            y1: { beginAtZero: true, position: 'right', ticks: { precision: 0 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Graduates' } },
+                        },
+                    },
+                }));
+            }
+
+            const trend = chartData.threeYearTrend || { years: [], trainings: [] };
+            const trendEl = document.getElementById('dashThreeYearTrendChart');
+            if (trendEl && trend.trainings.length) {
+                const trendColours = [brandNavy, brandBlue, brandOrange];
+                dashboardChartInstances.push(new Chart(trendEl, {
+                    type: 'bar',
+                    data: {
+                        labels: trend.trainings.map(row => row.training),
+                        datasets: trend.years.map((year, index) => ({
+                            label: String(year),
+                            data: trend.trainings.map(row => row.graduates[index]),
+                            backgroundColor: trendColours[index % trendColours.length],
+                            borderRadius: 4,
+                        })),
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+                    },
+                }));
+            }
+
             const mostNeededChartEl = document.getElementById('dashMostNeededTrainingsChart');
             if (mostNeededChartEl && mostNeededTrainings.length) {
                 dashboardChartInstances.push(new Chart(mostNeededChartEl, {

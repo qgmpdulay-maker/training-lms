@@ -89,6 +89,36 @@
             <p class="text-sm text-gray-400 dark:text-gray-500">{{ $year === 'all' ? __('No completed trainings yet.') : __('No completed trainings for :year.', ['year' => $year]) }}</p>
         @endif
     </x-chart-card>
+    {{-- Replaces the old request-pipeline chart: TA has no targets set against
+         it, so the honest comparison is asked-for against delivered. --}}
+    <x-chart-card :title="__('Requested vs Accomplished')"
+        :subtitle="__('Technical Assistance trainings, running total by month, :region :year.', ['region' => $chartRegionLabel, 'year' => $year === 'all' ? __('(all years)') : $year])">
+        @if (collect($chartData['requestedVsAccomplished'])->sum('requested') > 0)
+            <div class="h-72"><canvas id="dashRequestedVsAccomplishedChart"></canvas></div>
+        @else
+            <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No Technical Assistance trainings on record for this period.') }}</p>
+        @endif
+    </x-chart-card>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <x-chart-card :title="__('APB vs Technical Assistance')"
+            :subtitle="__('Completed trainings and the graduates they produced, :region.', ['region' => $chartRegionLabel])">
+            @if (collect($chartData['categoryComparison'])->sum('trainings') > 0)
+                <div class="h-64"><canvas id="dashCategoryComparisonChart"></canvas></div>
+            @else
+                <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings yet.') }}</p>
+            @endif
+        </x-chart-card>
+        <x-chart-card :title="__('Three-Year Trend')"
+            :subtitle="__('Graduates per training over the last three years, :region — top ten by total.', ['region' => $chartRegionLabel])">
+            @if (count($chartData['threeYearTrend']['trainings']) > 0)
+                <div class="h-64"><canvas id="dashThreeYearTrendChart"></canvas></div>
+            @else
+                <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings in the last three years.') }}</p>
+            @endif
+        </x-chart-card>
+    </div>
+
     <x-chart-card :title="__('Most Needed Trainings')"
         :subtitle="__('What the Training Needs Assessment says participants need most, :region.', ['region' => $chartRegionLabel])">
         @if (count($chartData['mostNeededTrainings']) > 0)

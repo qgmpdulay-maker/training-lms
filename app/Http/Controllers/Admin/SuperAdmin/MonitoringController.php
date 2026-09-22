@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrainingRequest;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -70,6 +71,7 @@ class MonitoringController extends Controller
             'trainings' => $trainings->count(),
             'participants' => $participants,
             'graduates' => $graduates,
+            'deployed' => self::deployedCount($trainings),
             'non_completers' => max($participants - $graduates, 0),
             'teams' => $trainings->sum('teams_organized'),
             'completion_rate' => $participants > 0 ? round($graduates / $participants * 100, 1).'%' : '—',
@@ -139,6 +141,31 @@ class MonitoringController extends Controller
      *
      * @param  Collection<int, TrainingRequest>  $trainings
      */
+    /**
+     * How many distinct graduates of these trainings have since been deployed
+     * to an operation (see Admin\ParticipantDeploymentController).
+     *
+     * Counted per person, not per deployment: someone sent out three times is
+     * one deployed graduate, and someone who attended two of these trainings
+     * is still only counted once.
+     *
+     * @param  Collection<int, TrainingRequest>  $trainings
+     */
+    private static function deployedCount(Collection $trainings): int
+    {
+        if ($trainings->isEmpty()) {
+            return 0;
+        }
+
+        return User::whereHas('deployments')
+            ->where(function ($query) use ($trainings) {
+                $ids = $trainings->pluck('id');
+                $query->whereHas('participatingTrainingRequests', fn ($q) => $q->whereIn('training_requests.id', $ids))
+                    ->orWhereHas('trainingRequests', fn ($q) => $q->whereIn('training_requests.id', $ids));
+            })
+            ->count();
+    }
+
     public static function mapPoints(Collection $trainings): array
     {
         return $trainings
@@ -156,6 +183,7 @@ class MonitoringController extends Controller
                     'longitude' => $first->map_coordinates[1],
                     'trainings' => $rows->count(),
                     'graduates' => $rows->sum(fn (TrainingRequest $t) => $t->graduates),
+                    'deployed' => self::deployedCount($rows),
                     'teams' => $rows->sum('teams_organized'),
                 ];
             })

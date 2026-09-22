@@ -52,11 +52,12 @@
     </x-chart-card>
 
     <!-- Regional Performance stat cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
         @foreach ([
             ['label' => 'Trainings Conducted', 'value' => $monitoringSummary['trainings'], 'hint' => null, 'accent' => '#2a78d6'],
             ['label' => 'Total Participants', 'value' => $monitoringSummary['participants'], 'hint' => $monitoringSummary['non_completers'].' non-completers', 'accent' => '#152A4E'],
             ['label' => 'Graduates', 'value' => $monitoringSummary['graduates'], 'hint' => $monitoringSummary['completion_rate'].' completion', 'accent' => '#0ca30c'],
+            ['label' => 'Deployed', 'value' => $monitoringSummary['deployed'], 'hint' => 'graduates sent to operations', 'accent' => '#b45309'],
             ['label' => 'LGUs Covered', 'value' => $monitoringSummary['lgus'], 'hint' => null, 'accent' => '#03055A'],
             ['label' => 'NGAs Covered', 'value' => $monitoringSummary['ngas'], 'hint' => null, 'accent' => '#E2762D'],
         ] as $card)
@@ -158,6 +159,7 @@
                             <th class="py-2 pr-4">{{ __('Region') }}</th>
                             <th class="py-2 pr-4">{{ __('Trainings') }}</th>
                             <th class="py-2 pr-4">{{ __('Graduates') }}</th>
+                            <th class="py-2 pr-4">{{ __('Deployed') }}</th>
                             <th class="py-2 pr-4">{{ __('Teams') }}</th>
                         </tr>
                     </thead>
@@ -179,6 +181,7 @@
                                 <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $point['region'] }}</td>
                                 <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['trainings'] }}</td>
                                 <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['graduates'] }}</td>
+                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['deployed'] }}</td>
                                 <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['teams'] }}</td>
                             </tr>
                         @endforeach

@@ -115,6 +115,9 @@ class DashboardController extends Controller
         ];
         $graduatesByAgeRange = $this->graduatesByAgeRangeChart($completedForCharts);
         $mostNeededTrainings = $this->mostNeededTrainingsChart($chartRegion);
+        $requestedVsAccomplished = $this->requestedVsAccomplishedChart($chartRegion, $year);
+        $categoryComparison = $this->categoryComparisonChart($chartRegion);
+        $threeYearTrend = $this->threeYearTrendChart($chartRegion);
 
         // Regional Monitoring and the Graduates Map used to be their own tabs —
         // folded into the dashboard so Super Admin has one place to look,
@@ -144,6 +147,9 @@ class DashboardController extends Controller
             'graduatesBySex' => $graduatesBySex,
             'graduatesByAgeRange' => $graduatesByAgeRange,
             'mostNeededTrainings' => $mostNeededTrainings,
+            'requestedVsAccomplished' => $requestedVsAccomplished,
+            'categoryComparison' => $categoryComparison,
+            'threeYearTrend' => $threeYearTrend,
         ];
         $insights = $this->buildInsights(
             statusBreakdown: $statusBreakdown,
@@ -503,6 +509,120 @@ class DashboardController extends Controller
      *
      * @param  Collection<int, TrainingRequest>  $completed
      */
+    /**
+     * Cumulative Requested vs Accomplished for TA trainings across one year.
+     *
+     * Deliberately not a target-vs-actual: Technical Assistance has no targets
+     * set for it, so the honest comparison is how many were asked for against
+     * how many were actually delivered, accumulating month by month. Both
+     * series run on preferred_date, so a training counts in the month it was
+     * scheduled for rather than the month it was filed.
+     *
+     * @return array<int, array{month: string, requested: int, accomplished: int}>
+     */
+    private function requestedVsAccomplishedChart(?string $region, string|int $year): array
+    {
+        $rows = TrainingRequest::query()
+            ->where('category', TrainingRequest::CATEGORY_TA)
+            ->when($region, fn ($q) => $q->where('region', $region))
+            ->when($year !== 'all', fn ($q) => $q->whereYear('preferred_date', $year))
+            ->selectRaw('MONTH(preferred_date) as month_number, count(*) as requested, sum(case when status = ? then 1 else 0 end) as accomplished', [TrainingRequest::STATUS_COMPLETED])
+            ->groupBy('month_number')
+            ->pluck('requested', 'month_number');
+
+        $accomplishedRows = TrainingRequest::query()
+            ->where('category', TrainingRequest::CATEGORY_TA)
+            ->where('status', TrainingRequest::STATUS_COMPLETED)
+            ->when($region, fn ($q) => $q->where('region', $region))
+            ->when($year !== 'all', fn ($q) => $q->whereYear('preferred_date', $year))
+            ->selectRaw('MONTH(preferred_date) as month_number, count(*) as total')
+            ->groupBy('month_number')
+            ->pluck('total', 'month_number');
+
+        $runningRequested = 0;
+        $runningAccomplished = 0;
+
+        return collect(range(1, 12))
+            ->map(function (int $month) use ($rows, $accomplishedRows, &$runningRequested, &$runningAccomplished) {
+                $runningRequested += (int) $rows->get($month, 0);
+                $runningAccomplished += (int) $accomplishedRows->get($month, 0);
+
+                return [
+                    'month' => Carbon::create(null, $month)->format('M'),
+                    'requested' => $runningRequested,
+                    'accomplished' => $runningAccomplished,
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * APB against TA on the two measures that matter: how many trainings were
+     * run, and how many people graduated from them.
+     *
+     * @return array<int, array{label: string, trainings: int, graduates: int}>
+     */
+    private function categoryComparisonChart(?string $region): array
+    {
+        // Aliased graduates_total, not graduates: TrainingRequest has a
+        // `graduates` accessor, which would shadow the alias and resolve to 0
+        // because the columns it adds up aren't selected here.
+        $rows = TrainingRequest::completed()
+            ->when($region, fn ($q) => $q->where('region', $region))
+            ->selectRaw('category, count(*) as trainings, sum(graduates_male + graduates_female) as graduates_total')
+            ->groupBy('category')
+            ->get()
+            ->keyBy('category');
+
+        return collect(TrainingRequest::$categoryLabels)
+            ->map(fn (string $label, string $category) => [
+                'label' => $label,
+                'trainings' => (int) ($rows[$category]->trainings ?? 0),
+                'graduates' => (int) ($rows[$category]->graduates_total ?? 0),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Graduates per training over the last three years, so a course that is
+     * quietly tailing off is visible next to one that is growing.
+     *
+     * Limited to the ten biggest trainings by three-year total — the catalog is
+     * long enough that plotting all of them is unreadable.
+     *
+     * @return array{years: array<int, int>, trainings: array<int, array{training: string, graduates: array<int, int>}>}
+     */
+    private function threeYearTrendChart(?string $region): array
+    {
+        $years = collect(range(now()->year - 2, now()->year));
+
+        $rows = TrainingRequest::completed()
+            ->when($region, fn ($q) => $q->where('region', $region))
+            ->whereYear('preferred_date', '>=', $years->first())
+            ->selectRaw('training_title, YEAR(preferred_date) as year, sum(graduates_male + graduates_female) as graduates_total')
+            ->groupBy('training_title', 'year')
+            ->get();
+
+        $byTraining = $rows->groupBy('training_title')
+            ->map(fn (Collection $group) => $years
+                ->map(fn (int $year) => (int) ($group->firstWhere('year', $year)->graduates_total ?? 0))
+                ->all())
+            ->sortByDesc(fn (array $graduates) => array_sum($graduates))
+            ->take(10);
+
+        return [
+            'years' => $years->all(),
+            'trainings' => $byTraining
+                ->map(fn (array $graduates, string $training) => [
+                    'training' => $training,
+                    'graduates' => $graduates,
+                ])
+                ->values()
+                ->all(),
+        ];
+    }
+
     private function graduatesByAgeRangeChart(Collection $completed): array
     {
         return [
