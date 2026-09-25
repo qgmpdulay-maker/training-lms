@@ -296,11 +296,12 @@
                                     this.searchResults = [];
                                     return;
                                 }
-                                {{-- Js::from() writes the region as a safely escaped JavaScript string. --}}
-                                const params = new URLSearchParams({ region: {{ Js::from($record->region ?? '') }}, q: this.participantSearch });
-                                fetch('{{ route('admin.trainings.participants') }}?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                                {{-- Searches every region, same as Schedule Training: a training's participants aren't tied to its own region. --}}
+                                const params = new URLSearchParams({ q: this.participantSearch });
+                                fetch('{{ route('admin.trainings.participants') }}?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
                                     .then(response => response.json())
-                                    .then(data => this.searchResults = data);
+                                    {{-- The endpoint is paginated, so the matches are under `data`. --}}
+                                    .then(page => this.searchResults = page.data ?? []);
                             },
                         }">
                         <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Participants') }}</h2>
@@ -331,7 +332,7 @@
                                     class="flex items-center w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <span class="text-sm">
                                         <span class="font-medium text-gray-800 dark:text-gray-100" x-text="result.name"></span>
-                                        <span class="text-gray-400" x-text="result.organization ? ' — ' + result.organization : ''"></span>
+                                        <span class="text-gray-400" x-text="[result.organization, result.region].filter(Boolean).map(v => ' — ' + v).join('')"></span>
                                     </span>
                                 </button>
                             </template>

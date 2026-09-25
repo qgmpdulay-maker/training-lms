@@ -302,7 +302,7 @@
                             </div>
                             <div class="space-y-5">
                                 <div>
-                                    <label for="email" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Work Email') }}</label>
+                                    <label for="email" class="block font-medium text-gray-700 mb-1.5 field-label">{{ __('Email') }}</label>
                                     <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="username"
                                         class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] px-4 field-input">
                                     <x-input-error :messages="$errors->get('email')" class="mt-1" />

@@ -15,6 +15,10 @@ export default {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
+            // Views use bg-[#152A4E]/8 for soft navy tints; 8 isn't in Tailwind's default opacity scale.
+            opacity: {
+                8: '0.08',
+            },
         },
     },
 
