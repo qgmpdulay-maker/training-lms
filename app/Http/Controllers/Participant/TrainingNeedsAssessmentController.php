@@ -29,7 +29,7 @@ class TrainingNeedsAssessmentController extends Controller
             return $this->lguIndex();
         }
 
-        if ($user->participant_type === 'Volunteers') {
+        if ($user->participant_type === 'Volunteer') {
             return $this->volunteerIndex();
         }
 

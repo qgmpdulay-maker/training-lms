@@ -33,7 +33,7 @@ Details that matter:
   else picks a region directly and gives a city.
 - **Participant type** is one of ~22 options listed in
   `resources/views/auth/register.blade.php` (Academe, LGU, N&RDRRMC,
-  Volunteers, Barangay, CSOs/NGOs, OCD Personnel, …). It determines which TNA
+  Volunteer, Barangay, CSOs/NGOs, OCD Personnel, …). It determines which TNA
   form the user gets.
 
 ## 2. Training lifecycle
@@ -199,7 +199,7 @@ graduate accumulates a deployment *history* rather than a single label.
 | `Academe` | Academe TNA (`config/tna_academe.php`) |
 | `N&RDRRMC` | N&RDRRMC TNA (`config/tna_nrdrrmc.php`) |
 | `LGU` | LGU TNA (`config/tna_lgu.php`) — includes team fact-sheet uploads |
-| `Volunteers` | Volunteer TNA (`config/tna_volunteer.php`) — includes asset/equipment uploads |
+| `Volunteer` | Volunteer TNA (`config/tna_volunteer.php`) — includes asset/equipment uploads |
 | everything else | Generic scored questionnaire that recommends a catalog training |
 
 The generic path scores answers by category and writes the winning

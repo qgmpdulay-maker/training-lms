@@ -89,7 +89,7 @@
                     'Farmers and Landless Rural Workers', 'GOCC', 'Humanitarian',
                     'Indigenous Peoples', 'Informal Sector', 'LGU', 'Local Chief Executive',
                     'Municipal Government', 'N&RDRRMC', 'National Government', 'OCD Personnel',
-                    'Others', 'Persons with Disabilities', 'Private Sector', 'Volunteers',
+                    'Others', 'Persons with Disabilities', 'Private Sector', 'Volunteer',
                 ] as $type)
                     <option value="{{ $type }}" {{ strcasecmp((string) $user->participant_type, $type) === 0 ? 'selected' : '' }}>
                         {{ $type }}
