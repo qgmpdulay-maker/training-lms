@@ -6,6 +6,12 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * Participants can edit only their name, age, sex, and picture. Email,
+ * participant type, organization, agency, and region are locked on the
+ * profile form (see ProfileUpdateRequest), and there's no self-service
+ * account deletion.
+ */
 class ProfileTest extends TestCase
 {
     use RefreshDatabase;
@@ -29,7 +35,8 @@ class ProfileTest extends TestCase
             ->actingAs($user)
             ->patch('/profile', [
                 'name' => 'Test User',
-                'email' => 'test@example.com',
+                'age' => 34,
+                'sex' => 'Female',
             ]);
 
         $response
@@ -39,61 +46,51 @@ class ProfileTest extends TestCase
         $user->refresh();
 
         $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->assertEquals(34, $user->age);
+        $this->assertSame('Female', $user->sex);
     }
 
-    public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->patch('/profile', [
-                'name' => 'Test User',
-                'email' => $user->email,
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
-
-        $this->assertNotNull($user->refresh()->email_verified_at);
-    }
-
-    public function test_user_can_delete_their_account(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->delete('/profile', [
-                'password' => 'password',
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
-
-        $this->assertGuest();
-        $this->assertNull($user->fresh());
-    }
-
-    public function test_correct_password_must_be_provided_to_delete_account(): void
+    public function test_name_age_and_sex_are_required(): void
     {
         $user = User::factory()->create();
 
         $response = $this
             ->actingAs($user)
             ->from('/profile')
-            ->delete('/profile', [
-                'password' => 'wrong-password',
+            ->patch('/profile', []);
+
+        $response
+            ->assertSessionHasErrors(['name', 'age', 'sex'])
+            ->assertRedirect('/profile');
+    }
+
+    public function test_locked_fields_are_ignored_when_submitted(): void
+    {
+        $user = User::factory()->create();
+        $locked = ['email', 'participant_type', 'organization', 'agency', 'region', 'role'];
+        $before = $user->fresh()->only($locked);
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile', [
+                'name' => $user->name,
+                'age' => $user->age,
+                'sex' => $user->sex,
+                'email' => 'someone-else@example.com',
+                'participant_type' => 'OCD Personnel',
+                'organization' => 'Some Other Organization',
+                'agency' => 'Some Other Agency',
+                'region' => $user->region === 'NCR' ? 'CAR' : 'NCR',
+                'role' => User::ROLE_SUPER_ADMIN,
             ]);
 
         $response
-            ->assertSessionHasErrorsIn('userDeletion', 'password')
+            ->assertSessionHasNoErrors()
             ->assertRedirect('/profile');
 
-        $this->assertNotNull($user->fresh());
+        $user->refresh();
+
+        $this->assertSame($before, $user->only($locked));
+        $this->assertNotNull($user->email_verified_at);
     }
 }
