@@ -124,6 +124,44 @@
         const brandBlue = '#3B4FA8';
         let dashboardChartInstances = [];
 
+        // Three-Year Trend line colours: the first six slots of a
+        // colour-blind-checked categorical palette, stepped separately for the
+        // light and dark card surfaces (white / gray-800). Each slot also has
+        // its own marker shape, so colour is never the only way to tell two
+        // lines apart. Six is also the cap on how many can be compared at once.
+        const TREND_COLOURS_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
+        const TREND_COLOURS_DARK = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300'];
+        const TREND_MARKERS = [
+            { style: 'circle', rotation: 0 },
+            { style: 'rect', rotation: 0 },
+            { style: 'triangle', rotation: 0 },
+            { style: 'rectRot', rotation: 0 },
+            { style: 'triangle', rotation: 180 },
+            { style: 'rectRounded', rotation: 0 },
+        ];
+        const TREND_MAX = TREND_COLOURS_LIGHT.length;
+        // Training names currently compared, kept across filter changes.
+        let trendSelection = null;
+
+        // One row of the Three-Year Trend "View as table" — built from DOM
+        // nodes rather than an HTML string, since training names are data.
+        function trendTableRow(row, colour) {
+            const tr = document.createElement('tr');
+            const name = document.createElement('td');
+            name.className = 'py-2 pr-4 text-gray-700 dark:text-gray-200';
+            const swatch = document.createElement('span');
+            swatch.className = 'inline-block w-2.5 h-2.5 rounded-full mr-2 align-middle';
+            swatch.style.background = colour;
+            name.append(swatch, row.training);
+            tr.append(name, ...row.graduates.map((value) => {
+                const td = document.createElement('td');
+                td.className = 'py-2 pr-4 text-right tabular-nums text-gray-600 dark:text-gray-300';
+                td.textContent = value;
+                return td;
+            }));
+            return tr;
+        }
+
         function renderDashboardCharts(chartData) {
             dashboardChartInstances.forEach((chart) => chart.destroy());
             dashboardChartInstances = [];
@@ -212,47 +250,137 @@
                 });
             }
 
-            // One training at a time. The dropdown lives in the card header
-            // and swaps the dataset in place — no refetch, since every
-            // training's three-year figures are already here.
+            // Three-Year Trend: a line per ticked training. A training keeps
+            // its colour and marker for as long as it stays ticked, so
+            // unticking one never repaints the others.
             const trend = chartData.threeYearTrend || { years: [], trainings: [] };
             const trendEl = document.getElementById('dashThreeYearTrendChart');
-            const trendPicker = document.getElementById('trend_training');
             if (trendEl && trend.trainings.length) {
-                const trendColours = [brandNavy, brandBlue, brandOrange];
-                const trendChart = new Chart(trendEl, {
-                    type: 'bar',
-                    data: {
-                        labels: trend.years.map(String),
-                        datasets: [{
-                            label: trend.trainings[0].training,
-                            data: trend.trainings[0].graduates,
-                            backgroundColor: trend.years.map((year, i) => trendColours[i % trendColours.length]),
-                            borderRadius: 4,
-                        }],
+                const dark = document.documentElement.classList.contains('dark');
+                const colours = dark ? TREND_COLOURS_DARK : TREND_COLOURS_LIGHT;
+                const surface = dark ? '#1f2937' : '#ffffff';
+                const boxes = [...document.querySelectorAll('.trend-training-option')];
+                const label = document.getElementById('trendSelectionLabel');
+                const table = document.getElementById('dashThreeYearTrendTable');
+
+                // Changing a dashboard filter re-renders this card; tick the
+                // same trainings again where they're still in the results.
+                if (boxes.length && trendSelection) {
+                    const kept = boxes.filter((box) => trendSelection.includes(trend.trainings[Number(box.value)].training));
+                    if (kept.length) {
+                        boxes.forEach((box) => { box.checked = kept.includes(box); });
+                    }
+                }
+
+                // With the Training filter set there's no checklist, just the one training.
+                const picked = () => boxes.length
+                    ? boxes.filter((box) => box.checked).map((box) => Number(box.value))
+                    : [0];
+
+                const slotOf = new Map();
+                const assignSlots = (indexes) => {
+                    [...slotOf.keys()].forEach((i) => {
+                        if (!indexes.includes(i)) {
+                            slotOf.delete(i);
+                        }
+                    });
+                    indexes.forEach((i) => {
+                        if (!slotOf.has(i)) {
+                            const used = new Set(slotOf.values());
+                            slotOf.set(i, colours.findIndex((colour, slot) => !used.has(slot)));
+                        }
+                    });
+                };
+
+                const datasetFor = (i) => {
+                    const slot = slotOf.get(i);
+                    return {
+                        label: trend.trainings[i].training,
+                        data: trend.trainings[i].graduates,
+                        borderColor: colours[slot],
+                        backgroundColor: colours[slot],
+                        borderWidth: 2,
+                        borderCapStyle: 'round',
+                        borderJoinStyle: 'round',
+                        tension: 0,
+                        pointStyle: TREND_MARKERS[slot].style,
+                        pointRotation: TREND_MARKERS[slot].rotation,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointBorderWidth: 2,
+                        pointBorderColor: surface,
+                        pointHoverBorderColor: surface,
+                    };
+                };
+
+                // A faint vertical guide at the year being hovered.
+                const crosshair = {
+                    id: 'trendCrosshair',
+                    beforeDatasetsDraw(chart) {
+                        const active = chart.tooltip ? chart.tooltip.getActiveElements() : [];
+                        if (!active.length) {
+                            return;
+                        }
+                        const { ctx, chartArea } = chart;
+                        ctx.save();
+                        ctx.strokeStyle = dark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(21, 42, 78, 0.2)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(active[0].element.x, chartArea.top);
+                        ctx.lineTo(active[0].element.x, chartArea.bottom);
+                        ctx.stroke();
+                        ctx.restore();
                     },
+                };
+
+                const trendChart = new Chart(trendEl, {
+                    type: 'line',
+                    data: { labels: trend.years.map(String), datasets: [] },
                     options: {
                         maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
                         plugins: {
-                            legend: { display: false },
-                            tooltip: { callbacks: { title: (items) => items[0].label } },
+                            legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 16 } },
+                            tooltip: { usePointStyle: true, itemSort: (a, b) => b.parsed.y - a.parsed.y },
                         },
-                        scales: { y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'Graduates' } } },
+                        scales: {
+                            x: { offset: true, grid: { display: false } },
+                            y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'Graduates' } },
+                        },
                     },
+                    plugins: [crosshair],
                 });
                 dashboardChartInstances.push(trendChart);
 
-                if (trendPicker) {
-                    trendPicker.addEventListener('change', function () {
-                        const row = trend.trainings[Number(this.value)];
-                        if (!row) {
-                            return;
-                        }
-                        trendChart.data.datasets[0].label = row.training;
-                        trendChart.data.datasets[0].data = row.graduates;
-                        trendChart.update();
-                    });
-                }
+                const sync = () => {
+                    const indexes = picked();
+                    assignSlots(indexes);
+                    trendChart.data.datasets = indexes.map(datasetFor);
+                    // One line needs no legend — the card title names it.
+                    trendChart.options.plugins.legend.display = indexes.length > 1;
+                    trendChart.update();
+
+                    boxes.forEach((box) => { box.disabled = !box.checked && indexes.length >= TREND_MAX; });
+                    if (label) {
+                        label.textContent = indexes.length === 1 ? '1 training' : indexes.length + ' trainings';
+                    }
+                    if (boxes.length) {
+                        trendSelection = indexes.map((i) => trend.trainings[i].training);
+                    }
+                    if (table) {
+                        table.replaceChildren(...indexes.map((i) => trendTableRow(trend.trainings[i], colours[slotOf.get(i)])));
+                    }
+                };
+
+                boxes.forEach((box) => box.addEventListener('change', () => {
+                    // Always keep at least one line on the chart.
+                    if (!box.checked && picked().length === 0) {
+                        box.checked = true;
+                        return;
+                    }
+                    sync();
+                }));
+                sync();
             }
 
             const mostNeededChartEl = document.getElementById('dashMostNeededTrainingsChart');

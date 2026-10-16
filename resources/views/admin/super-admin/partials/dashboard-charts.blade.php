@@ -77,26 +77,71 @@
         @endif
     </x-chart-card>
 
-    {{-- One training at a time, chosen from the header dropdown. Plotting all
-         28 at once left each bar a few pixels tall and clipped the longer
-         titles; the switch is client-side because every training's figures are
-         already in the payload. With the dashboard's Training filter set
-         there's only that one training, so the dropdown goes away. --}}
+    {{-- A line per training, so several can be compared at once. Trainings
+         are ticked in the checklist in the header — up to six, past which the
+         lines stop being easy to tell apart — and the busiest three start
+         ticked. Ticking happens in the browser, since every training's figures
+         are already in the payload (see renderDashboardCharts() in
+         dashboard.blade.php). With the dashboard's Training filter set there's
+         only that one training, so the checklist goes away. --}}
+    @php
+        $trendTrainings = $chartData['threeYearTrend']['trainings'];
+        $trendYears = $chartData['threeYearTrend']['years'];
+    @endphp
     <x-chart-card :title="__('Three-Year Trend')"
-        :subtitle="__('Graduates for one training, :first–:last, :region.', ['first' => $chartData['threeYearTrend']['years'][0], 'last' => last($chartData['threeYearTrend']['years']), 'region' => $chartRegionLabel])">
-        @if (count($chartData['threeYearTrend']['trainings']) > 1)
+        :subtitle="count($trendTrainings) > 1
+            ? __('Graduates per training, :first–:last, :region. Tick up to six trainings to compare.', ['first' => $trendYears[0], 'last' => last($trendYears), 'region' => $chartRegionLabel])
+            : __('Graduates, :first–:last, :region.', ['first' => $trendYears[0], 'last' => last($trendYears), 'region' => $chartRegionLabel])">
+        @if (count($trendTrainings) > 1)
             <x-slot:action>
-                <label for="trend_training" class="sr-only">{{ __('Training') }}</label>
-                <select id="trend_training"
-                    class="max-w-[16rem] rounded-md border-transparent bg-white text-[#152A4E] text-sm font-semibold py-1.5 focus:border-white focus:ring-2 focus:ring-white/60">
-                    @foreach ($chartData['threeYearTrend']['trainings'] as $index => $row)
-                        <option value="{{ $index }}">{{ $row['training'] }}</option>
-                    @endforeach
-                </select>
+                <div x-data="{ open: false, alignLeft: false }" class="relative" @keydown.escape.window="open = false">
+                    <button type="button" @click="alignLeft = $el.getBoundingClientRect().right < 340; open = !open" :aria-expanded="open.toString()" aria-haspopup="true"
+                        class="inline-flex items-center gap-2 rounded-md bg-white text-[#152A4E] text-sm font-semibold py-1.5 pl-3 pr-2 focus:outline-none focus:ring-2 focus:ring-white/60">
+                        <span id="trendSelectionLabel">{{ __('Compare trainings') }}</span>
+                        <svg class="w-4 h-4 text-gray-400 transition-transform duration-150" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    </button>
+                    <div x-show="open" x-cloak @click.outside="open = false" :class="alignLeft ? 'left-0' : 'right-0'"
+                        class="absolute z-20 mt-1.5 w-80 max-w-[calc(100vw-3rem)] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">
+                        <div class="flex items-center justify-between gap-3 px-3 pt-2.5 pb-1.5">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Tick up to 6 to compare') }}</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{{ __('Graduates') }}</p>
+                        </div>
+                        <div class="max-h-56 overflow-y-auto px-1.5 pb-1.5 space-y-0.5">
+                            @foreach ($trendTrainings as $index => $row)
+                                <label class="flex items-start gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/60 text-sm text-gray-700 dark:text-gray-200 cursor-pointer has-[:disabled]:opacity-50 has-[:disabled]:cursor-not-allowed">
+                                    <input type="checkbox" value="{{ $index }}" @checked($index < 3)
+                                        class="trend-training-option mt-0.5 rounded border-gray-300 dark:border-gray-600 text-[#152A4E] focus:ring-[#152A4E] disabled:cursor-not-allowed">
+                                    <span class="min-w-0">{{ $row['training'] }}</span>
+                                    <span class="ml-auto shrink-0 text-xs text-gray-400 tabular-nums">{{ array_sum($row['graduates']) }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
             </x-slot:action>
         @endif
-        @if (count($chartData['threeYearTrend']['trainings']) > 0)
-            <div class="h-64"><canvas id="dashThreeYearTrendChart"></canvas></div>
+        @if (count($trendTrainings) > 0)
+            <div class="h-72"><canvas id="dashThreeYearTrendChart"></canvas></div>
+
+            {{-- The same figures as text, for anyone who can't tell the line colours apart. --}}
+            <details class="mt-4">
+                <summary class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white cursor-pointer select-none">{{ __('View as table') }}</summary>
+                <div class="overflow-x-auto mt-3">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                <th class="py-2 pr-4">{{ __('Training') }}</th>
+                                @foreach ($trendYears as $trendYear)
+                                    <th class="py-2 pr-4 text-right">{{ $trendYear }}</th>
+                                @endforeach
+                            </tr>
+                        </thead>
+                        <tbody id="dashThreeYearTrendTable" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                    </table>
+                </div>
+            </details>
         @else
             <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings in these three years.') }}</p>
         @endif
