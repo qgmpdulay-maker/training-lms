@@ -62,30 +62,24 @@
 
                 @include('admin.partials.performance-stat-cards', ['summary' => $monitoringSummary])
 
-                {{-- The same map as the standalone Graduates Map page (shared
-                     partial), drawn around this admin's own region only. --}}
+                {{-- Graduates by city, by where each graduate lives — the same map as
+                     the Super Admin dashboard, with this admin's region outlined. --}}
                 <x-chart-card :title="__('Graduates by Location')"
                     :subtitle="$filters['training_title']
-                        ? __(':training only — :graduates across :locations.', [
+                        ? __(':training only — :graduates across :cities.', [
                             'training' => $filters['training_title'],
                             'graduates' => trans_choice(':count graduate|:count graduates', $monitoringSummary['graduates'], ['count' => $monitoringSummary['graduates']]),
-                            'locations' => trans_choice(':count location|:count locations', count($mapPoints), ['count' => count($mapPoints)]),
+                            'cities' => trans_choice(':count city|:count cities', count($cityTotals['cities']), ['count' => count($cityTotals['cities'])]),
                         ])
                         : null"
                     body-class="pt-4">
 
-                    @if (count($mapPoints) === 0)
+                    @if ($monitoringSummary['trainings'] === 0)
                         <div class="mx-6 mb-6 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
                             {{ $hasFilters ? __('No completed trainings match these filters yet.') : __('No completed trainings in your region yet.') }}
                         </div>
                     @else
-                        @include('admin.partials.graduates-map', [
-                            'mapId' => 'dashGraduatesMap',
-                            'height' => 480,
-                            'points' => $mapPoints,
-                            'regionDeployed' => $regionDeployed,
-                            'onlyRegion' => $region,
-                        ])
+                        @include('admin.partials.city-map', ['mapId' => 'dashboardCityMap', 'cityTotals' => $cityTotals, 'onlyRegion' => $region])
                     @endif
                 </x-chart-card>
             </div>

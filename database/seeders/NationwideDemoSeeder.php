@@ -90,6 +90,8 @@ class NationwideDemoSeeder extends Seeder
             $this->seedTnaSubmissions($catalog, $participantIdsByRegion);
         });
 
+        $this->call(DemoGraduateCitiesSeeder::class);
+
         $this->command?->info('Nationwide demo data seeded.');
     }
 

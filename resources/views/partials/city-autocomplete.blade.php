@@ -1,9 +1,9 @@
 {{--
     Type-ahead city field, matching the one on participant registration.
 
-    Filters config('cities.list') as you type so the same city is spelled the
-    same way every time. Still accepts free text — the list covers cities but
-    not every municipality, so anything unlisted can just be typed.
+    Filters every Philippine city and municipality (App\Support\CityDirectory)
+    as you type, so the same city is spelled the same way every time and can be
+    placed on the Graduates by Location map. Still accepts free text.
 
     $name / $id / $value / $placeholder / $inputClass are all optional.
 --}}
@@ -19,7 +19,7 @@
     x-data="{
         city: @js($value),
         show: false,
-        cities: {{ Js::from(config('cities.list')) }},
+        cities: {{ Js::from(\App\Support\CityDirectory::labels()) }},
         get matches() {
             const needle = this.city.toLowerCase();
             return this.cities.filter(c => c.toLowerCase().includes(needle)).slice(0, 8);

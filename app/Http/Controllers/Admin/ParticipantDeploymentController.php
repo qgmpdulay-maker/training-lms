@@ -5,19 +5,21 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ParticipantDeployment;
 use App\Models\User;
+use App\Support\CityDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 
 /**
- * Recording where graduates have been deployed after finishing a training.
+ * Recording where graduates have been deployed after finishing a training,
+ * and which city each is counted under on the Graduates by Location map.
  *
- * This is the one thing a Regional Admin may change — everything else about
- * trainings and certificates is Super Admin only (see routes/web.php). The
- * reasoning: regional staff are the ones who actually know which of their
- * graduates got sent to an operation, so they maintain it for their own
- * region. Super Admin can record for any region.
+ * These are the only things a Regional Admin may change — everything else
+ * about trainings and certificates is Super Admin only (see routes/web.php).
+ * The reasoning: regional staff are the ones who actually know which of
+ * their graduates got sent to an operation, and where they're based, so they
+ * maintain it for their own region. Super Admin can do it for any region.
  */
 class ParticipantDeploymentController extends Controller
 {
@@ -40,6 +42,7 @@ class ParticipantDeploymentController extends Controller
             // than paging through graduates who are already accounted for.
             ->when($status === 'deployed', fn ($query) => $query->has('deployments'))
             ->when($status === 'not_deployed', fn ($query) => $query->doesntHave('deployments'))
+            ->when($status === 'no_city', fn ($query) => $this->notOnMap($query))
             ->with(['deployments.recordedBy:id,name'])
             ->orderBy('name')
             ->paginate(10, ['*'], 'graduates')
@@ -83,6 +86,33 @@ class ParticipantDeploymentController extends Controller
         return Redirect::back()->with('status', "Deployment recorded for {$user->name}.");
     }
 
+    /**
+     * Sets the city a graduate is counted under on the Graduates by Location
+     * map — usually where they live. It has to be a city or municipality the
+     * map knows, or they'd still be left off it, so it's saved in the list's
+     * own spelling ("City of Malolos, Bulacan").
+     */
+    public function updateCity(Request $request, User $user): RedirectResponse
+    {
+        $this->authorizeFor($request, $user);
+
+        $validated = $request->validate(['city' => ['required', 'string', 'max:255']]);
+        $city = CityDirectory::match($validated['city'], $user->region);
+
+        if (! $city) {
+            return Redirect::back()
+                ->withErrors(['city' => __('Pick a city or municipality from the list so it can be placed on the map.')], "city_{$user->id}")
+                ->withInput();
+        }
+
+        $user->update(['city' => CityDirectory::label($city)]);
+
+        return Redirect::back()->with('status', __(':name is now counted under :city.', [
+            'name' => $user->name,
+            'city' => CityDirectory::label($city),
+        ]));
+    }
+
     public function destroy(Request $request, ParticipantDeployment $deployment): RedirectResponse
     {
         $deployment->loadMissing('user');
@@ -94,8 +124,31 @@ class ParticipantDeploymentController extends Controller
     }
 
     /**
-     * Deployments are only recorded against graduates, and a Regional Admin
-     * only for their own region.
+     * Graduates the map can't place: no City at all, or one CityDirectory
+     * can't match. Matching happens in PHP, so the distinct City values are
+     * checked once and the misses turned back into a query.
+     */
+    private function notOnMap($query): void
+    {
+        $unmatched = User::graduates()
+            ->whereNotNull('city')
+            ->where('city', '!=', '')
+            ->distinct()
+            ->get(['city', 'region'])
+            ->reject(fn (User $row) => CityDirectory::match($row->city, $row->region));
+
+        $query->where(function ($q) use ($unmatched) {
+            $q->whereNull('city')->orWhere('city', '');
+
+            foreach ($unmatched as $row) {
+                $q->orWhere(fn ($pair) => $pair->where('city', $row->city)->where('region', $row->region));
+            }
+        });
+    }
+
+    /**
+     * Deployments and cities are only recorded against graduates, and a
+     * Regional Admin only for their own region.
      */
     private function authorizeFor(Request $request, ?User $participant): void
     {

@@ -119,7 +119,7 @@
                             city: {{ Js::from(old('city') ?? '') }},
                             region: {{ Js::from(old('region') ?? '') }},
                             showCityOptions: false,
-                            cityRegionMap: {{ Js::from(config('regions.city_region_map')) }},
+                            cityRegionMap: {{ Js::from(\App\Support\CityDirectory::regionsByLabel()) }},
                             pickCity(option) {
                                 this.city = option;
                                 this.showCityOptions = false;
@@ -251,7 +251,7 @@
                                         placeholder="{{ __('Start typing your city...') }}"
                                         class="w-full rounded-lg border-gray-300 focus:border-[#152A4E] focus:ring-[#152A4E] px-4 field-input">
 
-                                    <template x-init="cities = {{ Js::from(config('cities.list')) }}"></template>
+                                    <template x-init="cities = {{ Js::from(\App\Support\CityDirectory::labels()) }}"></template>
 
                                     <ul x-show="showCityOptions && city.length > 0"
                                         x-cloak

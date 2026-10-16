@@ -62,8 +62,7 @@ class DashboardController extends Controller
             'region' => $region,
             'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
             'monitoringSummary' => MonitoringController::summary($completed),
-            'mapPoints' => MonitoringController::mapPoints($completed),
-            'regionDeployed' => MonitoringController::deployedByRegion(MonitoringController::regionalData($completed)),
+            'cityTotals' => MonitoringController::cityTotals($completed),
             'graduatesByLgu' => $this->graduatesByLgu($completed),
             'stats' => [
                 // Instructors aren't tied to a training or a date, so only the
@@ -137,13 +136,11 @@ class DashboardController extends Controller
         // navigation, so the page doesn't reload — see submitDashboardFilter()
         // in dashboard.blade.php. Everything the filters touch lives in one
         // partial, returned here re-rendered along with the data its charts
-        // and map are drawn from.
+        // are drawn from (the map carries its own data in the markup).
         if ($request->ajax()) {
             return response()->json([
                 'body_html' => view('admin.super-admin.partials.dashboard-body', $data)->render(),
                 'chartData' => $chartData,
-                'mapPoints' => $data['mapPoints'],
-                'regionDeployed' => $data['regionDeployed'],
             ]);
         }
 

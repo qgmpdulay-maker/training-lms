@@ -61,10 +61,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/certificates/{certificate}', [CertificateController::class, 'download'])->name('certificates.download');
 });
 
-// Regional Admins see their region's data and change none of it, with a
-// single exception: recording where their graduates have been deployed
-// (the deployments routes below). Every other training and certification
-// write lives in the Super Admin group further down.
+// Regional Admins see their region's data and change none of it, with one
+// exception: their graduates' deployments and city (the deployments routes
+// below). Every other training and certification write lives in the Super
+// Admin group further down.
 Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
@@ -89,12 +89,14 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     // force-scopes a Regional Admin to their own region.
     Route::get('/monitoring/map', [MonitoringController::class, 'map'])->name('monitoring.map');
 
-    // The Regional Admin's one write. Regional staff know which of their
-    // graduates got sent to an operation, so they maintain this for their own
+    // The Regional Admin's only writes. Regional staff know which of their
+    // graduates got sent to an operation, and which city each is based in for
+    // the Graduates by Location map, so they maintain both for their own
     // region; the controller scopes them to it. Graduates only — the
     // controller 404s for anyone who hasn't completed a training.
     Route::get('/deployments', [ParticipantDeploymentController::class, 'index'])->name('deployments.index');
     Route::post('/deployments/{user}', [ParticipantDeploymentController::class, 'store'])->name('deployments.store');
+    Route::post('/deployments/{user}/city', [ParticipantDeploymentController::class, 'updateCity'])->name('deployments.city');
     Route::delete('/deployments/{deployment}', [ParticipantDeploymentController::class, 'destroy'])->name('deployments.destroy');
 });
 

@@ -29,8 +29,8 @@
             <x-chart-card
                 :title="__('Graduate Deployments')"
                 :subtitle="Auth::user()->isAdmin()
-                    ? __('Record where a graduate has been deployed after finishing their training. Showing graduates in :region.', ['region' => Auth::user()->region ?? __('your region')])
-                    : __('Record where a graduate has been deployed after finishing their training.')"
+                    ? __('Record where a graduate has been deployed after finishing their training, and the city they\'re counted under on the dashboard map. Showing graduates in :region.', ['region' => Auth::user()->region ?? __('your region')])
+                    : __('Record where a graduate has been deployed after finishing their training, and the city they\'re counted under on the dashboard map.')"
                 body-class="p-6 sm:p-8">
 
                 <form data-live-form data-live-section="graduates" data-live-target="deployment-graduates"
@@ -56,6 +56,7 @@
                             <option value="">{{ __('All Graduates') }}</option>
                             <option value="not_deployed" @selected($status === 'not_deployed')>{{ __('Not Deployed') }}</option>
                             <option value="deployed" @selected($status === 'deployed')>{{ __('Deployed') }}</option>
+                            <option value="no_city" @selected($status === 'no_city')>{{ __('Not on the Map') }}</option>
                         </select>
                     </div>
                 </form>
@@ -63,6 +64,15 @@
                 <div id="deployment-graduates">
                     @include('admin.partials.deployment-graduates')
                 </div>
+
+                {{-- Suggestions for every graduate's City field, listed once here
+                     rather than inside each one (the list below is swapped in
+                     on every search, and holds 1,600-plus cities). --}}
+                <datalist id="ph-city-options">
+                    @foreach (\App\Support\CityDirectory::labels() as $cityOption)
+                        <option value="{{ $cityOption }}"></option>
+                    @endforeach
+                </datalist>
             </x-chart-card>
 
         </div>
