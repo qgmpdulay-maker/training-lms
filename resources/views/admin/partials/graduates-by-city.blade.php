@@ -6,20 +6,20 @@
     filter, or a Regional Admin's own region; null for every region).
 --}}
 <x-chart-card :title="__('Graduates by City')" body-class="p-6 sm:p-8">
-    <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-        {{ __('Graduates grouped by the city or municipality they live in — the same figures as the Graduates by Location map.') }}
-        {{ __('For the city map on a page of its own, see the') }}
-        <a href="{{ route('admin.monitoring.map', $region ? ['regions' => [$region]] : []) }}" class="font-semibold text-[#152A4E] dark:text-white hover:text-[#E2762D]">{{ __('Graduates Map') }}</a>.
-    </p>
-    <p class="text-xs text-amber-700 dark:text-amber-400 mb-5">
-        {{ __('"Teams Organized" isn\'t shown here since there\'s no team data in the system yet.') }}
-        @if ($cityTotals['unplaced'] > 0)
-            <br>
+    {{-- The only way to the standalone Graduates Map page from the dashboard. --}}
+    <x-slot:action>
+        <a href="{{ route('admin.monitoring.map', $region ? ['regions' => [$region]] : []) }}" class="text-xs font-semibold text-white/70 hover:text-white transition whitespace-nowrap">
+            {{ __('Graduates Map') }} &rarr;
+        </a>
+    </x-slot:action>
+
+    @if ($cityTotals['unplaced'] > 0)
+        <p class="text-xs text-amber-700 dark:text-amber-400 mb-5">
             {{ trans_choice(':count graduate isn\'t listed|:count graduates aren\'t listed', $cityTotals['unplaced'], ['count' => number_format($cityTotals['unplaced'])]) }}
             {{ __('— no City on file, or one that isn\'t a city or municipality we recognise.') }}
             <a href="{{ route('admin.deployments.index', ['status' => 'no_city']) }}" class="font-semibold underline hover:no-underline">{{ __('Set their city') }}</a>
-        @endif
-    </p>
+        </p>
+    @endif
 
     @if (empty($graduatesByCity))
         <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">

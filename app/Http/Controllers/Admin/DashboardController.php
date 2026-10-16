@@ -89,7 +89,6 @@ class DashboardController extends Controller
                 'upcoming_trainings' => $this->upcomingTrainingsCount($filters),
             ],
             'chartData' => $chartData,
-            'scheduledPeriod' => $scheduledStart->format('M Y').' – '.$scheduledEnd->format('M Y'),
             'insights' => $this->buildInsights(
                 statusBreakdown: $statusBreakdown,
                 graduatesByTraining: $graduatesByTraining,

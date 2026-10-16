@@ -15,10 +15,7 @@
 <div class="space-y-6">
     <!-- Filter -->
     <x-chart-card body-class="p-6 sm:p-8"
-        :title="__('Regional Performance & Graduates Map')"
-        :subtitle="$regionLocked
-            ? __(':region only — every training on file is Technical Assistance. These filters apply to the whole dashboard.', ['region' => $region])
-            : __('Every training on file is Technical Assistance. These filters apply to the whole dashboard.')">
+        :title="__('Regional Performance & Graduates Map')">
         @if ($hasFilters)
             <x-slot:action>
                 <a href="{{ route('admin.dashboard') }}" onclick="return submitDashboardFilterReset(event)" class="text-xs font-semibold text-white/70 hover:text-white transition whitespace-nowrap">
@@ -85,14 +82,7 @@
 
     <!-- Map -->
     <x-chart-card body-class="pt-4"
-        :title="__('Graduates by Location')"
-        :subtitle="$filters['training_title']
-            ? __(':training only — :graduates across :cities.', [
-                'training' => $filters['training_title'],
-                'graduates' => trans_choice(':count graduate|:count graduates', $monitoringSummary['graduates'], ['count' => $monitoringSummary['graduates']]),
-                'cities' => trans_choice(':count city|:count cities', count($cityTotals['cities']), ['count' => count($cityTotals['cities'])]),
-            ])
-            : null">
+        :title="__('Graduates by Location')">
 
         @if ($monitoringSummary['trainings'] === 0)
             <div class="mx-6 sm:mx-8 mb-6 sm:mb-8 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">

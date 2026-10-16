@@ -4,21 +4,16 @@
     (see performance.blade.php), and is re-rendered with the rest of
     body.blade.php when it changes.
 --}}
-@php
-    $chartRegionLabel = $region ?: __('every region');
-@endphp
 <div class="grid grid-cols-1 gap-6">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <x-chart-card :title="__('Graduates by Sex')"
-            :subtitle="__('Completed trainings only, :region.', ['region' => $chartRegionLabel])">
+        <x-chart-card :title="__('Graduates by Sex')">
             @if ($chartData['graduatesBySex']['male'] + $chartData['graduatesBySex']['female'] > 0)
                 <div class="h-64 max-w-xs mx-auto"><canvas id="dashGraduatesBySexChart"></canvas></div>
             @else
                 <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings yet.') }}</p>
             @endif
         </x-chart-card>
-        <x-chart-card :title="__('Graduates by Age Range')"
-            :subtitle="__('Completed trainings only, :region.', ['region' => $chartRegionLabel])">
+        <x-chart-card :title="__('Graduates by Age Range')">
             <div class="h-64"><canvas id="dashGraduatesByAgeRangeChart"></canvas></div>
         </x-chart-card>
     </div>
@@ -30,8 +25,7 @@
          the public form was pulled), so the navy bar is trainings this office
          scheduled, not demand coming in from outside. The underlying array
          keys are still requested/accomplished. --}}
-    <x-chart-card :title="__('Scheduled vs Completed')"
-        :subtitle="__('Technical Assistance trainings scheduled against those marked completed, running total by month, :region, :period.', ['region' => $chartRegionLabel, 'period' => $scheduledPeriod])">
+    <x-chart-card :title="__('Scheduled vs Completed')">
         @if (collect($chartData['requestedVsAccomplished'])->sum('requested') > 0)
             <div class="h-72"><canvas id="dashRequestedVsAccomplishedChart"></canvas></div>
         @else
@@ -45,8 +39,7 @@
          graduates draw at the same height — which read as if they were equal.
          The comparison that matters is APB against TA within a measure, not
          trainings against graduates. --}}
-    <x-chart-card :title="__('APB vs Technical Assistance')"
-        :subtitle="__('Completed trainings and the graduates they produced, :region. Each measure has its own scale.', ['region' => $chartRegionLabel])">
+    <x-chart-card :title="__('APB vs Technical Assistance')">
         @if (collect($chartData['categoryComparison'])->sum('trainings') > 0)
             @php $comparison = collect($chartData['categoryComparison']); @endphp
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -88,10 +81,7 @@
         $trendTrainings = $chartData['threeYearTrend']['trainings'];
         $trendYears = $chartData['threeYearTrend']['years'];
     @endphp
-    <x-chart-card :title="__('Three-Year Trend')"
-        :subtitle="count($trendTrainings) > 1
-            ? __('Graduates per training, :first–:last, :region. Tick up to six trainings to compare.', ['first' => $trendYears[0], 'last' => last($trendYears), 'region' => $chartRegionLabel])
-            : __('Graduates, :first–:last, :region.', ['first' => $trendYears[0], 'last' => last($trendYears), 'region' => $chartRegionLabel])">
+    <x-chart-card :title="__('Three-Year Trend')">
         @if (count($trendTrainings) > 1)
             <x-slot:action>
                 <div x-data="{ open: false, alignLeft: false }" class="relative" @keydown.escape.window="open = false">
@@ -147,8 +137,7 @@
         @endif
     </x-chart-card>
 
-    <x-chart-card :title="__('Most Needed Trainings')"
-        :subtitle="__('What the Training Needs Assessment says participants need most, :region.', ['region' => $chartRegionLabel])">
+    <x-chart-card :title="__('Most Needed Trainings')">
         @if (count($chartData['mostNeededTrainings']) > 0)
             <div style="height: {{ max(240, count($chartData['mostNeededTrainings']) * 34) }}px"><canvas id="dashMostNeededTrainingsChart"></canvas></div>
         @else

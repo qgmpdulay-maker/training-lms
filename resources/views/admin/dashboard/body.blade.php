@@ -34,8 +34,7 @@
     <!-- Needs Assessment per LGU / Organization (moved from the Needs Assessment tab) -->
     <x-chart-card id="needs-assessment-by-organization" class="scroll-mt-24"
         body-class="p-6 sm:p-8"
-        :title="__('Needs Assessment per LGU / Organization')"
-        :subtitle="__('Training Needs Assessment submissions grouped by the participant\'s LGU or organization.')">
+        :title="__('Needs Assessment per LGU / Organization')">
 
         @if ($needsAssessmentByOrganization->isEmpty())
             <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">

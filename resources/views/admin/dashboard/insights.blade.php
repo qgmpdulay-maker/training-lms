@@ -4,7 +4,7 @@
     fetchDashboard() in index.blade.php).
 --}}
 @if (count($insights) > 0)
-    <x-chart-card :title="__('Summary & Insights')" :subtitle="__('Auto-generated from the charts above.')">
+    <x-chart-card :title="__('Summary & Insights')">
         <ul class="space-y-3">
             @foreach ($insights as $insight)
                 <li class="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-300">
