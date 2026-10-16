@@ -77,7 +77,7 @@ class DashboardController extends Controller
                     'participantsByCity' => $participantsByCity,
                 ],
                 'graduatesByLocation' => MonitoringController::mapPoints($completed),
-                'regionCenter' => config('regions.geo.'.$user->region, [12.8797, 121.7740]),
+                'regionDeployed' => MonitoringController::deployedByRegion(MonitoringController::regionalData($completed)),
                 'insights' => $this->buildInsights(
                     statusBreakdown: $statusBreakdown,
                     graduatesByTraining: $graduatesByTraining,
@@ -167,6 +167,7 @@ class DashboardController extends Controller
         $monitoringSummary = MonitoringController::summary($monitoringTrainings);
         $regionalHighlights = MonitoringController::regionalHighlights($regionalData);
         $mapPoints = MonitoringController::mapPoints($monitoringTrainings);
+        $regionDeployed = MonitoringController::deployedByRegion($regionalData);
 
         // Every filter control on the dashboard (chart region, year, and the
         // Regional Performance filters) submits via fetch() instead of a plain
@@ -198,6 +199,7 @@ class DashboardController extends Controller
                 ])->render(),
                 'chartData' => $chartData,
                 'mapPoints' => $mapPoints,
+                'regionDeployed' => $regionDeployed,
             ]);
         }
 
@@ -222,6 +224,7 @@ class DashboardController extends Controller
             'regionalData' => $regionalData,
             'regionalHighlights' => $regionalHighlights,
             'mapPoints' => $mapPoints,
+            'regionDeployed' => $regionDeployed,
             'needsAssessmentByOrganization' => $needsAssessmentByOrganization,
             'region' => null,
             'graduatesByLgu' => $this->graduatesByLgu($completed),

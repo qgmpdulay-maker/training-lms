@@ -16,9 +16,10 @@ class MonitoringController extends Controller
      * Reachable by both Regional Admins and Super Admin (see routes/web.php) —
      * a Regional Admin's region filter is force-overridden below rather than
      * merged, so it can't be widened by editing the `regions[]` query string.
-     * Super Admin's own dashboard embeds this same map inline (see
-     * DashboardController) — this standalone page still exists for Regional
-     * Admins' own dashboard link and the Tools page's "Graduates Map" link.
+     * Both dashboards embed this same map inline (see DashboardController;
+     * the Regional Admin one shares its markup via admin.partials.graduates-map)
+     * — this standalone page is still reached from the "Graduates Map" link on
+     * the Graduates by LGU card, and keeps the date and training filters.
      */
     public function map(Request $request): View
     {
@@ -38,6 +39,7 @@ class MonitoringController extends Controller
             'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
             'summary' => static::summary($trainings),
             'mapPoints' => static::mapPoints($trainings),
+            'regionDeployed' => static::deployedByRegion(static::regionalData($trainings)),
         ]);
     }
 
@@ -189,6 +191,21 @@ class MonitoringController extends Controller
             })
             ->sortByDesc('graduates')
             ->values()
+            ->all();
+    }
+
+    /**
+     * Distinct deployed graduates per region, keyed by region name — feeds the
+     * region hover tooltip on the maps. Read off regionalData() rather than
+     * summed from mapPoints() in the browser: points are per agency, so a
+     * graduate who trained under two agencies in the same region would be
+     * counted twice.
+     */
+    public static function deployedByRegion(array $regionalData): array
+    {
+        return collect($regionalData)
+            ->reject(fn (array $row) => $row['label'] === 'Central (All OCDROs)')
+            ->pluck('deployed', 'label')
             ->all();
     }
 }

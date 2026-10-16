@@ -241,4 +241,41 @@ class ParticipantDeploymentTest extends TestCase
 
         $this->assertSame(0, \App\Http\Controllers\Admin\SuperAdmin\MonitoringController::summary($trainings)['deployed']);
     }
+
+    public function test_the_map_region_hover_counts_a_deployed_graduate_once(): void
+    {
+        // Trained under two LGUs in the same region, so the map has two
+        // location points for this person — the region total must still be 1.
+        $graduate = $this->graduate();
+        $first = TrainingRequest::sole();
+        $first->update(['agency_type' => TrainingRequest::AGENCY_TYPE_LGU, 'requesting_agency' => 'Angeles City']);
+        $second = $first->replicate()->fill(['requesting_agency' => 'City of San Fernando']);
+        $second->save();
+        $second->participants()->sync([$graduate->id]);
+        $second->syncGraduateCountsFromParticipants();
+        $graduate->deployments()->create($this->payload());
+
+        $monitoring = \App\Http\Controllers\Admin\SuperAdmin\MonitoringController::class;
+        $trainings = $monitoring::completedTrainings([])->get();
+
+        // Summing these per-point counts is the double count the region total avoids.
+        $this->assertSame([1, 1], collect($monitoring::mapPoints($trainings))->pluck('deployed')->all());
+        // What the Super Admin dashboard passes to its map (the dashboard page
+        // itself uses MySQL's YEAR(), so it can't render under SQLite here).
+        $this->assertSame(['Region III' => 1], $monitoring::deployedByRegion($monitoring::regionalData($trainings)));
+
+        // The standalone Graduates Map — the same partial the Regional Admin
+        // dashboard embeds — drawn around just that admin's region.
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->get(route('admin.monitoring.map'))
+            ->assertOk()
+            ->assertViewHas('regionDeployed', ['Region III' => 1])
+            ->assertSee('const onlyRegion = "Region III";', false);
+
+        // Super Admin's copy of that page still shades every region.
+        $this->actingAs(User::factory()->superAdmin()->create())
+            ->get(route('admin.monitoring.map'))
+            ->assertOk()
+            ->assertSee('const onlyRegion = null;', false);
+    }
 }

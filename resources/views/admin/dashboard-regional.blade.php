@@ -5,12 +5,6 @@
         </h2>
     </x-slot>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-
     <div class="py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             <!-- Welcome Banner -->
@@ -101,27 +95,24 @@
 
                 @include('admin.super-admin.partials.dashboard-atar-charts', ['chartData' => $chartData])
 
+                {{-- The same map as the standalone Graduates Map page (shared
+                     partial), drawn around this admin's own region only. --}}
                 <x-chart-card :title="__('Graduates by Location')"
-                    :subtitle="__('Completed trainings across your region, plotted by LGU / NGA — marker size scales with graduate count.')"
+                    :subtitle="__('Marker size scales with graduate count — hover a marker for its details, or hover anywhere in your region to see its totals.')"
                     body-class="pt-4">
-                    <x-slot:action>
-                        <a href="{{ route('admin.monitoring.map') }}"
-                            class="inline-flex items-center gap-1 text-xs font-semibold text-white hover:text-[#E2762D] transition whitespace-nowrap">
-                            {{ __('View full map & filters') }}
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                            </svg>
-                        </a>
-                    </x-slot:action>
 
                     @if (count($graduatesByLocation) === 0)
                         <div class="mx-6 mb-6 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
                             {{ __('No completed trainings in your region yet.') }}
                         </div>
                     @else
-                        <div class="dash-graduates-map-panel px-3">
-                            <div id="dashGraduatesMap" style="height: 360px; border-radius: 0.5rem;"></div>
-                        </div>
+                        @include('admin.partials.graduates-map', [
+                            'mapId' => 'dashGraduatesMap',
+                            'height' => 480,
+                            'points' => $graduatesByLocation,
+                            'regionDeployed' => $regionDeployed,
+                            'onlyRegion' => $region,
+                        ])
 
                         <div class="overflow-x-auto p-6 pt-4">
                             <table class="min-w-full text-sm">
@@ -130,6 +121,7 @@
                                         <th class="py-2 pr-4">{{ __('LGU / NGA') }}</th>
                                         <th class="py-2 pr-4">{{ __('Trainings') }}</th>
                                         <th class="py-2 pr-4">{{ __('Graduates') }}</th>
+                                        <th class="py-2 pr-4">{{ __('Deployed') }}</th>
                                         <th class="py-2 pr-4">{{ __('Teams') }}</th>
                                     </tr>
                                 </thead>
@@ -152,6 +144,7 @@
                                             </td>
                                             <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['trainings'] }}</td>
                                             <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['graduates'] }}</td>
+                                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['deployed'] }}</td>
                                             <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['teams'] }}</td>
                                         </tr>
                                     @endforeach
@@ -199,117 +192,6 @@
 
         </div>
     </div>
-
-    <style>
-        .dash-graduates-map-panel {
-            background: radial-gradient(ellipse at 50% 40%, #f6f8fc 0%, #e7ecf5 70%);
-            position: relative;
-            isolation: isolate;
-        }
-        .dark .dash-graduates-map-panel {
-            background: radial-gradient(ellipse at 50% 40%, #1c2740 0%, #131b2e 70%);
-        }
-        #dashGraduatesMap {
-            background: transparent;
-        }
-        .dash-graduates-map-panel .leaflet-container {
-            background: transparent !important;
-            outline: none;
-            font-family: inherit;
-        }
-        .dash-graduates-popup .leaflet-popup-content-wrapper {
-            border-radius: 10px;
-            box-shadow: 0 8px 24px rgba(21, 42, 78, 0.18);
-            padding: 2px;
-        }
-        .dash-graduates-popup .leaflet-popup-content {
-            margin: 10px 12px;
-            font-size: 12px;
-            min-width: 160px;
-        }
-        .dash-graduates-popup .leaflet-popup-tip {
-            box-shadow: none;
-        }
-        .dash-graduates-cluster-icon {
-            background: transparent !important;
-            border: none !important;
-        }
-        .dash-graduates-cluster-badge {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 9999px;
-            background: rgba(21, 42, 78, 0.88);
-            color: #fff;
-            font-weight: 700;
-            font-size: 12px;
-            box-shadow: 0 2px 8px rgba(21, 42, 78, 0.35), 0 0 0 3px rgba(255, 255, 255, 0.85);
-        }
-    </style>
-
-    <script>
-        (function () {
-            const points = @json($graduatesByLocation);
-            const center = @json($regionCenter);
-            const map = L.map('dashGraduatesMap', { attributionControl: false, scrollWheelZoom: false }).setView(center, 8);
-
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
-            L.control.attribution({ position: 'bottomright', prefix: false }).addAttribution('&copy; OpenStreetMap contributors').addTo(map);
-
-            const colorFor = (agencyType) => agencyType === 'LGU' ? '#03055A' : (agencyType === 'NGA' ? '#E2762D' : '#0EA5E9');
-
-            const clusterGroup = L.markerClusterGroup({
-                maxClusterRadius: 45,
-                spiderfyOnMaxZoom: true,
-                showCoverageOnHover: false,
-                iconCreateFunction: (cluster) => {
-                    const count = cluster.getChildCount();
-                    const size = count < 10 ? 30 : (count < 50 ? 38 : 46);
-                    return L.divIcon({
-                        html: '<div class="dash-graduates-cluster-badge" style="width:' + size + 'px;height:' + size + 'px;line-height:' + size + 'px;">' + count + '</div>',
-                        className: 'dash-graduates-cluster-icon',
-                        iconSize: L.point(size, size),
-                    });
-                },
-            });
-
-            const bounds = [];
-            points.forEach((point) => {
-                const radius = Math.max(6, Math.min(26, 5 + Math.sqrt(point.graduates)));
-                const marker = L.circleMarker([point.latitude, point.longitude], {
-                    radius,
-                    color: '#fff',
-                    weight: 1.5,
-                    fillColor: colorFor(point.agency_type),
-                    fillOpacity: 0.85,
-                });
-
-                const subtitle = [point.agency_type, point.region].filter(Boolean).join(' · ');
-                marker.bindPopup(
-                    '<div style="font-weight:700;color:#152A4E;letter-spacing:.01em;margin-bottom:2px">' + point.name + '</div>' +
-                    '<div style="color:#6b7280;margin-bottom:6px">' + subtitle + '</div>' +
-                    '<div style="color:#374151">{{ __('Graduates') }}: <strong>' + point.graduates + '</strong></div>' +
-                    '<div style="color:#374151">{{ __('Teams organized') }}: <strong>' + point.teams + '</strong></div>' +
-                    '<div style="color:#374151">{{ __('Trainings') }}: <strong>' + point.trainings + '</strong></div>',
-                    { className: 'dash-graduates-popup', closeButton: false }
-                );
-
-                marker.on('mouseover', function () { this.openPopup(); });
-                marker.on('mouseout', function () { this.closePopup(); });
-
-                clusterGroup.addLayer(marker);
-                bounds.push([point.latitude, point.longitude]);
-            });
-
-            map.addLayer(clusterGroup);
-
-            if (bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [30, 30], maxZoom: 11 });
-            }
-
-            setTimeout(() => map.invalidateSize(), 200);
-        })();
-    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script>

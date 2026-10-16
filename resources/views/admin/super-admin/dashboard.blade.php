@@ -186,7 +186,7 @@
                     document.getElementById('dashboard-insights').innerHTML = data.insights_html;
                     document.getElementById('dashboard-monitoring').innerHTML = data.monitoring_html;
                     renderDashboardCharts(data.chartData);
-                    renderDashboardMap(data.mapPoints);
+                    renderDashboardMap(data.mapPoints, data.regionDeployed);
                     window.history.pushState({}, '', url);
                 })
                 .catch(() => {
@@ -505,7 +505,7 @@
             'Zamboanga Peninsula (Region IX)': 'Region IX',
         };
 
-        function renderDashboardMap(points) {
+        function renderDashboardMap(points, regionDeployed = {}) {
             if (dashboardMapInstance) {
                 dashboardMapInstance.remove();
                 dashboardMapInstance = null;
@@ -557,6 +557,7 @@
                     '<div style="font-weight:700;color:#152A4E;letter-spacing:.01em;margin-bottom:2px">' + point.name + '</div>' +
                     '<div style="color:#6b7280;margin-bottom:6px">' + subtitle + '</div>' +
                     '<div style="color:#374151">' + '{{ __('Graduates') }}: <strong>' + point.graduates + '</strong></div>' +
+                    '<div style="color:#374151">' + '{{ __('Deployed') }}: <strong>' + point.deployed + '</strong></div>' +
                     '<div style="color:#374151">' + '{{ __('Teams organized') }}: <strong>' + point.teams + '</strong></div>' +
                     '<div style="color:#374151">' + '{{ __('Trainings') }}: <strong>' + point.trainings + '</strong></div>',
                     { className: 'dashboard-graduates-popup', closeButton: false }
@@ -580,7 +581,7 @@
                 if (!point.region) {
                     return;
                 }
-                regionTotals[point.region] ??= { graduates: 0, trainings: 0 };
+                regionTotals[point.region] ??= { graduates: 0, trainings: 0, deployed: regionDeployed[point.region] ?? 0 };
                 regionTotals[point.region].graduates += point.graduates;
                 regionTotals[point.region].trainings += point.trainings;
             });
@@ -616,7 +617,7 @@
                         },
                         onEachFeature: (feature, featureLayer) => {
                             const key = dashboardRegionNameMap[feature.properties.REGION] ?? feature.properties.REGION;
-                            const data = regionTotals[key] || { graduates: 0, trainings: 0 };
+                            const data = regionTotals[key] || { graduates: 0, trainings: 0, deployed: 0 };
                             const baseOpacity = opacityFor(data.graduates);
                             const baseWeight = data.graduates ? 1.5 : 1;
                             const baseColor = data.graduates ? REGION_ACCENT : REGION_BORDER_IDLE;
@@ -625,6 +626,7 @@
                                 '<div style="font-size:12px;min-width:150px">' +
                                 '<div style="font-weight:700;color:#152A4E;letter-spacing:.02em;margin-bottom:3px">' + key + '</div>' +
                                 '<div style="color:#6b7280">{{ __('Graduates') }}: <strong style="color:' + REGION_ACCENT + '">' + data.graduates + '</strong></div>' +
+                                '<div style="color:#6b7280">{{ __('Deployed') }}: <strong style="color:' + REGION_ACCENT + '">' + data.deployed + '</strong></div>' +
                                 '<div style="color:#6b7280">{{ __('Trainings') }}: <strong style="color:' + REGION_ACCENT + '">' + data.trainings + '</strong></div>' +
                                 '</div>',
                                 { sticky: true, className: 'dashboard-region-tooltip', direction: 'top' }
@@ -651,6 +653,6 @@
             setTimeout(() => map.invalidateSize(), 200);
         }
 
-        renderDashboardMap(@json($mapPoints));
+        renderDashboardMap(@json($mapPoints), @json((object) $regionDeployed));
     </script>
 </x-app-layout>
