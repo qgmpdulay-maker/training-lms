@@ -135,7 +135,7 @@
 
                 @include('admin.super-admin.partials.dashboard-atar-charts', ['chartData' => $chartData, 'chartRegionLabel' => __('your region')])
 
-                @include('admin.partials.graduates-by-lgu')
+                @include('admin.partials.graduates-by-city')
 
             </div>
 

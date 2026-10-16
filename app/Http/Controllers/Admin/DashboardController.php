@@ -9,6 +9,7 @@ use App\Models\Instructor;
 use App\Models\TrainingNeedsAssessment;
 use App\Models\TrainingRequest;
 use App\Models\User;
+use App\Support\CityDirectory;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -42,9 +43,8 @@ class DashboardController extends Controller
 
         // Every completed training matching the filters, loaded once and
         // shared by the stat cards, the map, and every chart built from
-        // completed trainings. withCount adds a participants_count number per
-        // training instead of loading each participant's row.
-        $completed = MonitoringController::completedTrainings($filters)->withCount('participants')->get();
+        // completed trainings.
+        $completed = MonitoringController::completedTrainings($filters)->get();
 
         $graduatesByTraining = $this->graduatesByTrainingChart($completed);
         $requestsByTraining = $this->requestsByTrainingChart($filters);
@@ -56,14 +56,16 @@ class DashboardController extends Controller
         $graduatesByAgeRange = $this->graduatesByAgeRangeChart($completed);
         $mostNeededTrainings = $this->mostNeededTrainingsChart($filters);
 
+        $cityTotals = MonitoringController::cityTotals($completed);
+
         $shared = [
             'user' => $user,
             'filters' => $filters,
             'region' => $region,
             'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
             'monitoringSummary' => MonitoringController::summary($completed),
-            'cityTotals' => MonitoringController::cityTotals($completed),
-            'graduatesByLgu' => $this->graduatesByLgu($completed),
+            'cityTotals' => $cityTotals,
+            'graduatesByCity' => $this->graduatesByCity($cityTotals, $region),
             'stats' => [
                 // Instructors aren't tied to a training or a date, so only the
                 // region narrows this one.
@@ -696,50 +698,28 @@ class DashboardController extends Controller
     }
 
     /**
-     * Graduates by LGU, grouped by OCD region — when not scoped to one
-     * region, LGUs from different regions can share a name, so a single flat
-     * ranking would blur them together. Moved here from the Tools tab.
+     * The Graduates by Location map's figures as a list for the Graduates by
+     * City card: cities grouped by the region they're in, busiest first. A
+     * city is where the graduate lives (see MonitoringController::cityTotals()),
+     * so a region's tab can hold graduates of another region's trainings —
+     * which is why a Regional Admin's own region is always the first tab.
      *
-     * Regions with completed trainings but none tagged with an LGU still get
-     * an entry (empty `lgus`) rather than being omitted — a region built
-     * entirely from ATAR CSV imports (which deliberately leave `lgu` blank
-     * instead of guessing it from the training title) would otherwise vanish
-     * from this chart as if it had no completed trainings at all.
-     *
-     * Uses the completed trainings index() already loaded, reading each
-     * training's participants_count rather than loading its whole roster.
-     *
-     * @param  Collection<int, TrainingRequest>  $completed  loaded withCount('participants')
-     * @return array<string, array{total: int, lgus: array}>
+     * @return array<string, array{total: int, cities: array<int, array{name: string, province: string, total: int}>}>
      */
-    private function graduatesByLgu(Collection $completed): array
+    private function graduatesByCity(array $cityTotals, ?string $ownRegion): array
     {
-        $byRegion = $completed
-            ->filter(fn (TrainingRequest $r) => filled($r->lgu))
-            ->groupBy(fn (TrainingRequest $r) => $r->region ?: __('Unspecified Region'))
-            ->map(function ($records) {
-                $lgus = $records->groupBy('lgu')
-                    ->map(fn ($lguRecords, $lgu) => [
-                        'lgu' => $lgu,
-                        'total' => $lguRecords->sum(fn (TrainingRequest $r) => max($r->participants_count, 1)),
-                    ])
-                    ->sortByDesc('total')
+        return collect($cityTotals['cities'])
+            ->groupBy(fn (array $city) => CityDirectory::find($city['id'])['region'])
+            ->map(fn (Collection $cities) => [
+                'total' => $cities->sum('graduates'),
+                'cities' => $cities
+                    ->sortByDesc('graduates')
+                    ->map(fn (array $city) => ['name' => $city['name'], 'province' => $city['province'], 'total' => $city['graduates']])
                     ->values()
-                    ->all();
-
-                return [
-                    'total' => array_sum(array_column($lgus, 'total')),
-                    'lgus' => $lgus,
-                ];
-            });
-
-        $regionsWithoutLgu = $completed->pluck('region')->filter()->unique()->diff($byRegion->keys());
-
-        foreach ($regionsWithoutLgu as $regionName) {
-            $byRegion[$regionName] = ['total' => 0, 'lgus' => []];
-        }
-
-        return $byRegion->sortByDesc('total')->all();
+                    ->all(),
+            ])
+            ->sortBy(fn (array $group, string $region) => [$region === $ownRegion ? 0 : 1, -$group['total']])
+            ->all();
     }
 
     /**

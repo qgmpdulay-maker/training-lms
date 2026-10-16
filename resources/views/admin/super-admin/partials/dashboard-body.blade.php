@@ -1,7 +1,7 @@
 {{--
     Every part of the Super Admin dashboard the filters touch: the Regional
     Performance section (which holds the filters themselves), the stat tiles,
-    the charts, the Needs Assessment and Graduates by LGU tables, and the
+    the charts, the Needs Assessment table and Graduates by City card, and the
     insights. Returned whole by DashboardController::index() on each filter
     change so they all stay in step — see fetchDashboard() in
     dashboard.blade.php.
@@ -71,7 +71,7 @@
         @endif
     </x-chart-card>
 
-    @include('admin.partials.graduates-by-lgu')
+    @include('admin.partials.graduates-by-city')
 </div>
 
 <div id="dashboard-insights">
