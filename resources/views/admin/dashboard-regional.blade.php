@@ -143,31 +143,6 @@
                  duplicated, so the two never drift out of sync with each other again. --}}
             @include('admin.super-admin.partials.dashboard-insights')
 
-            <!-- Module Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                @foreach ([
-                    ['title' => 'Summary', 'description' => 'Participant and training records, including status.', 'icon' => 'summary', 'route' => 'admin.summary'],
-                    ['title' => 'Tools', 'description' => 'Graduates list, charts, ATAR, and evaluations.', 'icon' => 'tools', 'route' => 'admin.tools'],
-                    ['title' => 'Instructors', 'description' => 'Instructor roster, deployments, and certificate codes.', 'icon' => 'instructors', 'route' => 'admin.instructors.index'],
-                    ['title' => 'Training Needs Assessment', 'description' => 'Participant self-assessments and recommended trainings.', 'icon' => 'tna', 'route' => 'admin.training-needs-assessment'],
-                    ['title' => 'Calendar', 'description' => 'Your region\'s scheduled trainings.', 'icon' => 'calendar', 'route' => 'admin.calendar'],
-                ] as $module)
-                    <a href="{{ route($module['route']) }}"
-                        class="group bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-7 hover:border-[#E2762D]/50 hover:shadow-md transition">
-                        <div class="flex items-start justify-between mb-4">
-                            <div class="h-11 w-11 rounded-lg bg-[#E2762D]/10 dark:bg-[#E2762D]/20 flex items-center justify-center text-[#E2762D]">
-                                @include('admin.partials.icon', ['name' => $module['icon']])
-                            </div>
-                            <svg class="w-4 h-4 text-gray-300 dark:text-gray-600 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-[#E2762D] transition-all" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                            </svg>
-                        </div>
-                        <h3 class="font-bold text-[#152A4E] dark:text-white mb-1 group-hover:text-[#E2762D] transition-colors">{{ __($module['title']) }}</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __($module['description']) }}</p>
-                    </a>
-                @endforeach
-            </div>
-
         </div>
     </div>
 

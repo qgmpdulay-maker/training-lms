@@ -18,46 +18,6 @@
                 @include('admin.super-admin.partials.dashboard-body')
             </div>
 
-            <!-- Module Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                @foreach ([
-                    ['title' => 'Summary', 'description' => 'Participant and training records across all regions and Central Office.', 'icon' => 'summary', 'route' => 'admin.summary'],
-                    ['title' => 'Tools', 'description' => 'Graduates list now available; charts, ATAR, evaluations, certificates, and maps still to come.', 'icon' => 'tools', 'route' => 'admin.tools'],
-                    ['title' => 'Instructors', 'description' => 'Instructor list with ratings, deployments, and certificate codes.', 'icon' => 'instructors', 'route' => 'admin.instructors.index'],
-                    ['title' => 'Training Needs Assessment', 'description' => 'Participant TNA results, aggregated across all regions.', 'icon' => 'tna', 'route' => 'admin.training-needs-assessment'],
-                    ['title' => 'Regional Training Calendar', 'description' => 'Color-coded by request status, all regions and Central.', 'icon' => 'calendar', 'route' => 'admin.calendar'],
-                ] as $module)
-                    @if ($module['route'])
-                        <a href="{{ route($module['route']) }}"
-                            class="group bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-7 hover:border-[#E2762D]/50 hover:shadow-md transition">
-                            <div class="flex items-start justify-between mb-4">
-                                <div class="h-11 w-11 rounded-lg bg-[#E2762D]/10 dark:bg-[#E2762D]/20 flex items-center justify-center text-[#E2762D]">
-                                    @include('admin.partials.icon', ['name' => $module['icon']])
-                                </div>
-                                <svg class="w-4 h-4 text-gray-300 dark:text-gray-600 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-[#E2762D] transition-all" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                </svg>
-                            </div>
-                            <h3 class="font-bold text-[#152A4E] dark:text-white mb-1 group-hover:text-[#E2762D] transition-colors">{{ __($module['title']) }}</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __($module['description']) }}</p>
-                        </a>
-                    @else
-                        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-7">
-                            <div class="flex items-start justify-between mb-4">
-                                <div class="h-11 w-11 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500">
-                                    @include('admin.partials.icon', ['name' => $module['icon']])
-                                </div>
-                                <span class="inline-flex items-center text-[11px] font-semibold rounded-full border px-2.5 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700">
-                                    {{ __('Coming Soon') }}
-                                </span>
-                            </div>
-                            <h3 class="font-bold text-[#152A4E] dark:text-white mb-1">{{ __($module['title']) }}</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __($module['description']) }}</p>
-                        </div>
-                    @endif
-                @endforeach
-            </div>
-
             <!-- Manage Users -->
             <a href="{{ route('admin.users.index') }}"
                 class="rounded-xl border border-dashed border-[#152A4E]/30 dark:border-white/20 p-6 sm:p-7 flex items-center justify-between gap-4 flex-wrap hover:border-[#152A4E]/60 dark:hover:border-white/40 hover:bg-[#152A4E]/[0.02] dark:hover:bg-white/[0.02] transition">
