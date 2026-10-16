@@ -122,14 +122,6 @@
                         <div class="h-64"><canvas id="dashGraduatesByAgeRangeChart"></canvas></div>
                     </x-chart-card>
                 </div>
-                <x-chart-card :title="__('Graduates by Training')"
-                    :subtitle="__('Completed trainings in your region — every course in the catalog is Technical Assistance.')">
-                    @if (count($chartData['graduatesByTraining']) > 0)
-                        <div style="height: {{ max(240, count($chartData['graduatesByTraining']) * 34) }}px"><canvas id="dashGraduatesByTrainingChart"></canvas></div>
-                    @else
-                        <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings match these filters.') }}</p>
-                    @endif
-                </x-chart-card>
                 <x-chart-card :title="__('Most Needed Trainings')"
                     :subtitle="__('What the Training Needs Assessment says your region\'s participants need most.')">
                     @if (count($chartData['mostNeededTrainings']) > 0)
@@ -230,24 +222,6 @@
             },
             options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
         });
-
-        const graduatesByTraining = @json($chartData['graduatesByTraining']);
-        const trainingChartEl = document.getElementById('dashGraduatesByTrainingChart');
-        if (trainingChartEl && graduatesByTraining.length) {
-            new Chart(trainingChartEl, {
-                type: 'bar',
-                data: {
-                    labels: graduatesByTraining.map(row => row.training),
-                    datasets: [{ label: 'Graduates', data: graduatesByTraining.map(row => row.graduates), backgroundColor: brandOrange, borderRadius: 4 }],
-                },
-                options: {
-                    indexAxis: 'y',
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
-                },
-            });
-        }
 
         const mostNeededTrainings = @json($chartData['mostNeededTrainings']);
         const mostNeededChartEl = document.getElementById('dashMostNeededTrainingsChart');

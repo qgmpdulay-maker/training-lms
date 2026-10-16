@@ -22,14 +22,6 @@
             <div class="h-64"><canvas id="dashGraduatesByAgeRangeChart"></canvas></div>
         </x-chart-card>
     </div>
-    <x-chart-card :title="__('Graduates by Training')"
-        :subtitle="__('Completed trainings only, :region — every course in the catalog is Technical Assistance.', ['region' => $chartRegionLabel])">
-        @if (count($chartData['graduatesByTraining']) > 0)
-            <div style="height: {{ max(240, count($chartData['graduatesByTraining']) * 34) }}px"><canvas id="dashGraduatesByTrainingChart"></canvas></div>
-        @else
-            <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings match these filters.') }}</p>
-        @endif
-    </x-chart-card>
     {{-- Replaces the old request-pipeline chart: TA has no targets set against
          it, so the honest comparison is what was put on the calendar against
          what was delivered. Labelled "Scheduled", not "Requested": nobody but

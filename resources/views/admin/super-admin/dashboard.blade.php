@@ -154,24 +154,6 @@
                 options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
             }));
 
-            const graduatesByTraining = chartData.graduatesByTraining;
-            const trainingChartEl = document.getElementById('dashGraduatesByTrainingChart');
-            if (trainingChartEl && graduatesByTraining.length) {
-                dashboardChartInstances.push(new Chart(trainingChartEl, {
-                    type: 'bar',
-                    data: {
-                        labels: graduatesByTraining.map(row => row.training),
-                        datasets: [{ label: 'Graduates', data: graduatesByTraining.map(row => row.graduates), backgroundColor: brandOrange, borderRadius: 4 }],
-                    },
-                    options: {
-                        indexAxis: 'y',
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
-                    },
-                }));
-            }
-
             const mostNeededTrainings = chartData.mostNeededTrainings;
             // Scheduled vs Completed — running totals, so the two series only
             // ever climb and the gap between them is the backlog of TA

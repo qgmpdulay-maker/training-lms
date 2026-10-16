@@ -177,7 +177,7 @@ class AtarRecordController extends Controller
 
     /**
      * Creates the completed TrainingRequest each imported row counts as, so
-     * it flows into Regional Performance, Graduates by Training/Sex, the
+     * it flows into Regional Performance, Graduates by Sex/Age Range, the
      * Graduates Map, and Summary — not just the ATAR-specific charts.
      *
      * @param  array<string, mixed>  $row

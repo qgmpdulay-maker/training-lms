@@ -77,7 +77,6 @@ class DashboardController extends Controller
         if (! $user->isSuperAdmin()) {
             return view('admin.dashboard-regional', $shared + [
                 'chartData' => [
-                    'graduatesByTraining' => $graduatesByTraining,
                     'requestsByTraining' => $requestsByTraining,
                     'statusBreakdown' => $statusBreakdown,
                     'graduatesBySex' => $graduatesBySex,
@@ -104,7 +103,6 @@ class DashboardController extends Controller
         [$scheduledStart, $scheduledEnd] = $this->scheduledRange($filters);
 
         $chartData = [
-            'graduatesByTraining' => $graduatesByTraining,
             'requestsByTraining' => $requestsByTraining,
             'statusBreakdown' => $statusBreakdown,
             'graduatesBySex' => $graduatesBySex,
@@ -402,9 +400,9 @@ class DashboardController extends Controller
     }
 
     /**
-     * Graduate totals per training course, completed trainings only — every
-     * course in the catalog is Technical Assistance, so this is the CDTI
-     * staff's actual training mix rather than an APB/TA split.
+     * Graduate totals per training course, completed trainings only, highest
+     * first. No longer drawn as a chart — it feeds the "has produced the most
+     * graduates" insight.
      *
      * @param  Collection<int, TrainingRequest>  $completed
      */

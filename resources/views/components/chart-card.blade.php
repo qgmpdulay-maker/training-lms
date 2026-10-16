@@ -1,7 +1,7 @@
 {{--
     Standard dashboard card: navy header band (white title + subtitle) over a
     white body. Use the optional `action` slot for controls that belong in the
-    header, e.g. the Year select on "Graduates by Training" — style those for a
+    header, e.g. the training picker on "Three-Year Trend" — style those for a
     dark background (white field, navy text).
 --}}
 @props([
