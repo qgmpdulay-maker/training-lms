@@ -83,10 +83,10 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Per-region rollup plus a "Central (All OCDROs)" total row — feeds the
-     * Regional Performance table on the Super Admin dashboard.
+     * Per-region rollup plus a "Central (All OCDROs)" total row — what
+     * deployedByRegion() reads its per-region deployed counts from.
      *
-     * Takes the trainings the dashboard already loaded (rather than the
+     * Takes the trainings the caller already loaded (rather than the
      * filters) so the same query isn't run twice on one page load.
      *
      * @param  Collection<int, TrainingRequest>  $trainings  already filtered via completedTrainings()
@@ -106,34 +106,6 @@ class MonitoringController extends Controller
         $total = array_merge(['label' => 'Central (All OCDROs)', 'short_label' => 'Total'], static::summary($trainings));
 
         return $rows->push($total)->all();
-    }
-
-    /**
-     * Quick top-line callouts from the regional breakdown — which region leads
-     * on graduates, completion rate, and trainings conducted — so a Super Admin
-     * gets the headline without reading the whole table. Only real regions are
-     * considered, never the "Central (All OCDROs)" aggregate row.
-     */
-    public static function regionalHighlights(array $regionalData): array
-    {
-        $regions = collect($regionalData)->reject(fn (array $row) => $row['label'] === 'Central (All OCDROs)');
-
-        if ($regions->isEmpty()) {
-            return [];
-        }
-
-        $topGraduates = $regions->sortByDesc('graduates')->first();
-        $topCompletion = $regions
-            ->filter(fn (array $row) => $row['participants'] > 0)
-            ->sortByDesc(fn (array $row) => (float) $row['completion_rate'])
-            ->first();
-        $mostTrainings = $regions->sortByDesc('trainings')->first();
-
-        return array_values(array_filter([
-            $topGraduates ? ['label' => 'Most Graduates', 'region' => $topGraduates['label'], 'value' => $topGraduates['graduates']] : null,
-            $topCompletion ? ['label' => 'Best Completion Rate', 'region' => $topCompletion['label'], 'value' => $topCompletion['completion_rate']] : null,
-            $mostTrainings ? ['label' => 'Most Trainings Conducted', 'region' => $mostTrainings['label'], 'value' => $mostTrainings['trainings']] : null,
-        ]));
     }
 
     /**

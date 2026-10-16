@@ -113,11 +113,18 @@
             maxClusterRadius: 45,
             spiderfyOnMaxZoom: true,
             showCoverageOnHover: false,
+            // The bubble shows the graduates inside it, not how many
+            // locations it groups — so with a training picked, the number on
+            // the map is that training's graduates. Location count stays on
+            // hover via the title.
             iconCreateFunction: (cluster) => {
-                const count = cluster.getChildCount();
-                const size = count < 10 ? 32 : (count < 50 ? 40 : 48);
+                const locations = cluster.getChildCount();
+                const graduates = cluster.getAllChildMarkers().reduce((total, m) => total + (m.options.graduates || 0), 0);
+                const label = graduates >= 1000 ? (graduates / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(graduates);
+                const size = label.length <= 2 ? 32 : (label.length === 3 ? 40 : 48);
+                const title = graduates.toLocaleString() + ' {{ __('graduates') }} · ' + locations + ' {{ __('locations') }}';
                 return L.divIcon({
-                    html: '<div class="graduates-cluster-badge" style="width:' + size + 'px;height:' + size + 'px;line-height:' + size + 'px;">' + count + '</div>',
+                    html: '<div class="graduates-cluster-badge" title="' + title + '" style="width:' + size + 'px;height:' + size + 'px;line-height:' + size + 'px;">' + label + '</div>',
                     className: 'graduates-cluster-icon',
                     iconSize: L.point(size, size),
                 });
@@ -132,6 +139,7 @@
                 weight: 1.5,
                 fillColor: colorFor(point.agency_type),
                 fillOpacity: 0.85,
+                graduates: point.graduates,
                 className: 'graduates-glow-dot',
                 // Region polygons live in the default overlayPane and jump to
                 // its front on hover (see bringToFront() below) — pinning

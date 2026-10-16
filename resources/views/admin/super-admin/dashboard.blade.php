@@ -14,92 +14,14 @@
     <div class="py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             <!-- Welcome Banner -->
-            <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#152A4E] via-[#1E3A66] to-[#0D1B33] px-6 py-8 sm:px-10 sm:py-10">
-                <img src="{{ asset('images/ocd-seal.png') }}" alt=""
-                    class="absolute -right-10 -bottom-16 w-64 h-64 object-contain opacity-[0.08] pointer-events-none">
-                <div class="relative z-10">
-                    <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase mb-2">
-                        {{ __('CDTI — Central Office') }}
-                    </p>
-                    <h1 class="text-2xl sm:text-3xl font-bold text-white mb-2">
-                        {{ __('Welcome back, :name', ['name' => explode(' ', $user->name)[0]]) }}
-                    </h1>
-                    <p class="text-sm text-white/70 max-w-xl">
-                        {{ __('Super Admin access — full visibility across all OCD regional offices, plus admin account management.') }}
-                    </p>
-                </div>
-            </div>
+            @include('admin.partials.welcome-banner', [
+                'eyebrow' => __('CDTI — Central Office'),
+                'description' => __('Super Admin access — full visibility across all OCD regional offices, plus admin account management.'),
+            ])
 
-            <!-- Stat tiles -->
-            <div class="grid grid-cols-3 gap-3">
-                @foreach ([
-                    ['label' => 'Instructors on File', 'value' => $stats['instructors']],
-                    ['label' => 'TNA Submissions', 'value' => $stats['tna_submissions']],
-                    ['label' => 'Upcoming Trainings', 'value' => $stats['upcoming_trainings']],
-                ] as $card)
-                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm px-3 py-2.5">
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{{ __($card['label']) }}</div>
-                        <div class="text-xl font-bold text-[#152A4E] dark:text-white mt-0.5">{{ $card['value'] }}</div>
-                    </div>
-                @endforeach
-            </div>
-
-            <!-- Charts -->
-            <div id="dashboard-charts">
-                @include('admin.super-admin.partials.dashboard-charts')
-            </div>
-
-            <!-- Regional Performance & Graduates Map (folded in from the former Regional Monitoring / Graduates Map tabs) -->
-            <div id="dashboard-monitoring">
-                @include('admin.super-admin.partials.dashboard-monitoring')
-            </div>
-
-            <div class="grid grid-cols-1 gap-6">
-                <!-- Needs Assessment per LGU / Organization (moved from the Needs Assessment tab) -->
-                <x-chart-card id="needs-assessment-by-organization" class="scroll-mt-24"
-                    body-class="p-6 sm:p-8"
-                    :title="__('Needs Assessment per LGU / Organization')"
-                    :subtitle="__('Training Needs Assessment submissions grouped by the participant\'s LGU or organization.')">
-
-                    @if ($needsAssessmentByOrganization->isEmpty())
-                        <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
-                            {{ __('No Training Needs Assessment submissions yet.') }}
-                        </div>
-                    @else
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full text-sm">
-                                <thead>
-                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                        <th class="py-2 pr-4">{{ __('LGU / Organization') }}</th>
-                                        <th class="py-2 pr-4">{{ __('Region') }}</th>
-                                        <th class="py-2 pr-4">{{ __('Submissions') }}</th>
-                                        <th class="py-2 pr-4">{{ __('Most Needed Training') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                    @foreach ($needsAssessmentByOrganization as $row)
-                                        <tr>
-                                            <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $row['organization'] }}</td>
-                                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $row['region'] }}</td>
-                                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $row['submissions'] }}</td>
-                                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $row['top_training'] ?? '—' }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="mt-5">
-                            {{ $needsAssessmentByOrganization->links() }}
-                        </div>
-                    @endif
-                </x-chart-card>
-
-                @include('admin.partials.graduates-by-lgu')
-            </div>
-
-            <div id="dashboard-insights">
-                @include('admin.super-admin.partials.dashboard-insights')
+            <!-- Everything the dashboard filters touch, re-rendered as one piece when they change -->
+            <div id="dashboard-body" class="space-y-8">
+                @include('admin.super-admin.partials.dashboard-body')
             </div>
 
             <!-- Module Grid -->
@@ -158,10 +80,10 @@
     </div>
 
     <script>
-        // Every filter control on this dashboard (chart region, year, and the
-        // Regional Performance "Apply Filters" form) posts here instead of
-        // doing a normal GET navigation, so filtering never reloads the page
-        // or resets the user's scroll position back to the top.
+        // The dashboard's one filter (From / Until / Region / Training, at the
+        // top of the Regional Performance section) posts here instead of doing
+        // a normal GET navigation, so filtering never reloads the page or
+        // resets the user's scroll position back to the top.
         function submitDashboardFilter(el, event) {
             if (event) {
                 event.preventDefault();
@@ -182,9 +104,7 @@
             fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then((response) => response.json())
                 .then((data) => {
-                    document.getElementById('dashboard-charts').innerHTML = data.charts_html;
-                    document.getElementById('dashboard-insights').innerHTML = data.insights_html;
-                    document.getElementById('dashboard-monitoring').innerHTML = data.monitoring_html;
+                    document.getElementById('dashboard-body').innerHTML = data.body_html;
                     renderDashboardCharts(data.chartData);
                     renderDashboardMap(data.mapPoints, data.regionDeployed);
                     window.history.pushState({}, '', url);
@@ -530,11 +450,18 @@
                 maxClusterRadius: 45,
                 spiderfyOnMaxZoom: true,
                 showCoverageOnHover: false,
+                // The bubble shows the graduates inside it, not how many
+                // locations it groups — so with a training picked, the number on
+                // the map is that training's graduates. Location count stays on
+                // hover via the title.
                 iconCreateFunction: (cluster) => {
-                    const count = cluster.getChildCount();
-                    const size = count < 10 ? 32 : (count < 50 ? 40 : 48);
+                    const locations = cluster.getChildCount();
+                    const graduates = cluster.getAllChildMarkers().reduce((total, m) => total + (m.options.graduates || 0), 0);
+                    const label = graduates >= 1000 ? (graduates / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(graduates);
+                    const size = label.length <= 2 ? 32 : (label.length === 3 ? 40 : 48);
+                    const title = graduates.toLocaleString() + ' {{ __('graduates') }} · ' + locations + ' {{ __('locations') }}';
                     return L.divIcon({
-                        html: '<div class="dashboard-graduates-cluster-badge" style="width:' + size + 'px;height:' + size + 'px;line-height:' + size + 'px;">' + count + '</div>',
+                        html: '<div class="dashboard-graduates-cluster-badge" title="' + title + '" style="width:' + size + 'px;height:' + size + 'px;line-height:' + size + 'px;">' + label + '</div>',
                         className: 'dashboard-graduates-cluster-icon',
                         iconSize: L.point(size, size),
                     });
@@ -549,6 +476,7 @@
                     weight: 1.5,
                     fillColor: colorFor(point.agency_type),
                     fillOpacity: 0.85,
+                    graduates: point.graduates,
                     pane: 'markerPane',
                 });
 

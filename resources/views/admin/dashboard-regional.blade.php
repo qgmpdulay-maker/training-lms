@@ -8,20 +8,86 @@
     <div class="py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             <!-- Welcome Banner -->
-            <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#152A4E] via-[#1E3A66] to-[#0D1B33] px-6 py-8 sm:px-10 sm:py-10">
-                <img src="{{ asset('images/ocd-seal.png') }}" alt=""
-                    class="absolute -right-10 -bottom-16 w-64 h-64 object-contain opacity-[0.08] pointer-events-none">
-                <div class="relative z-10">
-                    <p class="text-xs font-semibold tracking-[0.2em] text-[#E2762D] uppercase mb-2">
-                        {{ __('OCD Regional Office') }}{{ $user->region ? ' — '.$user->region : '' }}
-                    </p>
-                    <h1 class="text-2xl sm:text-3xl font-bold text-white mb-2">
-                        {{ __('Welcome back, :name', ['name' => explode(' ', $user->name)[0]]) }}
-                    </h1>
-                    <p class="text-sm text-white/70 max-w-xl">
-                        {{ __('Regional admin access — manage your region\'s trainings, instructors, and reports below.') }}
-                    </p>
-                </div>
+            @include('admin.partials.welcome-banner', [
+                'eyebrow' => __('OCD Regional Office').($user->region ? ' — '.$user->region : ''),
+                'description' => __('Regional admin access — manage your region\'s trainings, instructors, and reports below.'),
+            ])
+
+            <!-- Regional Performance & Graduates Map — first thing under the welcome banner.
+                 Same section as the Super Admin dashboard, locked to this admin's region.
+                 Its From / Until / Training fields filter the whole dashboard. -->
+            @php
+                $hasFilters = $filters['training_title'] || $filters['from'] || $filters['until'];
+            @endphp
+            <div class="space-y-6">
+                <x-chart-card body-class="p-6 sm:p-8"
+                    :title="__('Regional Performance & Graduates Map')"
+                    :subtitle="__('Completed trainings in your region — every course in the catalog is Technical Assistance. These filters apply to the whole dashboard.')">
+                    @if ($hasFilters)
+                        <x-slot:action>
+                            <a href="{{ route('admin.dashboard') }}" class="text-xs font-semibold text-white/70 hover:text-white transition whitespace-nowrap">
+                                {{ __('Reset') }}
+                            </a>
+                        </x-slot:action>
+                    @endif
+
+                    <form method="GET" action="{{ route('admin.dashboard') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label for="from" class="block text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">{{ __('From') }}</label>
+                            <input type="date" id="from" name="from" value="{{ $filters['from'] }}" onchange="this.form.submit()"
+                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark] text-sm py-2.5 px-3 hover:border-[#152A4E] dark:hover:border-white/40 focus:border-[#152A4E] focus:ring-[#152A4E] transition">
+                        </div>
+                        <div>
+                            <label for="until" class="block text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">{{ __('Until') }}</label>
+                            <input type="date" id="until" name="until" value="{{ $filters['until'] }}" onchange="this.form.submit()"
+                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:[color-scheme:dark] text-sm py-2.5 px-3 hover:border-[#152A4E] dark:hover:border-white/40 focus:border-[#152A4E] focus:ring-[#152A4E] transition">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="training_title" class="block text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">{{ __('Training') }}</label>
+                            <div class="relative">
+                                <select id="training_title" name="training_title" onchange="this.form.submit()"
+                                    class="appearance-none w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm py-2.5 pl-3 pr-9 hover:border-[#152A4E] dark:hover:border-white/40 focus:border-[#152A4E] focus:ring-[#152A4E] transition">
+                                    <option value="">{{ __('All Trainings') }}</option>
+                                    @foreach ($trainingTitles as $title)
+                                        <option value="{{ $title }}" @selected($filters['training_title'] === $title)>{{ $title }}</option>
+                                    @endforeach
+                                </select>
+                                <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </div>
+                        </div>
+                    </form>
+                </x-chart-card>
+
+                @include('admin.partials.performance-stat-cards', ['summary' => $monitoringSummary])
+
+                {{-- The same map as the standalone Graduates Map page (shared
+                     partial), drawn around this admin's own region only. --}}
+                <x-chart-card :title="__('Graduates by Location')"
+                    :subtitle="$filters['training_title']
+                        ? __(':training only — :graduates across :locations.', [
+                            'training' => $filters['training_title'],
+                            'graduates' => trans_choice(':count graduate|:count graduates', $monitoringSummary['graduates'], ['count' => $monitoringSummary['graduates']]),
+                            'locations' => trans_choice(':count location|:count locations', count($mapPoints), ['count' => count($mapPoints)]),
+                        ])
+                        : null"
+                    body-class="pt-4">
+
+                    @if (count($mapPoints) === 0)
+                        <div class="mx-6 mb-6 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
+                            {{ $hasFilters ? __('No completed trainings match these filters yet.') : __('No completed trainings in your region yet.') }}
+                        </div>
+                    @else
+                        @include('admin.partials.graduates-map', [
+                            'mapId' => 'dashGraduatesMap',
+                            'height' => 480,
+                            'points' => $mapPoints,
+                            'regionDeployed' => $regionDeployed,
+                            'onlyRegion' => $region,
+                        ])
+                    @endif
+                </x-chart-card>
             </div>
 
             <!-- Stat tiles -->
@@ -58,22 +124,10 @@
                 </div>
                 <x-chart-card :title="__('Graduates by Training')"
                     :subtitle="__('Completed trainings in your region — every course in the catalog is Technical Assistance.')">
-                    <x-slot:action>
-                        <form method="GET" action="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                            <label for="year" class="text-xs font-semibold text-white/70">{{ __('Year') }}</label>
-                            <select id="year" name="year" onchange="this.form.submit()"
-                                class="rounded-md border-transparent bg-white text-[#152A4E] text-sm font-semibold py-1.5 focus:border-white focus:ring-2 focus:ring-white/60">
-                                @foreach ($availableYears as $yearOption)
-                                    <option value="{{ $yearOption }}" @selected((string) $year === (string) $yearOption)>{{ $yearOption }}</option>
-                                @endforeach
-                                <option value="all" @selected($year === 'all')>{{ __('All Years') }}</option>
-                            </select>
-                        </form>
-                    </x-slot:action>
                     @if (count($chartData['graduatesByTraining']) > 0)
                         <div style="height: {{ max(240, count($chartData['graduatesByTraining']) * 34) }}px"><canvas id="dashGraduatesByTrainingChart"></canvas></div>
                     @else
-                        <p class="text-sm text-gray-400 dark:text-gray-500">{{ $year === 'all' ? __('No completed trainings yet.') : __('No completed trainings for :year.', ['year' => $year]) }}</p>
+                        <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('No completed trainings match these filters.') }}</p>
                     @endif
                 </x-chart-card>
                 <x-chart-card :title="__('Most Needed Trainings')"
@@ -85,7 +139,7 @@
                     @endif
                 </x-chart-card>
                 <x-chart-card :title="__('Participants by City')"
-                    :subtitle="__('Registered participants in your region, grouped by city.')">
+                    :subtitle="__('Every registered participant in your region, grouped by city — not affected by the filters above.')">
                     @if (count($chartData['participantsByCity']) > 0)
                         <div style="height: {{ max(240, count($chartData['participantsByCity']) * 34) }}px"><canvas id="dashParticipantsByCityChart"></canvas></div>
                     @else
@@ -93,69 +147,7 @@
                     @endif
                 </x-chart-card>
 
-                @include('admin.super-admin.partials.dashboard-atar-charts', ['chartData' => $chartData])
-
-                {{-- The same map as the standalone Graduates Map page (shared
-                     partial), drawn around this admin's own region only. --}}
-                <x-chart-card :title="__('Graduates by Location')"
-                    :subtitle="__('Marker size scales with graduate count — hover a marker for its details, or hover anywhere in your region to see its totals.')"
-                    body-class="pt-4">
-
-                    @if (count($graduatesByLocation) === 0)
-                        <div class="mx-6 mb-6 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
-                            {{ __('No completed trainings in your region yet.') }}
-                        </div>
-                    @else
-                        @include('admin.partials.graduates-map', [
-                            'mapId' => 'dashGraduatesMap',
-                            'height' => 480,
-                            'points' => $graduatesByLocation,
-                            'regionDeployed' => $regionDeployed,
-                            'onlyRegion' => $region,
-                        ])
-
-                        <div class="overflow-x-auto p-6 pt-4">
-                            <table class="min-w-full text-sm">
-                                <thead>
-                                    <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                        <th class="py-2 pr-4">{{ __('LGU / NGA') }}</th>
-                                        <th class="py-2 pr-4">{{ __('Trainings') }}</th>
-                                        <th class="py-2 pr-4">{{ __('Graduates') }}</th>
-                                        <th class="py-2 pr-4">{{ __('Deployed') }}</th>
-                                        <th class="py-2 pr-4">{{ __('Teams') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                    @foreach (array_slice($graduatesByLocation, 0, 10) as $point)
-                                        @php
-                                            $dotColor = $point['agency_type'] === 'LGU' ? '#03055A' : ($point['agency_type'] === 'NGA' ? '#E2762D' : '#0EA5E9');
-                                        @endphp
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                            <td class="py-3 pr-4">
-                                                <div class="flex items-center gap-2">
-                                                    <span class="w-2 h-2 rounded-full shrink-0" style="background: {{ $dotColor }};"></span>
-                                                    <div>
-                                                        <div class="font-medium text-[#152A4E] dark:text-white">{{ $point['name'] }}</div>
-                                                        @if ($point['agency_type'])
-                                                            <div class="text-xs text-gray-400">{{ $point['agency_type'] }}</div>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['trainings'] }}</td>
-                                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['graduates'] }}</td>
-                                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['deployed'] }}</td>
-                                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-300 tabular-nums">{{ $point['teams'] }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                            @if (count($graduatesByLocation) > 10)
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-3">{{ __('Top 10 of :count locations, by graduate count.', ['count' => count($graduatesByLocation)]) }}</p>
-                            @endif
-                        </div>
-                    @endif
-                </x-chart-card>
+                @include('admin.super-admin.partials.dashboard-atar-charts', ['chartData' => $chartData, 'chartRegionLabel' => __('your region')])
 
                 @include('admin.partials.graduates-by-lgu')
 

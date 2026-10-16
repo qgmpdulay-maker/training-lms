@@ -10,6 +10,7 @@ use App\Models\TrainingNeedsAssessment;
 use App\Models\TrainingRequest;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -22,48 +23,59 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        // Defaults to the current year so the chart opens on the most relevant
-        // slice of data rather than every year stacked together; "All Years"
-        // is still one filter away for anyone who wants the full history. Only
-        // this one chart is year-scoped — everything else on the dashboard
-        // stays all-time.
-        $year = $request->query('year', (string) now()->year);
+        // One filter set for the whole dashboard: the From / Until / Region /
+        // Training fields in the Regional Performance card at the top. Every
+        // section below reads these same filters rather than having its own
+        // region or year picker. A Regional Admin is always held to their own
+        // region — the query string can't widen it.
+        $requestedRegion = $request->query('region');
+        $requestedTraining = $request->query('training_title');
+        $filters = [
+            'regions' => $user->isSuperAdmin()
+                ? (is_string($requestedRegion) && in_array($requestedRegion, config('regions.list'), true) ? [$requestedRegion] : [])
+                : [$user->region],
+            'training_title' => is_string($requestedTraining) && $requestedTraining !== '' ? $requestedTraining : null,
+            'from' => $this->queryDate($request, 'from'),
+            'until' => $this->queryDate($request, 'until'),
+        ];
+        $region = $filters['regions'][0] ?? null;
+
+        // Every completed training matching the filters, loaded once and
+        // shared by the stat cards, the map, and every chart built from
+        // completed trainings. withCount adds a participants_count number per
+        // training instead of loading each participant's row.
+        $completed = MonitoringController::completedTrainings($filters)->withCount('participants')->get();
+
+        $graduatesByTraining = $this->graduatesByTrainingChart($completed);
+        $requestsByTraining = $this->requestsByTrainingChart($filters);
+        $statusBreakdown = $this->statusBreakdownChart($filters);
+        $graduatesBySex = [
+            'male' => $completed->sum('graduates_male'),
+            'female' => $completed->sum('graduates_female'),
+        ];
+        $graduatesByAgeRange = $this->graduatesByAgeRangeChart($completed);
+        $mostNeededTrainings = $this->mostNeededTrainingsChart($filters);
+
+        $shared = [
+            'user' => $user,
+            'filters' => $filters,
+            'region' => $region,
+            'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
+            'monitoringSummary' => MonitoringController::summary($completed),
+            'mapPoints' => MonitoringController::mapPoints($completed),
+            'regionDeployed' => MonitoringController::deployedByRegion(MonitoringController::regionalData($completed)),
+            'graduatesByLgu' => $this->graduatesByLgu($completed),
+            'stats' => [
+                // Instructors aren't tied to a training or a date, so only the
+                // region narrows this one.
+                'instructors' => Instructor::query()->when($region, fn ($q) => $q->where('region', $region))->count(),
+                'tna_submissions' => $this->needsAssessments($filters)->count(),
+                'upcoming_trainings' => $this->upcomingTrainingsCount($filters),
+            ],
+        ];
 
         if (! $user->isSuperAdmin()) {
-            // Loaded once and reused by every chart below (year-filtered in
-            // memory, not re-queried). withCount adds a participants_count
-            // number per training instead of loading each participant's row.
-            $completed = TrainingRequest::completed()->where('region', $user->region)->withCount('participants')->get();
-
-            $availableYears = $this->availableYears($user->region);
-            $graduatesByTraining = $this->graduatesByTrainingChart($this->inYear($completed, $year));
-            $requestsByTraining = $this->requestsByTrainingChart($user->region);
-            $statusBreakdown = $this->statusBreakdownChart($user->region);
-            $graduatesBySex = [
-                'male' => $completed->sum('graduates_male'),
-                'female' => $completed->sum('graduates_female'),
-            ];
-            $graduatesByAgeRange = $this->graduatesByAgeRangeChart($completed);
-            $mostNeededTrainings = $this->mostNeededTrainingsChart($user->region);
-            $atarTrainingsByMode = $this->atarTrainingsByModeChart($user->region);
-            $atarTrainingsByMonth = $this->atarTrainingsByMonthChart($user->region);
-            $atarGraduatesBySector = $this->atarGraduatesBySectorChart($user->region);
-            $participantsByCity = $this->participantsByCityChart($user->region);
-
-            return view('admin.dashboard-regional', [
-                'user' => $user,
-                'year' => $year,
-                'availableYears' => $availableYears,
-                'region' => $user->region,
-                'graduatesByLgu' => $this->graduatesByLgu($completed),
-                'stats' => [
-                    'instructors' => Instructor::where('region', $user->region)->count(),
-                    'tna_submissions' => TrainingNeedsAssessment::whereHas('user', fn ($q) => $q->where('region', $user->region))->count(),
-                    'upcoming_trainings' => TrainingRequest::where('region', $user->region)
-                        ->where('preferred_date', '>=', today())
-                        ->whereIn('status', [TrainingRequest::STATUS_APPROVED, TrainingRequest::STATUS_UNDER_REVIEW])
-                        ->count(),
-                ],
+            return view('admin.dashboard-regional', $shared + [
                 'chartData' => [
                     'graduatesByTraining' => $graduatesByTraining,
                     'requestsByTraining' => $requestsByTraining,
@@ -71,13 +83,11 @@ class DashboardController extends Controller
                     'graduatesBySex' => $graduatesBySex,
                     'graduatesByAgeRange' => $graduatesByAgeRange,
                     'mostNeededTrainings' => $mostNeededTrainings,
-                    'atarTrainingsByMode' => $atarTrainingsByMode,
-                    'atarTrainingsByMonth' => $atarTrainingsByMonth,
-                    'atarGraduatesBySector' => $atarGraduatesBySector,
-                    'participantsByCity' => $participantsByCity,
+                    'atarTrainingsByMode' => $this->atarTrainingsByModeChart($filters),
+                    'atarTrainingsByMonth' => $this->atarTrainingsByMonthChart($filters),
+                    'atarGraduatesBySector' => $this->atarGraduatesBySectorChart($filters),
+                    'participantsByCity' => $this->participantsByCityChart($region),
                 ],
-                'graduatesByLocation' => MonitoringController::mapPoints($completed),
-                'regionDeployed' => MonitoringController::deployedByRegion(MonitoringController::regionalData($completed)),
                 'insights' => $this->buildInsights(
                     statusBreakdown: $statusBreakdown,
                     graduatesByTraining: $graduatesByTraining,
@@ -85,60 +95,13 @@ class DashboardController extends Controller
                     graduatesByAgeRange: $graduatesByAgeRange,
                     graduatesBySex: $graduatesBySex,
                     mostNeededTrainings: $mostNeededTrainings,
-                    lowestCompletionRateTraining: $this->lowestCompletionRateTraining($user->region),
+                    lowestCompletionRateTraining: $this->lowestCompletionRateTraining($filters),
                     lguNgaReach: $this->lguNgaReach($completed),
                 ),
             ]);
         }
 
-        // Every completed training nationwide, loaded once and reused by the
-        // charts below (filtered in memory by region/year rather than
-        // re-queried). withCount adds a participants_count number per
-        // training instead of loading each participant's full row.
-        $completed = TrainingRequest::completed()->withCount('participants')->get();
-
-        // One shared region filter for the five overview charts below, also
-        // reused by $monitoringFilters['regions'] further down for the
-        // Regional Performance & Graduates Map section — a single control
-        // for both rather than two independent region filters on one page.
-        $chartRegion = $request->query('chart_region') ?: null;
-        $completedForCharts = $completed->when($chartRegion, fn ($c) => $c->where('region', $chartRegion));
-
-        $availableYears = $this->availableYears();
-        $graduatesByTraining = $this->graduatesByTrainingChart($this->inYear($completedForCharts, $year));
-        $requestsByTraining = $this->requestsByTrainingChart();
-        $statusBreakdown = $this->statusBreakdownChart($chartRegion);
-        $graduatesByRegion = $this->graduatesByRegionChart($completed);
-        $graduatesBySex = [
-            'male' => $completedForCharts->sum('graduates_male'),
-            'female' => $completedForCharts->sum('graduates_female'),
-        ];
-        $graduatesByAgeRange = $this->graduatesByAgeRangeChart($completedForCharts);
-        $mostNeededTrainings = $this->mostNeededTrainingsChart($chartRegion);
-        $requestedVsAccomplished = $this->requestedVsAccomplishedChart($chartRegion, $year);
-        $categoryComparison = $this->categoryComparisonChart($chartRegion);
-        $threeYearTrend = $this->threeYearTrendChart($chartRegion);
-
-        // Regional Monitoring and the Graduates Map used to be their own tabs —
-        // folded into the dashboard so Super Admin has one place to look,
-        // sharing the same region filter as the charts above (previously its
-        // own independent multi-select).
-        $monitoringFilters = [
-            'regions' => $chartRegion ? [$chartRegion] : [],
-            'training_title' => $request->query('training_title') ?: null,
-            'from' => $request->query('from') ?: null,
-            'until' => $request->query('until') ?: null,
-        ];
-        // The Regional Performance table reuses these same filtered trainings
-        // instead of running the identical query a second time.
-        $monitoringTrainings = MonitoringController::completedTrainings($monitoringFilters)->get();
-        $regionalData = MonitoringController::regionalData($monitoringTrainings);
-
-        // Needs Assessment used to show its own "What Training Is Needed" chart
-        // and a per-organization breakdown table — the chart duplicated
-        // mostNeededTrainingsChart() above, so only the breakdown table (which
-        // has no dashboard equivalent) moved over.
-        $needsAssessmentByOrganization = $this->needsAssessmentByOrganization($request);
+        [$scheduledStart, $scheduledEnd] = $this->scheduledRange($filters);
 
         $chartData = [
             'graduatesByTraining' => $graduatesByTraining,
@@ -147,88 +110,113 @@ class DashboardController extends Controller
             'graduatesBySex' => $graduatesBySex,
             'graduatesByAgeRange' => $graduatesByAgeRange,
             'mostNeededTrainings' => $mostNeededTrainings,
-            'requestedVsAccomplished' => $requestedVsAccomplished,
-            'categoryComparison' => $categoryComparison,
-            'threeYearTrend' => $threeYearTrend,
+            'requestedVsAccomplished' => $this->requestedVsAccomplishedChart($filters, $scheduledStart, $scheduledEnd),
+            'categoryComparison' => $this->categoryComparisonChart($completed),
+            'threeYearTrend' => $this->threeYearTrendChart($filters),
         ];
-        $insights = $this->buildInsights(
-            statusBreakdown: $statusBreakdown,
-            graduatesByTraining: $graduatesByTraining,
-            requestsByTraining: $requestsByTraining,
-            graduatesByAgeRange: $graduatesByAgeRange,
-            graduatesByRegion: $graduatesByRegion,
-            graduatesBySex: $graduatesBySex,
-            mostNeededTrainings: $mostNeededTrainings,
-            lowestCompletionRateTraining: $this->lowestCompletionRateTraining($chartRegion),
-            lguNgaReach: $this->lguNgaReach($completedForCharts),
-        );
-        $regionsList = config('regions.list');
-        $trainingTitles = collect(config('trainings.catalog'))->pluck('title');
-        $monitoringSummary = MonitoringController::summary($monitoringTrainings);
-        $regionalHighlights = MonitoringController::regionalHighlights($regionalData);
-        $mapPoints = MonitoringController::mapPoints($monitoringTrainings);
-        $regionDeployed = MonitoringController::deployedByRegion($regionalData);
 
-        // Every filter control on the dashboard (chart region, year, and the
-        // Regional Performance filters) submits via fetch() instead of a plain
-        // GET navigation, so filtering doesn't reload the page or reset scroll
-        // position — see submitDashboardFilter() in dashboard.blade.php. This
-        // returns just the re-rendered fragments instead of the full page.
+        $data = $shared + [
+            'regions' => config('regions.list'),
+            'chartData' => $chartData,
+            'scheduledPeriod' => $scheduledStart->format('M Y').' – '.$scheduledEnd->format('M Y'),
+            'insights' => $this->buildInsights(
+                statusBreakdown: $statusBreakdown,
+                graduatesByTraining: $graduatesByTraining,
+                requestsByTraining: $requestsByTraining,
+                graduatesByAgeRange: $graduatesByAgeRange,
+                // A region-by-region comparison only means something when no
+                // single region is picked.
+                graduatesByRegion: $region ? null : $this->graduatesByRegionChart($completed),
+                graduatesBySex: $graduatesBySex,
+                mostNeededTrainings: $mostNeededTrainings,
+                lowestCompletionRateTraining: $this->lowestCompletionRateTraining($filters),
+                lguNgaReach: $this->lguNgaReach($completed),
+            ),
+            'needsAssessmentByOrganization' => $this->needsAssessmentByOrganization($request, $filters),
+        ];
+
+        // Changing a filter submits via fetch() instead of a plain GET
+        // navigation, so the page doesn't reload — see submitDashboardFilter()
+        // in dashboard.blade.php. Everything the filters touch lives in one
+        // partial, returned here re-rendered along with the data its charts
+        // and map are drawn from.
         if ($request->ajax()) {
             return response()->json([
-                'charts_html' => view('admin.super-admin.partials.dashboard-charts', [
-                    'chartRegion' => $chartRegion,
-                    'regions' => $regionsList,
-                    'year' => $year,
-                    'availableYears' => $availableYears,
-                    'chartData' => $chartData,
-                    'monitoringFilters' => $monitoringFilters,
-                ])->render(),
-                'insights_html' => view('admin.super-admin.partials.dashboard-insights', [
-                    'insights' => $insights,
-                ])->render(),
-                'monitoring_html' => view('admin.super-admin.partials.dashboard-monitoring', [
-                    'chartRegion' => $chartRegion,
-                    'monitoringFilters' => $monitoringFilters,
-                    'regions' => $regionsList,
-                    'trainingTitles' => $trainingTitles,
-                    'monitoringSummary' => $monitoringSummary,
-                    'regionalHighlights' => $regionalHighlights,
-                    'regionalData' => $regionalData,
-                    'mapPoints' => $mapPoints,
-                ])->render(),
+                'body_html' => view('admin.super-admin.partials.dashboard-body', $data)->render(),
                 'chartData' => $chartData,
-                'mapPoints' => $mapPoints,
-                'regionDeployed' => $regionDeployed,
+                'mapPoints' => $data['mapPoints'],
+                'regionDeployed' => $data['regionDeployed'],
             ]);
         }
 
-        return view('admin.super-admin.dashboard', [
-            'user' => $user,
-            'year' => $year,
-            'availableYears' => $availableYears,
-            'chartRegion' => $chartRegion,
-            'stats' => [
-                'instructors' => Instructor::count(),
-                'tna_submissions' => TrainingNeedsAssessment::count(),
-                'upcoming_trainings' => TrainingRequest::where('preferred_date', '>=', today())
-                    ->whereIn('status', [TrainingRequest::STATUS_APPROVED, TrainingRequest::STATUS_UNDER_REVIEW])
-                    ->count(),
-            ],
-            'chartData' => $chartData,
-            'insights' => $insights,
-            'monitoringFilters' => $monitoringFilters,
-            'regions' => $regionsList,
-            'trainingTitles' => $trainingTitles,
-            'monitoringSummary' => $monitoringSummary,
-            'regionalData' => $regionalData,
-            'regionalHighlights' => $regionalHighlights,
-            'mapPoints' => $mapPoints,
-            'regionDeployed' => $regionDeployed,
-            'needsAssessmentByOrganization' => $needsAssessmentByOrganization,
-            'region' => null,
-            'graduatesByLgu' => $this->graduatesByLgu($completed),
-        ]);
+        return view('admin.super-admin.dashboard', $data);
+    }
+
+    /**
+     * A From/Until value from the query string as Y-m-d, or null when it's
+     * missing or isn't a real date — so a hand-edited URL can't feed garbage
+     * into the date math further down.
+     */
+    private function queryDate(Request $request, string $key): ?string
+    {
+        $value = $request->query($key);
+
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('!Y-m-d', $value)->toDateString();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Training Needs Assessment submissions matching the dashboard filters:
+     * region by the submitting participant's region, dates by when it was
+     * submitted, and training by the training it recommended.
+     *
+     * @return Builder<TrainingNeedsAssessment>
+     */
+    private function needsAssessments(array $filters): Builder
+    {
+        return TrainingNeedsAssessment::query()
+            ->when($filters['regions'], fn ($q) => $q->whereHas('user', fn ($user) => $user->whereIn('region', $filters['regions'])))
+            ->when($filters['training_title'], fn ($q) => $q->where('recommended_training_title', $filters['training_title']))
+            ->when($filters['from'], fn ($q) => $q->whereDate('created_at', '>=', $filters['from']))
+            ->when($filters['until'], fn ($q) => $q->whereDate('created_at', '<=', $filters['until']));
+    }
+
+    /**
+     * Approved or under-review trainings still ahead — today onward, or from
+     * the filter's From date if that's later — within the rest of the filters.
+     */
+    private function upcomingTrainingsCount(array $filters): int
+    {
+        $today = today()->toDateString();
+
+        return TrainingRequest::filteredBy(['from' => max($filters['from'] ?? $today, $today)] + $filters)
+            ->whereIn('status', [TrainingRequest::STATUS_APPROVED, TrainingRequest::STATUS_UNDER_REVIEW])
+            ->count();
+    }
+
+    /**
+     * Imported ATAR records matching the dashboard filters. An ATAR's own
+     * date_conducted is free text, so dates are matched through the training
+     * the import created alongside it.
+     *
+     * @return Builder<AtarRecord>
+     */
+    private function atarRecords(array $filters): Builder
+    {
+        return AtarRecord::query()
+            ->when($filters['regions'], fn ($q) => $q->whereIn('region', $filters['regions']))
+            ->when($filters['training_title'], fn ($q) => $q->where('training_title', $filters['training_title']))
+            ->when($filters['from'] || $filters['until'], fn ($q) => $q->whereHas('trainingRequest', fn ($training) => $training->filteredBy([
+                'from' => $filters['from'],
+                'until' => $filters['until'],
+            ])));
     }
 
     /**
@@ -375,10 +363,9 @@ class DashboardController extends Controller
      *
      * @return array{training: string, rate: int, completed: int, total: int}|null
      */
-    private function lowestCompletionRateTraining(?string $region): ?array
+    private function lowestCompletionRateTraining(array $filters): ?array
     {
-        $rows = TrainingRequest::query()
-            ->when($region, fn ($q) => $q->where('region', $region))
+        $rows = TrainingRequest::filteredBy($filters)
             ->selectRaw('training_title, count(*) as total, sum(case when status = ? then 1 else 0 end) as completed', [TrainingRequest::STATUS_COMPLETED])
             ->groupBy('training_title')
             ->havingRaw('count(*) >= 3')
@@ -401,10 +388,7 @@ class DashboardController extends Controller
     /**
      * Distinct LGUs/NGAs actually reached by completed trainings — the same
      * agency_type split MonitoringController::summary() computes for the
-     * Regional Performance table, recomputed here from the same $completed
-     * collection the rest of buildInsights() already uses (rather than
-     * reusing $monitoringSummary directly), so this number doesn't silently
-     * change when someone adjusts the separate Regional Performance filters.
+     * LGUs/NGAs Covered stat cards, from the same filtered trainings.
      *
      * @param  Collection<int, TrainingRequest>  $completed
      * @return array{lgus: int, ngas: int}
@@ -415,37 +399,6 @@ class DashboardController extends Controller
             'lgus' => $completed->where('agency_type', TrainingRequest::AGENCY_TYPE_LGU)->pluck('requesting_agency')->filter()->unique()->count(),
             'ngas' => $completed->where('agency_type', TrainingRequest::AGENCY_TYPE_NGA)->pluck('requesting_agency')->filter()->unique()->count(),
         ];
-    }
-
-    /**
-     * Narrows already-loaded completed trainings to one year in memory, so the
-     * year-scoped chart doesn't re-query rows the dashboard already holds.
-     *
-     * @param  Collection<int, TrainingRequest>  $completed
-     */
-    private function inYear(Collection $completed, string $year): Collection
-    {
-        return $year === 'all'
-            ? $completed
-            : $completed->filter(fn (TrainingRequest $t) => $t->preferred_date?->year === (int) $year);
-    }
-
-    /**
-     * Every year with at least one completed training on file (region-scoped
-     * when given), plus the current year so it's always selectable even
-     * before any :year data exists — feeds the Graduates by Training year
-     * picker.
-     */
-    private function availableYears(?string $region = null): Collection
-    {
-        return TrainingRequest::where('status', TrainingRequest::STATUS_COMPLETED)
-            ->when($region, fn ($query) => $query->where('region', $region))
-            ->selectRaw('DISTINCT YEAR(preferred_date) as year')
-            ->pluck('year')
-            ->push(now()->year)
-            ->unique()
-            ->sortDesc()
-            ->values();
     }
 
     /**
@@ -470,13 +423,12 @@ class DashboardController extends Controller
     }
 
     /**
-     * Training request counts per training course — every request on file
-     * regardless of status, scoped to a single region when one is given.
+     * Training request counts per training course — every request matching
+     * the dashboard filters, regardless of status.
      */
-    private function requestsByTrainingChart(?string $region = null): array
+    private function requestsByTrainingChart(array $filters): array
     {
-        return TrainingRequest::query()
-            ->when($region, fn ($q) => $q->where('region', $region))
+        return TrainingRequest::filteredBy($filters)
             ->selectRaw('training_title, count(*) as total')
             ->groupBy('training_title')
             ->orderByDesc('total')
@@ -486,14 +438,12 @@ class DashboardController extends Controller
     }
 
     /**
-     * All-time request counts by status — the pipeline from newly submitted
-     * through completed. Scoped to a single region when one is given, otherwise
-     * every training request on file.
+     * Request counts by status — the pipeline from newly submitted through
+     * completed — for every request matching the dashboard filters.
      */
-    private function statusBreakdownChart(?string $region = null): array
+    private function statusBreakdownChart(array $filters): array
     {
-        $counts = TrainingRequest::query()
-            ->when($region, fn ($q) => $q->where('region', $region))
+        $counts = TrainingRequest::filteredBy($filters)
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
@@ -508,12 +458,34 @@ class DashboardController extends Controller
     }
 
     /**
-     * Graduate totals per age bracket, completed trainings only.
+     * The months the Scheduled vs Completed chart covers: the dashboard's
+     * From/Until when set, otherwise the current calendar year. With only one
+     * end set, the other falls back to the start of Until's year, or the end
+     * of the current year after From.
      *
-     * @param  Collection<int, TrainingRequest>  $completed
+     * @return array{0: Carbon, 1: Carbon}
      */
+    private function scheduledRange(array $filters): array
+    {
+        $start = match (true) {
+            $filters['from'] !== null => Carbon::parse($filters['from'])->startOfMonth(),
+            $filters['until'] !== null => Carbon::parse($filters['until'])->startOfYear(),
+            default => now()->startOfYear(),
+        };
+        $end = $filters['until'] !== null
+            ? Carbon::parse($filters['until'])->endOfMonth()
+            : now()->endOfYear();
+
+        if ($end->lt($start)) {
+            $end = $start->copy()->endOfYear();
+        }
+
+        return [$start, $end];
+    }
+
     /**
-     * Cumulative Scheduled vs Completed for TA trainings across one year.
+     * Cumulative Scheduled vs Completed for TA trainings, month by month
+     * across scheduledRange().
      *
      * Deliberately not a target-vs-actual: Technical Assistance has no targets
      * set for it, so the honest comparison is how many were put on the calendar
@@ -530,73 +502,68 @@ class DashboardController extends Controller
      *
      * @return array<int, array{month: string, requested: int, accomplished: int}>
      */
-    private function requestedVsAccomplishedChart(?string $region, string|int $year): array
+    private function requestedVsAccomplishedChart(array $filters, Carbon $start, Carbon $end): array
     {
-        $rows = TrainingRequest::query()
+        $counts = TrainingRequest::query()
             ->where('category', TrainingRequest::CATEGORY_TA)
-            ->when($region, fn ($q) => $q->where('region', $region))
-            ->when($year !== 'all', fn ($q) => $q->whereYear('preferred_date', $year))
-            ->selectRaw('MONTH(preferred_date) as month_number, count(*) as requested, sum(case when status = ? then 1 else 0 end) as accomplished', [TrainingRequest::STATUS_COMPLETED])
-            ->groupBy('month_number')
-            ->pluck('requested', 'month_number');
+            ->filteredBy([
+                'from' => $filters['from'] ?? $start->toDateString(),
+                'until' => $filters['until'] ?? $end->toDateString(),
+            ] + $filters)
+            ->selectRaw('YEAR(preferred_date) as year_number, MONTH(preferred_date) as month_number, count(*) as requested, sum(case when status = ? then 1 else 0 end) as accomplished', [TrainingRequest::STATUS_COMPLETED])
+            ->groupBy('year_number', 'month_number')
+            ->get()
+            ->keyBy(fn ($row) => $row->year_number.'-'.$row->month_number);
 
-        $accomplishedRows = TrainingRequest::query()
-            ->where('category', TrainingRequest::CATEGORY_TA)
-            ->where('status', TrainingRequest::STATUS_COMPLETED)
-            ->when($region, fn ($q) => $q->where('region', $region))
-            ->when($year !== 'all', fn ($q) => $q->whereYear('preferred_date', $year))
-            ->selectRaw('MONTH(preferred_date) as month_number, count(*) as total')
-            ->groupBy('month_number')
-            ->pluck('total', 'month_number');
-
+        // Month names alone are ambiguous once the range crosses a year.
+        $labelFormat = $start->year === $end->year ? 'M' : 'M Y';
         $runningRequested = 0;
         $runningAccomplished = 0;
+        $months = [];
 
-        return collect(range(1, 12))
-            ->map(function (int $month) use ($rows, $accomplishedRows, &$runningRequested, &$runningAccomplished) {
-                $runningRequested += (int) $rows->get($month, 0);
-                $runningAccomplished += (int) $accomplishedRows->get($month, 0);
+        for ($month = $start->copy()->startOfMonth(); $month->lte($end); $month->addMonth()) {
+            $row = $counts->get($month->year.'-'.$month->month);
+            $runningRequested += (int) ($row->requested ?? 0);
+            $runningAccomplished += (int) ($row->accomplished ?? 0);
 
-                return [
-                    'month' => Carbon::create(null, $month)->format('M'),
-                    'requested' => $runningRequested,
-                    'accomplished' => $runningAccomplished,
-                ];
-            })
-            ->all();
+            $months[] = [
+                'month' => $month->format($labelFormat),
+                'requested' => $runningRequested,
+                'accomplished' => $runningAccomplished,
+            ];
+        }
+
+        return $months;
     }
 
     /**
      * APB against TA on the two measures that matter: how many trainings were
      * run, and how many people graduated from them.
      *
+     * @param  Collection<int, TrainingRequest>  $completed
      * @return array<int, array{label: string, trainings: int, graduates: int}>
      */
-    private function categoryComparisonChart(?string $region): array
+    private function categoryComparisonChart(Collection $completed): array
     {
-        // Aliased graduates_total, not graduates: TrainingRequest has a
-        // `graduates` accessor, which would shadow the alias and resolve to 0
-        // because the columns it adds up aren't selected here.
-        $rows = TrainingRequest::completed()
-            ->when($region, fn ($q) => $q->where('region', $region))
-            ->selectRaw('category, count(*) as trainings, sum(graduates_male + graduates_female) as graduates_total')
-            ->groupBy('category')
-            ->get()
-            ->keyBy('category');
-
         return collect(TrainingRequest::$categoryLabels)
-            ->map(fn (string $label, string $category) => [
-                'label' => $label,
-                'trainings' => (int) ($rows[$category]->trainings ?? 0),
-                'graduates' => (int) ($rows[$category]->graduates_total ?? 0),
-            ])
+            ->map(function (string $label, string $category) use ($completed) {
+                $rows = $completed->where('category', $category);
+
+                return [
+                    'label' => $label,
+                    'trainings' => $rows->count(),
+                    'graduates' => $rows->sum(fn (TrainingRequest $t) => $t->graduates),
+                ];
+            })
             ->values()
             ->all();
     }
 
     /**
-     * Graduates per training over the last three years, so a course that is
-     * quietly tailing off is easy to spot.
+     * Graduates per training over three years, so a course that is quietly
+     * tailing off is easy to spot. The three years end at the Until date's
+     * year when one is set, otherwise this year; region and training follow
+     * the dashboard filters.
      *
      * Returns every training rather than a top slice: the chart shows one at a
      * time, picked from a dropdown, so all of them need to be available to the
@@ -605,13 +572,15 @@ class DashboardController extends Controller
      *
      * @return array{years: array<int, int>, trainings: array<int, array{training: string, graduates: array<int, int>}>}
      */
-    private function threeYearTrendChart(?string $region): array
+    private function threeYearTrendChart(array $filters): array
     {
-        $years = collect(range(now()->year - 2, now()->year));
+        $endYear = $filters['until'] !== null ? Carbon::parse($filters['until'])->year : now()->year;
+        $years = collect(range($endYear - 2, $endYear));
 
         $rows = TrainingRequest::completed()
-            ->when($region, fn ($q) => $q->where('region', $region))
+            ->filteredBy(['regions' => $filters['regions'], 'training_title' => $filters['training_title']])
             ->whereYear('preferred_date', '>=', $years->first())
+            ->whereYear('preferred_date', '<=', $years->last())
             ->selectRaw('training_title, YEAR(preferred_date) as year, sum(graduates_male + graduates_female) as graduates_total')
             ->groupBy('training_title', 'year')
             ->get();
@@ -634,6 +603,11 @@ class DashboardController extends Controller
         ];
     }
 
+    /**
+     * Graduate totals per age bracket, completed trainings only.
+     *
+     * @param  Collection<int, TrainingRequest>  $completed
+     */
     private function graduatesByAgeRangeChart(Collection $completed): array
     {
         return [
@@ -647,13 +621,11 @@ class DashboardController extends Controller
     /**
      * What the Training Needs Assessment says participants need most — how
      * many submissions recommended each training, ranked highest-demand
-     * first. Scoped to a single region (by the submitting participant's
-     * region) when one is given, otherwise every submission on file.
+     * first, among the submissions matching the dashboard filters.
      */
-    private function mostNeededTrainingsChart(?string $region = null): array
+    private function mostNeededTrainingsChart(array $filters): array
     {
-        return TrainingNeedsAssessment::query()
-            ->when($region, fn ($q) => $q->whereHas('user', fn ($q2) => $q2->where('region', $region)))
+        return $this->needsAssessments($filters)
             ->whereNotNull('recommended_training_title')
             ->selectRaw('recommended_training_title, count(*) as total')
             ->groupBy('recommended_training_title')
@@ -688,11 +660,11 @@ class DashboardController extends Controller
      * moved here from the Needs Assessment tab, which had no dashboard
      * equivalent for this specific breakdown.
      */
-    private function needsAssessmentByOrganization(Request $request): LengthAwarePaginator
+    private function needsAssessmentByOrganization(Request $request, array $filters): LengthAwarePaginator
     {
         // Skips the large answers/category_scores JSON columns — only the
         // recommendation and the submitter's organization/region are used.
-        $submissions = TrainingNeedsAssessment::select(['id', 'user_id', 'recommended_training_title'])
+        $submissions = $this->needsAssessments($filters)->select(['id', 'user_id', 'recommended_training_title'])
             ->with('user:id,organization,region')
             ->get();
 
@@ -801,13 +773,12 @@ class DashboardController extends Controller
      * modes (some rows in the source Training Database leave this unset) are
      * grouped under "Unspecified" rather than dropped.
      */
-    private function atarTrainingsByModeChart(?string $region = null): array
+    private function atarTrainingsByModeChart(array $filters): array
     {
         // Built from get()+map() rather than pluck('total', 'mode_of_implementation') —
         // mode_of_implementation is nullable, and using a null value as an
         // array key triggers a deprecation notice.
-        return AtarRecord::query()
-            ->when($region, fn ($q) => $q->where('region', $region))
+        return $this->atarRecords($filters)
             ->selectRaw('mode_of_implementation, count(*) as total')
             ->groupBy('mode_of_implementation')
             ->get()
@@ -821,10 +792,9 @@ class DashboardController extends Controller
      * chronologically (Jan → Dec) rather than alphabetically or by import
      * order — months not present in the data are simply omitted.
      */
-    private function atarTrainingsByMonthChart(?string $region = null): array
+    private function atarTrainingsByMonthChart(array $filters): array
     {
-        $counts = AtarRecord::query()
-            ->when($region, fn ($q) => $q->where('region', $region))
+        $counts = $this->atarRecords($filters)
             ->whereNotNull('month')
             ->selectRaw('month, count(*) as total')
             ->groupBy('month')
@@ -856,7 +826,7 @@ class DashboardController extends Controller
      * Graduate totals per sector from imported ATAR records, sectors with
      * zero graduates omitted so the chart doesn't pad out with empty bars.
      */
-    private function atarGraduatesBySectorChart(?string $region = null): array
+    private function atarGraduatesBySectorChart(array $filters): array
     {
         $sectors = [
             'graduates_rdrrmc' => 'RDRRMC',
@@ -872,8 +842,7 @@ class DashboardController extends Controller
 
         // Summed in SQL instead of loading every ATAR row (with its long
         // narrative text columns) just to add up nine numbers.
-        $totals = AtarRecord::query()
-            ->when($region, fn ($q) => $q->where('region', $region))
+        $totals = $this->atarRecords($filters)
             ->selectRaw(collect(array_keys($sectors))->map(fn (string $column) => "COALESCE(SUM({$column}), 0) AS {$column}")->implode(', '))
             ->toBase()
             ->first();
