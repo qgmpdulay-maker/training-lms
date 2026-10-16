@@ -253,8 +253,9 @@
             }
 
             const mostNeededTrainings = chartData.mostNeededTrainings;
-            // Requested vs Accomplished — running totals, so the two lines
-            // only ever climb and the gap between them is the backlog.
+            // Scheduled vs Completed — running totals, so the two series only
+            // ever climb and the gap between them is the backlog of TA
+            // trainings scheduled but not yet marked completed.
             const rva = chartData.requestedVsAccomplished || [];
             const rvaEl = document.getElementById('dashRequestedVsAccomplishedChart');
             if (rvaEl && rva.length) {
@@ -263,8 +264,8 @@
                     data: {
                         labels: rva.map(row => row.month),
                         datasets: [
-                            { label: 'Requested (cumulative)', data: rva.map(row => row.requested), backgroundColor: brandNavy, borderRadius: 4 },
-                            { label: 'Accomplished (cumulative)', data: rva.map(row => row.accomplished), backgroundColor: brandOrange, borderRadius: 4 },
+                            { label: 'Scheduled (cumulative)', data: rva.map(row => row.requested), backgroundColor: brandNavy, borderRadius: 4 },
+                            { label: 'Completed (cumulative)', data: rva.map(row => row.accomplished), backgroundColor: brandOrange, borderRadius: 4 },
                         ],
                     },
                     options: {

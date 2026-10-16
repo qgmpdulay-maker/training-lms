@@ -90,9 +90,15 @@
         @endif
     </x-chart-card>
     {{-- Replaces the old request-pipeline chart: TA has no targets set against
-         it, so the honest comparison is asked-for against delivered. --}}
-    <x-chart-card :title="__('Requested vs Accomplished')"
-        :subtitle="__('Technical Assistance trainings, running total by month, :region :year.', ['region' => $chartRegionLabel, 'year' => $year === 'all' ? __('(all years)') : $year])">
+         it, so the honest comparison is what was put on the calendar against
+         what was delivered. Labelled "Scheduled", not "Requested": nobody but
+         Super Admin can create a TrainingRequest right now (participants and
+         Regional Admin are read-only, and SOURCE_PUBLIC_PORTAL is unused since
+         the public form was pulled), so the navy bar is trainings this office
+         scheduled, not demand coming in from outside. The underlying array
+         keys are still requested/accomplished. --}}
+    <x-chart-card :title="__('Scheduled vs Completed')"
+        :subtitle="__('Technical Assistance trainings scheduled against those marked completed, running total by month, :region :year.', ['region' => $chartRegionLabel, 'year' => $year === 'all' ? __('(all years)') : $year])">
         @if (collect($chartData['requestedVsAccomplished'])->sum('requested') > 0)
             <div class="h-72"><canvas id="dashRequestedVsAccomplishedChart"></canvas></div>
         @else

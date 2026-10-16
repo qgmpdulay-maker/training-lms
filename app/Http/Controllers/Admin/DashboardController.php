@@ -510,13 +510,20 @@ class DashboardController extends Controller
      * @param  Collection<int, TrainingRequest>  $completed
      */
     /**
-     * Cumulative Requested vs Accomplished for TA trainings across one year.
+     * Cumulative Scheduled vs Completed for TA trainings across one year.
      *
      * Deliberately not a target-vs-actual: Technical Assistance has no targets
-     * set for it, so the honest comparison is how many were asked for against
-     * how many were actually delivered, accumulating month by month. Both
-     * series run on preferred_date, so a training counts in the month it was
-     * scheduled for rather than the month it was filed.
+     * set for it, so the honest comparison is how many were put on the calendar
+     * against how many were actually delivered, accumulating month by month.
+     * Both series run on preferred_date, so a training counts in the month it
+     * was scheduled for rather than the month the record was created.
+     *
+     * The array keys stay requested/accomplished, but the chart is labelled
+     * "Scheduled vs Completed" — only Super Admin can create a TrainingRequest
+     * today, so the first series is this office's own schedule, not incoming
+     * demand. If agency-as-requester lands and SOURCE_PUBLIC_PORTAL rows start
+     * appearing, the "Requested" framing becomes true again and the label
+     * should go back.
      *
      * @return array<int, array{month: string, requested: int, accomplished: int}>
      */
