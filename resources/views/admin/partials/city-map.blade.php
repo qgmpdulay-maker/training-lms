@@ -36,11 +36,6 @@
             background: transparent;
             font-family: inherit;
         }
-        /* Grey base map, so the blue shading is the only colour on it —
-           OpenStreetMap's own blue sea otherwise reads as data. */
-        .city-map-panel .leaflet-tile-pane {
-            filter: grayscale(1) contrast(0.85) brightness(1.05);
-        }
         .city-map-tooltip {
             background: rgba(255, 255, 255, 0.97) !important;
             border: 1px solid rgba(21, 42, 78, 0.15) !important;

@@ -64,12 +64,6 @@ class TrainingRequest extends Model
     // request.
     const SOURCE_ATAR_IMPORT = 'atar_import';
 
-    /**
-     * Fallback map marker location (geographic centre of the Philippines)
-     * for a completed training with no region and no encoded coordinates.
-     */
-    const DEFAULT_MAP_COORDINATES = [12.8797, 121.7740];
-
     public static array $statusLabels = [
         self::STATUS_SUBMITTED => 'Received',
         self::STATUS_UNDER_REVIEW => 'Being Reviewed',
@@ -201,18 +195,6 @@ class TrainingRequest extends Model
     public function getNonCompletersAttribute(): int
     {
         return max($this->number_of_participants - $this->graduates, 0);
-    }
-
-    /**
-     * @return array{0: float, 1: float}
-     */
-    public function getMapCoordinatesAttribute(): array
-    {
-        if ($this->latitude !== null && $this->longitude !== null) {
-            return [$this->latitude, $this->longitude];
-        }
-
-        return config("regions.geo.{$this->region}", self::DEFAULT_MAP_COORDINATES);
     }
 
     public function scopeCompleted($query)

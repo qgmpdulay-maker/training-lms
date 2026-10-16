@@ -8,7 +8,6 @@ use App\Http\Controllers\Admin\ParticipantDeploymentController;
 use App\Http\Controllers\Admin\SummaryController;
 use App\Http\Controllers\Admin\SuperAdmin\AtarRecordController;
 use App\Http\Controllers\Admin\SuperAdmin\AtarReportController;
-use App\Http\Controllers\Admin\SuperAdmin\MonitoringController;
 use App\Http\Controllers\Admin\SuperAdmin\OrganizationController;
 use App\Http\Controllers\Admin\SuperAdmin\TrainingController as SuperAdminTrainingController;
 use App\Http\Controllers\Admin\SuperAdmin\UserManagementController;
@@ -84,10 +83,6 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     Route::get('/training-needs-assessment', [AdminTrainingNeedsAssessmentController::class, 'index'])->name('training-needs-assessment');
 
     Route::get('/instructors', [InstructorController::class, 'index'])->name('instructors.index');
-
-    // Graduates Map is Regional-Admin-reachable too — MonitoringController::map()
-    // force-scopes a Regional Admin to their own region.
-    Route::get('/monitoring/map', [MonitoringController::class, 'map'])->name('monitoring.map');
 
     // The Regional Admin's only writes. Regional staff know which of their
     // graduates got sent to an operation, and which city each is based in for

@@ -8,60 +8,19 @@ use App\Models\TrainingRequest;
 use App\Models\User;
 use App\Support\CityDirectory;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\View\View;
 
+/**
+ * No routes of its own any more — the standalone Graduates Map page is gone.
+ * What's left are the stat-card and city-map figures both admin dashboards
+ * build from (see DashboardController).
+ */
 class MonitoringController extends Controller
 {
-    /**
-     * Reachable by both Regional Admins and Super Admin (see routes/web.php) —
-     * a Regional Admin's region filter is force-overridden below rather than
-     * merged, so it can't be widened by editing the `regions[]` query string.
-     * Both dashboards embed this same map inline (see DashboardController;
-     * the Regional Admin one shares its markup via admin.partials.graduates-map)
-     * — this standalone page is still reached from the "Graduates Map" link on
-     * the Graduates by LGU card, and keeps the date and training filters.
-     */
-    public function map(Request $request): View
-    {
-        $user = $request->user();
-        $filters = $this->filtersFromRequest($request);
-
-        if ($user->isAdmin()) {
-            $filters['regions'] = [$user->region];
-        }
-
-        $trainings = static::completedTrainings($filters)->get();
-
-        return view('admin.super-admin.monitoring.map', [
-            'filters' => $filters,
-            'regionLocked' => $user->isAdmin(),
-            'regions' => config('regions.list'),
-            'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
-            'summary' => static::summary($trainings),
-            'mapPoints' => static::mapPoints($trainings),
-            'regionDeployed' => static::deployedByRegion(static::regionalData($trainings)),
-        ]);
-    }
-
     public static function completedTrainings(array $filters): Builder
     {
         return TrainingRequest::completed()->filteredBy($filters);
-    }
-
-    /**
-     * @return array{regions: array, training_title: ?string, from: ?string, until: ?string}
-     */
-    private function filtersFromRequest(Request $request): array
-    {
-        return [
-            'regions' => array_filter((array) $request->query('regions', [])),
-            'training_title' => $request->query('training_title') ?: null,
-            'from' => $request->query('from') ?: null,
-            'until' => $request->query('until') ?: null,
-        ];
     }
 
     /**
@@ -85,39 +44,6 @@ class MonitoringController extends Controller
         ];
     }
 
-    /**
-     * Per-region rollup plus a "Central (All OCDROs)" total row — what
-     * deployedByRegion() reads its per-region deployed counts from.
-     *
-     * Takes the trainings the caller already loaded (rather than the
-     * filters) so the same query isn't run twice on one page load.
-     *
-     * @param  Collection<int, TrainingRequest>  $trainings  already filtered via completedTrainings()
-     */
-    public static function regionalData(Collection $trainings): array
-    {
-        $rows = collect(config('regions.list'))
-            ->map(function (string $region) use ($trainings) {
-                $regionTrainings = $trainings->where('region', $region);
-
-                return array_merge(['label' => $region, 'short_label' => $region], static::summary($regionTrainings));
-            })
-            ->filter(fn (array $row) => $row['trainings'] > 0)
-            ->sortByDesc('graduates')
-            ->values();
-
-        $total = array_merge(['label' => 'Central (All OCDROs)', 'short_label' => 'Total'], static::summary($trainings));
-
-        return $rows->push($total)->all();
-    }
-
-    /**
-     * Shared with both dashboards' embedded maps (see DashboardController),
-     * hence public static rather than a private instance method like the
-     * rest of this controller's helpers.
-     *
-     * @param  Collection<int, TrainingRequest>  $trainings
-     */
     /**
      * How many distinct graduates of these trainings have since been deployed
      * to an operation (see Admin\ParticipantDeploymentController).
@@ -143,35 +69,9 @@ class MonitoringController extends Controller
             ->count();
     }
 
-    public static function mapPoints(Collection $trainings): array
-    {
-        return $trainings
-            ->groupBy(fn (TrainingRequest $t) => $t->agency_type && $t->requesting_agency
-                ? "{$t->agency_type}|{$t->requesting_agency}"
-                : "region|{$t->region}")
-            ->map(function (Collection $rows) {
-                $first = $rows->first();
-
-                return [
-                    'name' => $first->agency_type ? $first->requesting_agency : ($first->region ?? 'Unassigned Region'),
-                    'agency_type' => $first->agency_type ? strtoupper($first->agency_type) : null,
-                    'region' => $first->region,
-                    'latitude' => $first->map_coordinates[0],
-                    'longitude' => $first->map_coordinates[1],
-                    'trainings' => $rows->count(),
-                    'graduates' => $rows->sum(fn (TrainingRequest $t) => $t->graduates),
-                    'deployed' => self::deployedCount($rows),
-                    'teams' => $rows->sum('teams_organized'),
-                ];
-            })
-            ->sortByDesc('graduates')
-            ->values()
-            ->all();
-    }
-
     /**
-     * Graduates, deployed people, and trainings per city, for the dashboards'
-     * Graduates by Location map. Trainings don't record where they were held,
+     * Graduates, deployed people, and trainings per city, for the Graduates
+     * by Location map on both dashboards. Trainings don't record where they were held,
      * so a graduate counts in the city they live in — their City on file,
      * which an admin can also set on the Deployments page.
      *
@@ -251,20 +151,5 @@ class MonitoringController extends Controller
             'unplaced' => $unplaced,
             'unplaced_people' => count($unplacedPeople),
         ];
-    }
-
-    /**
-     * Distinct deployed graduates per region, keyed by region name — feeds the
-     * region hover tooltip on the maps. Read off regionalData() rather than
-     * summed from mapPoints() in the browser: points are per agency, so a
-     * graduate who trained under two agencies in the same region would be
-     * counted twice.
-     */
-    public static function deployedByRegion(array $regionalData): array
-    {
-        return collect($regionalData)
-            ->reject(fn (array $row) => $row['label'] === 'Central (All OCDROs)')
-            ->pluck('deployed', 'label')
-            ->all();
     }
 }

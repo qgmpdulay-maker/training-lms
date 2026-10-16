@@ -1,18 +1,10 @@
 {{--
     Shared "Graduates by City" card, used by both admin dashboards: the
     Graduates by Location map's figures as a ranked list, one tab per region.
-    Expects $graduatesByCity (DashboardController::graduatesByCity()),
-    $cityTotals (for the not-on-the-map count), and $region (the region
-    filter, or a Regional Admin's own region; null for every region).
+    Expects $graduatesByCity (DashboardController::graduatesByCity()) and
+    $cityTotals (for the not-on-the-map count).
 --}}
 <x-chart-card :title="__('Graduates by City')" body-class="p-6 sm:p-8">
-    {{-- The only way to the standalone Graduates Map page from the dashboard. --}}
-    <x-slot:action>
-        <a href="{{ route('admin.monitoring.map', $region ? ['regions' => [$region]] : []) }}" class="text-xs font-semibold text-white/70 hover:text-white transition whitespace-nowrap">
-            {{ __('Graduates Map') }} &rarr;
-        </a>
-    </x-slot:action>
-
     @if ($cityTotals['unplaced'] > 0)
         <p class="text-xs text-amber-700 dark:text-amber-400 mb-5">
             {{ trans_choice(':count graduate isn\'t listed|:count graduates aren\'t listed', $cityTotals['unplaced'], ['count' => number_format($cityTotals['unplaced'])]) }}
