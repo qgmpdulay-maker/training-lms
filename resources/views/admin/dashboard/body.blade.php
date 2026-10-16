@@ -1,14 +1,14 @@
 {{--
-    Every part of the Super Admin dashboard the filters touch: the Regional
+    Every part of the dashboard the filters touch: the Regional
     Performance section (which holds the filters themselves), the stat tiles,
     the charts, the Needs Assessment table and Graduates by City card, and the
     insights. Returned whole by DashboardController::index() on each filter
     change so they all stay in step — see fetchDashboard() in
-    dashboard.blade.php.
+    index.blade.php.
 --}}
 <!-- Regional Performance & Graduates Map — first thing under the welcome banner -->
 <div id="dashboard-monitoring">
-    @include('admin.super-admin.partials.dashboard-monitoring')
+    @include('admin.dashboard.performance')
 </div>
 
 <!-- Stat tiles -->
@@ -27,7 +27,7 @@
 
 <!-- Charts -->
 <div id="dashboard-charts">
-    @include('admin.super-admin.partials.dashboard-charts')
+    @include('admin.dashboard.charts')
 </div>
 
 <div class="grid grid-cols-1 gap-6">
@@ -75,5 +75,5 @@
 </div>
 
 <div id="dashboard-insights">
-    @include('admin.super-admin.partials.dashboard-insights')
+    @include('admin.dashboard.insights')
 </div>

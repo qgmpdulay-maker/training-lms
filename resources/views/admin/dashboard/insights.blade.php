@@ -1,7 +1,7 @@
 {{--
     Auto-generated callouts from the chart data, so they follow the dashboard
-    filters too — re-rendered with the rest of dashboard-body.blade.php on the
-    Super Admin side (see fetchDashboard() in dashboard.blade.php).
+    filters too — re-rendered with the rest of body.blade.php (see
+    fetchDashboard() in index.blade.php).
 --}}
 @if (count($insights) > 0)
     <x-chart-card :title="__('Summary & Insights')" :subtitle="__('Auto-generated from the charts above.')">

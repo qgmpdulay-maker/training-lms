@@ -4,11 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\SuperAdmin\MonitoringController;
 use App\Http\Controllers\Controller;
-use App\Models\AtarRecord;
 use App\Models\Instructor;
 use App\Models\TrainingNeedsAssessment;
 use App\Models\TrainingRequest;
-use App\Models\User;
 use App\Support\CityDirectory;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -58,49 +56,6 @@ class DashboardController extends Controller
 
         $cityTotals = MonitoringController::cityTotals($completed);
 
-        $shared = [
-            'user' => $user,
-            'filters' => $filters,
-            'region' => $region,
-            'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
-            'monitoringSummary' => MonitoringController::summary($completed),
-            'cityTotals' => $cityTotals,
-            'graduatesByCity' => $this->graduatesByCity($cityTotals, $region),
-            'stats' => [
-                // Instructors aren't tied to a training or a date, so only the
-                // region narrows this one.
-                'instructors' => Instructor::query()->when($region, fn ($q) => $q->where('region', $region))->count(),
-                'tna_submissions' => $this->needsAssessments($filters)->count(),
-                'upcoming_trainings' => $this->upcomingTrainingsCount($filters),
-            ],
-        ];
-
-        if (! $user->isSuperAdmin()) {
-            return view('admin.dashboard-regional', $shared + [
-                'chartData' => [
-                    'requestsByTraining' => $requestsByTraining,
-                    'statusBreakdown' => $statusBreakdown,
-                    'graduatesBySex' => $graduatesBySex,
-                    'graduatesByAgeRange' => $graduatesByAgeRange,
-                    'mostNeededTrainings' => $mostNeededTrainings,
-                    'atarTrainingsByMode' => $this->atarTrainingsByModeChart($filters),
-                    'atarTrainingsByMonth' => $this->atarTrainingsByMonthChart($filters),
-                    'atarGraduatesBySector' => $this->atarGraduatesBySectorChart($filters),
-                    'participantsByCity' => $this->participantsByCityChart($region),
-                ],
-                'insights' => $this->buildInsights(
-                    statusBreakdown: $statusBreakdown,
-                    graduatesByTraining: $graduatesByTraining,
-                    requestsByTraining: $requestsByTraining,
-                    graduatesByAgeRange: $graduatesByAgeRange,
-                    graduatesBySex: $graduatesBySex,
-                    mostNeededTrainings: $mostNeededTrainings,
-                    lowestCompletionRateTraining: $this->lowestCompletionRateTraining($filters),
-                    lguNgaReach: $this->lguNgaReach($completed),
-                ),
-            ]);
-        }
-
         [$scheduledStart, $scheduledEnd] = $this->scheduledRange($filters);
 
         $chartData = [
@@ -114,8 +69,25 @@ class DashboardController extends Controller
             'threeYearTrend' => $this->threeYearTrendChart($filters),
         ];
 
-        $data = $shared + [
+        // Super Admin and Regional Admins get the same dashboard; a Regional
+        // Admin's is just locked to their region (see $filters above).
+        $data = [
+            'user' => $user,
+            'regionLocked' => ! $user->isSuperAdmin(),
+            'filters' => $filters,
+            'region' => $region,
             'regions' => config('regions.list'),
+            'trainingTitles' => collect(config('trainings.catalog'))->pluck('title'),
+            'monitoringSummary' => MonitoringController::summary($completed),
+            'cityTotals' => $cityTotals,
+            'graduatesByCity' => $this->graduatesByCity($cityTotals, $region),
+            'stats' => [
+                // Instructors aren't tied to a training or a date, so only the
+                // region narrows this one.
+                'instructors' => Instructor::query()->when($region, fn ($q) => $q->where('region', $region))->count(),
+                'tna_submissions' => $this->needsAssessments($filters)->count(),
+                'upcoming_trainings' => $this->upcomingTrainingsCount($filters),
+            ],
             'chartData' => $chartData,
             'scheduledPeriod' => $scheduledStart->format('M Y').' – '.$scheduledEnd->format('M Y'),
             'insights' => $this->buildInsights(
@@ -124,7 +96,7 @@ class DashboardController extends Controller
                 requestsByTraining: $requestsByTraining,
                 graduatesByAgeRange: $graduatesByAgeRange,
                 // A region-by-region comparison only means something when no
-                // single region is picked.
+                // single region is picked — so never for a Regional Admin.
                 graduatesByRegion: $region ? null : $this->graduatesByRegionChart($completed),
                 graduatesBySex: $graduatesBySex,
                 mostNeededTrainings: $mostNeededTrainings,
@@ -136,17 +108,18 @@ class DashboardController extends Controller
 
         // Changing a filter submits via fetch() instead of a plain GET
         // navigation, so the page doesn't reload — see submitDashboardFilter()
-        // in dashboard.blade.php. Everything the filters touch lives in one
-        // partial, returned here re-rendered along with the data its charts
-        // are drawn from (the map carries its own data in the markup).
+        // in admin/dashboard/index.blade.php. Everything the filters touch
+        // lives in one partial, returned here re-rendered along with the data
+        // its charts are drawn from (the map carries its own data in the
+        // markup).
         if ($request->ajax()) {
             return response()->json([
-                'body_html' => view('admin.super-admin.partials.dashboard-body', $data)->render(),
+                'body_html' => view('admin.dashboard.body', $data)->render(),
                 'chartData' => $chartData,
             ]);
         }
 
-        return view('admin.super-admin.dashboard', $data);
+        return view('admin.dashboard.index', $data);
     }
 
     /**
@@ -196,24 +169,6 @@ class DashboardController extends Controller
         return TrainingRequest::filteredBy(['from' => max($filters['from'] ?? $today, $today)] + $filters)
             ->whereIn('status', [TrainingRequest::STATUS_APPROVED, TrainingRequest::STATUS_UNDER_REVIEW])
             ->count();
-    }
-
-    /**
-     * Imported ATAR records matching the dashboard filters. An ATAR's own
-     * date_conducted is free text, so dates are matched through the training
-     * the import created alongside it.
-     *
-     * @return Builder<AtarRecord>
-     */
-    private function atarRecords(array $filters): Builder
-    {
-        return AtarRecord::query()
-            ->when($filters['regions'], fn ($q) => $q->whereIn('region', $filters['regions']))
-            ->when($filters['training_title'], fn ($q) => $q->where('training_title', $filters['training_title']))
-            ->when($filters['from'] || $filters['until'], fn ($q) => $q->whereHas('trainingRequest', fn ($training) => $training->filteredBy([
-                'from' => $filters['from'],
-                'until' => $filters['until'],
-            ])));
     }
 
     /**
@@ -307,9 +262,10 @@ class DashboardController extends Controller
                 'region' => $top['region'], 'count' => $top['graduates'],
             ]);
 
-            // Only meaningful nationwide (this whole callout is skipped for
-            // the regional dashboard, since $graduatesByRegion is only ever
-            // passed on the Super Admin side) — a coverage gap, not just a
+            // Only meaningful nationwide (this whole callout is skipped
+            // whenever a single region is showing, including every Regional
+            // Admin's dashboard, since $graduatesByRegion is null then) — a
+            // coverage gap, not just a
             // leaderboard, since graduatesByRegionChart() already drops any
             // region with zero graduates rather than listing it at zero.
             $regionsWithNoGraduates = count(config('regions.list')) - count($graduatesByRegion);
@@ -719,114 +675,6 @@ class DashboardController extends Controller
                     ->all(),
             ])
             ->sortBy(fn (array $group, string $region) => [$region === $ownRegion ? 0 : 1, -$group['total']])
-            ->all();
-    }
-
-    /**
-     * Registered participant counts per city, scoped to a single region when
-     * one is given. Blank cities are excluded rather than grouped under
-     * "Unspecified" — most existing participants registered before the city
-     * field existed, and lumping them in would dwarf every real city.
-     */
-    private function participantsByCityChart(?string $region = null): array
-    {
-        return User::query()
-            ->where('role', User::ROLE_PARTICIPANT)
-            ->when($region, fn ($q) => $q->where('region', $region))
-            ->whereNotNull('city')
-            ->where('city', '!=', '')
-            ->selectRaw('city, count(*) as total')
-            ->groupBy('city')
-            ->orderByDesc('total')
-            ->get()
-            ->map(fn ($row) => ['city' => $row->city, 'total' => (int) $row->total])
-            ->all();
-    }
-
-    /**
-     * Training counts per delivery mode from imported ATAR records — blank
-     * modes (some rows in the source Training Database leave this unset) are
-     * grouped under "Unspecified" rather than dropped.
-     */
-    private function atarTrainingsByModeChart(array $filters): array
-    {
-        // Built from get()+map() rather than pluck('total', 'mode_of_implementation') —
-        // mode_of_implementation is nullable, and using a null value as an
-        // array key triggers a deprecation notice.
-        return $this->atarRecords($filters)
-            ->selectRaw('mode_of_implementation, count(*) as total')
-            ->groupBy('mode_of_implementation')
-            ->get()
-            ->map(fn ($row) => ['label' => $row->mode_of_implementation ?: __('Unspecified'), 'value' => (int) $row->total])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Training counts per month from imported ATAR records, ordered
-     * chronologically (Jan → Dec) rather than alphabetically or by import
-     * order — months not present in the data are simply omitted.
-     */
-    private function atarTrainingsByMonthChart(array $filters): array
-    {
-        $counts = $this->atarRecords($filters)
-            ->whereNotNull('month')
-            ->selectRaw('month, count(*) as total')
-            ->groupBy('month')
-            ->pluck('total', 'month');
-
-        return $counts
-            ->map(fn ($total, $month) => ['label' => $month, 'value' => (int) $total, 'sort' => $this->monthSortKey($month)])
-            ->sortBy('sort')
-            ->map(fn (array $row) => ['label' => $row['label'], 'value' => $row['value']])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Best-effort month index (1-12) for sorting free-text month labels like
-     * "March" or "Apr" — unparseable labels sort last rather than breaking
-     * the chart.
-     */
-    private function monthSortKey(string $month): int
-    {
-        try {
-            return Carbon::parse("1 {$month} 2000")->month;
-        } catch (\Throwable) {
-            return 99;
-        }
-    }
-
-    /**
-     * Graduate totals per sector from imported ATAR records, sectors with
-     * zero graduates omitted so the chart doesn't pad out with empty bars.
-     */
-    private function atarGraduatesBySectorChart(array $filters): array
-    {
-        $sectors = [
-            'graduates_rdrrmc' => 'RDRRMC',
-            'graduates_lgu' => 'LGU',
-            'graduates_ldrrmo' => 'LDRRMO',
-            'graduates_academe' => 'Academe',
-            'graduates_cso' => 'CSO',
-            'graduates_ngo' => 'NGO',
-            'graduates_volunteer' => 'Volunteer',
-            'graduates_private_sector' => 'Private Sector',
-            'graduates_others' => 'Others',
-        ];
-
-        // Summed in SQL instead of loading every ATAR row (with its long
-        // narrative text columns) just to add up nine numbers.
-        $totals = $this->atarRecords($filters)
-            ->selectRaw(collect(array_keys($sectors))->map(fn (string $column) => "COALESCE(SUM({$column}), 0) AS {$column}")->implode(', '))
-            ->toBase()
-            ->first();
-
-        return collect($sectors)
-            ->map(fn (string $label, string $column) => ['sector' => $label, 'graduates' => (int) $totals->{$column}])
-            ->filter(fn (array $row) => $row['graduates'] > 0)
-            ->sortByDesc('graduates')
-            ->values()
             ->all();
     }
 }

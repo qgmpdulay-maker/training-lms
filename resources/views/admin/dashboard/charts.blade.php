@@ -1,8 +1,8 @@
 {{--
     The overview charts. They have no filters of their own — every one follows
     the From / Until / Region / Training filter at the top of the dashboard
-    (see dashboard-monitoring.blade.php), and is re-rendered with the rest of
-    dashboard-body.blade.php when it changes.
+    (see performance.blade.php), and is re-rendered with the rest of
+    body.blade.php when it changes.
 --}}
 @php
     $chartRegionLabel = $region ?: __('every region');
@@ -82,7 +82,7 @@
          lines stop being easy to tell apart — and the busiest three start
          ticked. Ticking happens in the browser, since every training's figures
          are already in the payload (see renderDashboardCharts() in
-         dashboard.blade.php). With the dashboard's Training filter set there's
+         index.blade.php). With the dashboard's Training filter set there's
          only that one training, so the checklist goes away. --}}
     @php
         $trendTrainings = $chartData['threeYearTrend']['trainings'];
