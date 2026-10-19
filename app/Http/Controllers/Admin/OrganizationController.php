@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin\SuperAdmin;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
@@ -12,21 +12,36 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * Super-admin management of the bodies OCD trains — LGUs, NGAs, academe, and
- * teams — and of who belongs to each.
+ * The bodies OCD trains — LGUs, NGAs, academe, and teams — and who belongs to
+ * each.
  *
- * Membership is curated here and nowhere else: a participant can't self-join,
- * and the freetext organization they typed at signup is only ever a suggestion
- * shown to the admin doing the assigning. That's what makes a confirmed member
- * trustworthy enough to act for the body.
+ * Who does what here splits by role. A **Regional Admin adds** the bodies in
+ * their own region and sees that region's list: regional staff are the ones
+ * who know which LGUs and schools exist in their area, so making the Super
+ * Admin type them all in was the wrong way round. Everything after that —
+ * editing a body, removing one, and above all placing members into it — stays
+ * **Super Admin**.
+ *
+ * Membership in particular is curated there and nowhere else: a participant
+ * can't self-join, and the freetext organization they typed at signup is only
+ * ever a suggestion shown to the admin doing the assigning. That's what makes
+ * a confirmed member trustworthy enough to act for the body.
  */
 class OrganizationController extends Controller
 {
     public function index(Request $request): View
     {
+        $user = $request->user();
+
+        // A Regional Admin's list is their own region and nothing else, so the
+        // region filter is replaced by a notice saying so — same shape as the
+        // Tools and Summary pages.
+        $regionLocked = $user->isAdmin();
+        $region = $regionLocked ? $user->region : $request->query('region');
+
         $organizations = Organization::filteredBy(
             $request->query('type'),
-            $request->query('region'),
+            $region,
             trim((string) $request->query('q', '')) ?: null,
         )
             ->withCount('members')
@@ -35,12 +50,13 @@ class OrganizationController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('admin.super-admin.organizations.index', [
+        return view('admin.organizations.index', [
             'organizations' => $organizations,
             'typeLabels' => Organization::$typeLabels,
             'regions' => config('regions.list'),
             'selectedType' => $request->query('type'),
-            'selectedRegion' => $request->query('region'),
+            'selectedRegion' => $region,
+            'regionLocked' => $regionLocked,
             'search' => trim((string) $request->query('q', '')),
         ]);
     }
@@ -88,12 +104,30 @@ class OrganizationController extends Controller
             return view('admin.partials.organization-candidates', $payload);
         }
 
-        return view('admin.super-admin.organizations.show', $payload);
+        return view('admin.organizations.show', $payload);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $user = $request->user();
+
+        // A Regional Admin files bodies under their own region, whatever the
+        // form sent. Merged in before validation rather than after, because
+        // the name-uniqueness rule is scoped by region — validating a null
+        // region and then saving a real one would let the same LGU in twice.
+        if ($user->isAdmin()) {
+            $request->merge(['region' => $user->region]);
+        }
+
         $organization = Organization::create($this->validated($request));
+
+        // Only a Super Admin has anything to do on the detail page; a Regional
+        // Admin is sent back to their list, where the new body is now on file
+        // for the Super Admin to place members into.
+        if ($user->isAdmin()) {
+            return Redirect::route('admin.organizations.index')
+                ->with('status', "{$organization->name} was added to {$user->region}.");
+        }
 
         return Redirect::route('admin.organizations.show', $organization)
             ->with('status', "{$organization->name} was added.");

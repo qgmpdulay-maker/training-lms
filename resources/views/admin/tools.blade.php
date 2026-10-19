@@ -83,6 +83,31 @@
                 </x-chart-card>
             @endif
 
+            {{-- Organizations. A Regional Admin knows which LGUs, agencies, and
+                 schools exist in their area, so they add their region's here.
+                 Reached from this card rather than its own sidebar entry: a
+                 Super Admin has one under Administration, but a Regional Admin
+                 has no Administration heading and the nav is crowded enough. --}}
+            @unless (Auth::user()->isSuperAdmin())
+                <x-chart-card body-class="p-6 sm:p-8"
+                    :title="__('Organizations')"
+                    :subtitle="__('The LGUs, national government agencies, academe bodies, and teams in your region.')">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <p class="text-sm text-gray-500 dark:text-gray-400 flex-1">
+                            {{ __('Add the bodies your region trains so requests and rosters can be tied to them. The Super Admin places members into a body once it is on file.') }}
+                            <span class="block text-xs text-gray-400 mt-1">
+                                {{ trans_choice(':count organization on file|:count organizations on file', $organizationCount, ['count' => $organizationCount]) }}{{ $region ? ' '.__('for :region', ['region' => $region]) : '' }}.
+                            </span>
+                        </p>
+
+                        <a href="{{ route('admin.organizations.index') }}"
+                            class="inline-flex items-center justify-center shrink-0 bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                            {{ __('Manage Organizations') }}
+                        </a>
+                    </div>
+                </x-chart-card>
+            @endunless
+
             <!-- Evaluation Computation (L1 / L2) -->
             <x-chart-card id="evaluation-computation" class="scroll-mt-24" body-class="p-0"
                 :title="__('Evaluation Computation (L1 / L2)')">

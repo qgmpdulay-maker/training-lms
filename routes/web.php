@@ -5,11 +5,11 @@ use App\Http\Controllers\Admin\CalendarController as AdminCalendarController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EvaluationController;
 use App\Http\Controllers\Admin\InstructorController;
+use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\ParticipantDeploymentController;
 use App\Http\Controllers\Admin\SummaryController;
 use App\Http\Controllers\Admin\TnaFormController;
 use App\Http\Controllers\Admin\SuperAdmin\AtarRecordController;
-use App\Http\Controllers\Admin\SuperAdmin\OrganizationController;
 use App\Http\Controllers\Admin\SuperAdmin\UserManagementController;
 use App\Http\Controllers\Admin\ToolsController;
 use App\Http\Controllers\Admin\TrainingController as AdminTrainingController;
@@ -107,6 +107,14 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     Route::patch('/instructor-deployments/{deployment}', [InstructorController::class, 'updateDeployment'])->name('instructors.deployments.update');
     Route::delete('/instructor-deployments/{deployment}', [InstructorController::class, 'removeDeployment'])->name('instructors.deployments.destroy');
 
+    // The bodies OCD trains. Regional staff know which LGUs, agencies, and
+    // schools exist in their area, so a Regional Admin lists and adds their
+    // own region's (the controller locks the list and every new body to it).
+    // Editing, removing, and assigning members stay Super Admin, further
+    // down — membership is what lets someone act for their body.
+    Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
+    Route::post('/organizations', [OrganizationController::class, 'store'])->name('organizations.store');
+
     // What's scheduled: a Regional Admin's own region, every region for a
     // Super Admin. Scheduling itself is in the role:admin group at the bottom
     // of this file.
@@ -146,11 +154,10 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
     // their own region. The rest of the roster is in the shared group above.
     Route::patch('/instructors/{instructor}/region', [InstructorController::class, 'updateRegion'])->name('instructors.region');
 
-    // The LGUs / NGAs / academe bodies / teams OCD trains, and who belongs to
-    // each. Curated here only — membership is what lets a member act for their
-    // body, so nobody self-joins.
-    Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
-    Route::post('/organizations', [OrganizationController::class, 'store'])->name('organizations.store');
+    // Everything about an organization past adding it: its detail page, edits,
+    // removal, and membership. Membership is curated here only — it's what
+    // lets a member act for their body, so nobody self-joins and no Regional
+    // Admin assigns it. Adding a body is in the shared group above.
     Route::get('/organizations/{organization}', [OrganizationController::class, 'show'])->name('organizations.show');
     Route::patch('/organizations/{organization}', [OrganizationController::class, 'update'])->name('organizations.update');
     Route::delete('/organizations/{organization}', [OrganizationController::class, 'destroy'])->name('organizations.destroy');

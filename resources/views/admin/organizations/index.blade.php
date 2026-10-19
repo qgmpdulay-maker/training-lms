@@ -21,6 +21,15 @@
                 </div>
             @endif
 
+            @if ($regionLocked)
+                <div class="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3">
+                    <svg class="w-5 h-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    <span>{{ __('Showing :region only. Anything you add is filed under :region, and the Super Admin places members into it.', ['region' => $selectedRegion]) }}</span>
+                </div>
+            @endif
+
             <div x-data="{ open: {{ $errors->any() ? 'true' : 'false' }} }">
                 <x-chart-card
                     :title="__('Add an Organization')"
@@ -56,12 +65,19 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{{ __('Region') }}</label>
-                                <select name="region" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                    <option value="">{{ __('Not set') }}</option>
-                                    @foreach ($regions as $region)
-                                        <option value="{{ $region }}" @selected(old('region') === $region)>{{ $region }}</option>
-                                    @endforeach
-                                </select>
+                                @if ($regionLocked)
+                                    {{-- No input at all: the controller files it under the
+                                         admin's own region regardless of what's posted, so a
+                                         field here would only look like a choice. --}}
+                                    <p class="text-sm text-gray-700 dark:text-gray-200 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 py-2">{{ $selectedRegion }}</p>
+                                @else
+                                    <select name="region" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                        <option value="">{{ __('Not set') }}</option>
+                                        @foreach ($regions as $region)
+                                            <option value="{{ $region }}" @selected(old('region') === $region)>{{ $region }}</option>
+                                        @endforeach
+                                    </select>
+                                @endif
                             </div>
                             <div>
                                 <label for="new-city" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{{ __('City / Municipality') }}</label>
@@ -83,7 +99,7 @@
             </div>
 
             <x-chart-card
-                :title="__('All Organizations')"
+                :title="$regionLocked ? __('Organizations in :region', ['region' => $selectedRegion]) : __('All Organizations')"
                 :subtitle="trans_choice(':count organization on file|:count organizations on file', $organizations->total(), ['count' => $organizations->total()])"
                 body-class="p-6 sm:p-8">
                 <form method="GET" action="{{ route('admin.organizations.index') }}"
@@ -109,18 +125,20 @@
                         </select>
                     </div>
 
-                    <div class="relative sm:w-44 shrink-0">
-                        <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
-                        </svg>
-                        <select name="region" onchange="this.form.submit()"
-                            class="w-full rounded-xl border-0 bg-gray-50 dark:bg-gray-700 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 pr-9 py-2.5 transition">
-                            <option value="">{{ __('All Regions') }}</option>
-                            @foreach ($regions as $region)
-                                <option value="{{ $region }}" @selected($selectedRegion === $region)>{{ $region }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    @unless ($regionLocked)
+                        <div class="relative sm:w-44 shrink-0">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                            </svg>
+                            <select name="region" onchange="this.form.submit()"
+                                class="w-full rounded-xl border-0 bg-gray-50 dark:bg-gray-700 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 pr-9 py-2.5 transition">
+                                <option value="">{{ __('All Regions') }}</option>
+                                @foreach ($regions as $region)
+                                    <option value="{{ $region }}" @selected($selectedRegion === $region)>{{ $region }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endunless
                 </form>
 
                 <div class="overflow-x-auto">
@@ -131,7 +149,9 @@
                                 <th class="py-3 pr-4">{{ __('Type') }}</th>
                                 <th class="py-3 pr-4">{{ __('Location') }}</th>
                                 <th class="py-3 pr-4">{{ __('Members') }}</th>
-                                <th class="py-3"></th>
+                                @unless ($regionLocked)
+                                    <th class="py-3"></th>
+                                @endunless
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -145,15 +165,20 @@
                                     </td>
                                     <td class="py-3 pr-4 text-gray-500 dark:text-gray-400">{{ $organization->locationLabel() ?: '—' }}</td>
                                     <td class="py-3 pr-4 text-gray-500 dark:text-gray-400">{{ $organization->members_count }}</td>
-                                    <td class="py-3 text-right">
-                                        <a href="{{ route('admin.organizations.show', $organization) }}" class="text-xs font-semibold text-[#152A4E] dark:text-blue-300 hover:underline">
-                                            {{ __('Manage') }}
-                                        </a>
-                                    </td>
+                                    {{-- The detail page is where a body is edited, removed, and
+                                         given members — all Super Admin. No link for a Regional
+                                         Admin, who would only get a 403. --}}
+                                    @unless ($regionLocked)
+                                        <td class="py-3 text-right">
+                                            <a href="{{ route('admin.organizations.show', $organization) }}" class="text-xs font-semibold text-[#152A4E] dark:text-blue-300 hover:underline">
+                                                {{ __('Manage') }}
+                                            </a>
+                                        </td>
+                                    @endunless
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="py-10 text-center text-gray-500 dark:text-gray-400">
+                                    <td colspan="{{ $regionLocked ? 4 : 5 }}" class="py-10 text-center text-gray-500 dark:text-gray-400">
                                         {{ __('No organizations yet. Add the first one above.') }}
                                     </td>
                                 </tr>

@@ -8,9 +8,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Super-admin-curated organizations (LGUs / NGAs / academe / teams) and their
- * membership. Nobody self-joins — that's what makes a member trustworthy
- * enough to act for the body.
+ * Organizations (LGUs / NGAs / academe / teams) and their membership.
+ *
+ * A Regional Admin adds the bodies in their own region; membership stays
+ * super-admin-curated, and nobody self-joins — that's what makes a member
+ * trustworthy enough to act for the body.
  */
 class OrganizationTest extends TestCase
 {
@@ -141,21 +143,135 @@ class OrganizationTest extends TestCase
             ->assertDontSee('value="'.$alreadyAssigned->id.'"', false);
     }
 
-    public function test_regional_admins_and_participants_cannot_manage_organizations(): void
+    public function test_a_super_admins_list_spans_every_region_and_links_into_each_body(): void
+    {
+        $this->organization(['name' => 'Municipality of Fictional Town', 'region' => 'Region III']);
+        $elsewhere = $this->organization(['name' => 'Municipality of Elsewhere', 'region' => 'Region V', 'city' => 'Elsewhere']);
+
+        $this->actingAs($this->superAdmin())
+            ->get(route('admin.organizations.index'))
+            ->assertOk()
+            ->assertSee('Municipality of Fictional Town')
+            ->assertSee('Municipality of Elsewhere')
+            ->assertSee(__('All Regions'))
+            ->assertSee(route('admin.organizations.show', $elsewhere));
+    }
+
+    public function test_participants_cannot_reach_organizations_at_all(): void
     {
         $organization = $this->organization();
+        $participant = User::factory()->create();
 
-        foreach ([User::factory()->admin('Region III')->create(), User::factory()->create()] as $user) {
-            $this->actingAs($user)->get(route('admin.organizations.index'))->assertForbidden();
-            $this->actingAs($user)->post(route('admin.organizations.store'), [
-                'name' => 'Sneaky LGU', 'type' => Organization::TYPE_LGU,
-            ])->assertForbidden();
-            $this->actingAs($user)->post(route('admin.organizations.members.add', $organization), [
-                'user_ids' => [$user->id],
-            ])->assertForbidden();
-        }
+        $this->actingAs($participant)->get(route('admin.organizations.index'))->assertForbidden();
+        $this->actingAs($participant)->post(route('admin.organizations.store'), [
+            'name' => 'Sneaky LGU', 'type' => Organization::TYPE_LGU,
+        ])->assertForbidden();
+        $this->actingAs($participant)->post(route('admin.organizations.members.add', $organization), [
+            'user_ids' => [$participant->id],
+        ])->assertForbidden();
 
         $this->assertSame(1, Organization::count());
+    }
+
+    /**
+     * A Regional Admin adds the bodies in their region — they're the ones who
+     * know which LGUs and schools exist there — but everything past that stays
+     * Super Admin's, membership above all.
+     */
+    public function test_regional_admin_can_add_an_organization(): void
+    {
+        $admin = User::factory()->admin('Region III')->create();
+
+        $this->actingAs($admin)
+            ->post(route('admin.organizations.store'), [
+                'name' => 'Municipality of Fictional Town',
+                'type' => Organization::TYPE_LGU,
+                'city' => 'Fictional Town',
+            ])
+            // Sent back to their list, not to the detail page — there is
+            // nothing there they're allowed to do.
+            ->assertRedirect(route('admin.organizations.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Region III', Organization::sole()->region);
+    }
+
+    public function test_a_regional_admin_cannot_file_an_organization_under_another_region(): void
+    {
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->post(route('admin.organizations.store'), [
+                'name' => 'Municipality of Elsewhere',
+                'type' => Organization::TYPE_LGU,
+                'region' => 'Region V',
+            ])
+            ->assertSessionHasNoErrors();
+
+        // Their own region wins over whatever the form posted.
+        $this->assertSame('Region III', Organization::sole()->region);
+    }
+
+    /**
+     * The forced region has to be in place *before* validation, or the
+     * name-uniqueness rule (scoped by type and region) would compare against
+     * a null region and let the same body in twice.
+     */
+    public function test_a_regional_admin_cannot_add_the_same_body_twice(): void
+    {
+        $this->organization(['region' => 'Region III']);
+
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->post(route('admin.organizations.store'), [
+                'name' => 'Municipality of Fictional Town',
+                'type' => Organization::TYPE_LGU,
+            ])
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame(1, Organization::count());
+    }
+
+    public function test_a_regional_admins_list_is_their_own_region_only(): void
+    {
+        $this->organization(['name' => 'Municipality of Fictional Town', 'region' => 'Region III']);
+        $this->organization(['name' => 'Municipality of Elsewhere', 'region' => 'Region V', 'city' => 'Elsewhere']);
+
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->get(route('admin.organizations.index'))
+            ->assertOk()
+            ->assertSee('Municipality of Fictional Town')
+            ->assertDontSee('Municipality of Elsewhere')
+            // No region picker and no link into the super-admin detail page.
+            ->assertDontSee(__('All Regions'))
+            ->assertDontSee(route('admin.organizations.show', Organization::first()));
+    }
+
+    public function test_a_regional_admin_cannot_edit_remove_or_staff_an_organization(): void
+    {
+        $organization = $this->organization();
+        $member = User::factory()->create(['region' => 'Region III']);
+        $admin = User::factory()->admin('Region III')->create();
+
+        // Their own region, and still no — these are Super Admin decisions.
+        $this->actingAs($admin)->get(route('admin.organizations.show', $organization))->assertForbidden();
+        $this->actingAs($admin)->patch(route('admin.organizations.update', $organization), [
+            'name' => 'Renamed', 'type' => Organization::TYPE_LGU,
+        ])->assertForbidden();
+        $this->actingAs($admin)->post(route('admin.organizations.members.add', $organization), [
+            'user_ids' => [$member->id],
+        ])->assertForbidden();
+        $this->actingAs($admin)->delete(route('admin.organizations.destroy', $organization))->assertForbidden();
+
+        $this->assertSame('Municipality of Fictional Town', $organization->fresh()->name);
+        $this->assertNull($member->fresh()->organization_id);
+    }
+
+    public function test_a_regional_admin_reaches_organizations_from_the_tools_page(): void
+    {
+        // No sidebar entry of their own — the nav is crowded enough — so the
+        // card on Tools is the way in. If this link goes, so does the feature.
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->get(route('admin.tools'))
+            ->assertOk()
+            ->assertSee(route('admin.organizations.index'));
     }
 
     public function test_the_users_page_suggests_a_match_from_what_they_typed_at_signup(): void

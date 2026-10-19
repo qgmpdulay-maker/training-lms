@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AtarRecord;
+use App\Models\Organization;
 use App\Models\TrainingRequest;
 use App\Services\EvaluationSummary;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -31,9 +32,18 @@ class ToolsController extends Controller
             ? AtarRecord::when($region, fn ($query) => $query->where('region', $region))->count()
             : 0;
 
+        // A Regional Admin reaches Organizations from the card on this page —
+        // they have no Administration heading in the sidebar, and the nav has
+        // enough top-level entries already. The count is just so the card can
+        // say how many of their region's bodies are on file.
+        $organizationCount = $user->isAdmin()
+            ? Organization::where('region', $user->region)->count()
+            : 0;
+
         return view('admin.tools', [
             'region' => $region,
             'regionLocked' => $user->isAdmin(),
+            'organizationCount' => $organizationCount,
             'regions' => config('regions.list'),
             'importedRecordCount' => $importedRecordCount,
             'trainingSearch' => $trainingSearch,
