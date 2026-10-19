@@ -97,10 +97,18 @@ class MonitoringController extends Controller
             ->whereIn('training_request_id', $trainings->pluck('id'))
             ->get(['training_request_id', 'user_id']);
 
+        // A training with no participant list — every ATAR imported from a
+        // region's CSV is one — still knows its own region and often its LGU.
+        // Its graduates are placed from that instead of being dropped: by city
+        // when the LGU resolves to one, by region otherwise. Counted
+        // separately from graduates whose own City is missing or unrecognised,
+        // because the two need different things done about them.
         $withRoster = $roster->pluck('training_request_id')->flip();
-        $unplaced = $trainings
-            ->reject(fn (TrainingRequest $t) => $withRoster->has($t->id))
-            ->sum(fn (TrainingRequest $t) => $t->graduates);
+        $rosterless = $trainings->reject(fn (TrainingRequest $t) => $withRoster->has($t->id));
+
+        $unplaced = 0;
+        $fromTrainingLocation = 0;
+        $regionOnly = 0;
 
         $people = User::whereIn('id', $roster->pluck('user_id')->unique())->get(['id', 'city', 'region']);
         $deployed = ParticipantDeployment::whereIn('user_id', $people->pluck('id'))->distinct()->pluck('user_id')->flip();
@@ -117,7 +125,38 @@ class MonitoringController extends Controller
         });
 
         $totals = [];
+        $regionTotals = [];
         $unplacedPeople = [];
+
+        foreach ($rosterless as $training) {
+            if ($training->graduates < 1) {
+                continue;
+            }
+
+            $cityId = filled($training->lgu)
+                ? (CityDirectory::match($training->lgu, $training->region)['id'] ?? null)
+                : null;
+
+            if ($cityId !== null) {
+                $totals[$cityId]['graduates'] = ($totals[$cityId]['graduates'] ?? 0) + $training->graduates;
+                $totals[$cityId]['trainings'][$training->id] = true;
+                $fromTrainingLocation += $training->graduates;
+
+                continue;
+            }
+
+            // No city to shade, but the region still counts — the Region view
+            // is the one that can show these at all.
+            if (filled($training->region)) {
+                $regionTotals[$training->region]['graduates'] = ($regionTotals[$training->region]['graduates'] ?? 0) + $training->graduates;
+                $regionTotals[$training->region]['trainings'][$training->id] = true;
+                $regionOnly += $training->graduates;
+
+                continue;
+            }
+
+            $unplaced += $training->graduates;
+        }
         foreach ($roster as $row) {
             $cityId = $cityOf[$row->user_id] ?? null;
 
@@ -139,6 +178,13 @@ class MonitoringController extends Controller
         // a region's cities still counts once there. People live in one city,
         // so the deployed sets never overlap.
         $regions = [];
+        foreach ($regionTotals as $region => $total) {
+            $regions[$region]['graduates'] = $total['graduates'];
+            $regions[$region]['deployed'] = [];
+            $regions[$region]['trainings'] = $total['trainings'];
+            $regions[$region]['cities'] = 0;
+        }
+
         foreach ($totals as $cityId => $total) {
             $region = CityDirectory::find($cityId)['region'];
             $regions[$region]['graduates'] = ($regions[$region]['graduates'] ?? 0) + $total['graduates'];
@@ -177,6 +223,10 @@ class MonitoringController extends Controller
                 ->all(),
             'unplaced' => $unplaced,
             'unplaced_people' => count($unplacedPeople),
+            // Graduates the City view cannot show but the Region view can.
+            'region_only' => $regionOnly,
+            // Placed from their training's LGU rather than from where they live.
+            'from_training_location' => $fromTrainingLocation,
         ];
     }
 }

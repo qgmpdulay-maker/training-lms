@@ -255,9 +255,16 @@
                 let mode = preferredMode;
                 let show = () => {};
 
-                const markSwitcher = () => switcher?.querySelectorAll('button').forEach((button) => {
-                    button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
-                });
+                const markSwitcher = () => {
+                    switcher?.querySelectorAll('button').forEach((button) => {
+                        button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
+                    });
+                    // Graduates placed by region only are on the map in Region
+                    // view, so the note about them belongs to City view alone.
+                    document.querySelectorAll('[data-city-map-note="region-only"]').forEach((note) => {
+                        note.hidden = mode !== 'city';
+                    });
+                };
                 markSwitcher();
                 switcher?.querySelectorAll('button').forEach((button) => {
                     button.onclick = () => {
@@ -388,11 +395,25 @@
 </div>
 <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 px-6 pb-5 pt-1">
     <div data-city-map-legend="{{ $mapId }}" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400"></div>
-    @if ($cityTotals['unplaced'] > 0)
-        <p class="text-xs text-amber-700 dark:text-amber-400 max-w-md">
-            {{ trans_choice(':count graduate isn\'t on the map|:count graduates aren\'t on the map', $cityTotals['unplaced'], ['count' => number_format($cityTotals['unplaced'])]) }}
-            {{ __('— no City on file, or one that isn\'t a city or municipality we recognise.') }}
-            <a href="{{ route('admin.deployments.index', ['status' => 'no_city']) }}" class="font-semibold underline hover:no-underline">{{ __('Set their city') }}</a>
-        </p>
-    @endif
+    {{-- Three different reasons a graduate may be missing, each with its own
+         fix, so they are never lumped into one misleading sentence. --}}
+    <div class="text-xs text-amber-700 dark:text-amber-400 max-w-md space-y-1">
+        @if (($cityTotals['region_only'] ?? 0) > 0)
+            <p data-city-map-note="region-only" hidden>
+                {{ trans_choice(':count graduate is only on the Region view|:count graduates are only on the Region view', $cityTotals['region_only'], ['count' => number_format($cityTotals['region_only'])]) }}
+                {{ __('— their training has no participant list and no LGU, so there is no city to place them in.') }}
+            </p>
+        @endif
+        @if ($cityTotals['unplaced'] > 0)
+            <p>
+                {{ trans_choice(':count graduate isn\'t on the map|:count graduates aren\'t on the map', $cityTotals['unplaced'], ['count' => number_format($cityTotals['unplaced'])]) }}
+                @if (($cityTotals['unplaced_people'] ?? 0) > 0)
+                    {{ __('— no City on file, or one that isn\'t a city or municipality we recognise.') }}
+                    <a href="{{ route('admin.deployments.index', ['status' => 'no_city']) }}" class="font-semibold underline hover:no-underline">{{ __('Set their city') }}</a>
+                @else
+                    {{ __('— their training has no participant list and no region on file.') }}
+                @endif
+            </p>
+        @endif
+    </div>
 </div>

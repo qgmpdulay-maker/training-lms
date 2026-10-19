@@ -50,6 +50,30 @@ class GraduateCityTest extends TestCase
         return $person->refresh();
     }
 
+    /**
+     * A completed training nobody is listed on — the shape every ATAR imported
+     * from a region's CSV has: graduate counts, a region, sometimes an LGU,
+     * and no participants in the system.
+     */
+    private function importedTraining(int $graduates, ?string $region, ?string $lgu = null): TrainingRequest
+    {
+        $training = new TrainingRequest([
+            'training_slug' => 'imported-training',
+            'training_title' => 'Imported Training',
+            'region' => $region,
+            'lgu' => $lgu,
+            'preferred_date' => now()->subMonths(6)->toDateString(),
+            'venue' => 'Municipal Hall',
+            'number_of_participants' => $graduates,
+            'graduates_male' => $graduates,
+            'graduates_female' => 0,
+            'status' => TrainingRequest::STATUS_COMPLETED,
+        ]);
+        $training->save();
+
+        return $training->refresh();
+    }
+
     public function test_free_text_cities_match_the_way_people_write_them(): void
     {
         $label = fn (?string $value, ?string $region = null) => ($city = CityDirectory::match($value, $region)) ? CityDirectory::label($city) : null;
@@ -167,5 +191,50 @@ class GraduateCityTest extends TestCase
         // The person with no City is counted, just not on the map.
         $this->assertSame(1, $totals['unplaced']);
         $this->assertSame(1, $totals['unplaced_people']);
+    }
+
+    /**
+     * Imported trainings have graduate counts but nobody on a roster, so there
+     * is no-one's City to read. They used to contribute nothing to the map and
+     * be reported as "no City on file", which pointed at the wrong fix — on a
+     * database built from ATAR imports that was every graduate. They are now
+     * placed from the training's own location.
+     */
+    public function test_a_training_with_no_participant_list_is_placed_by_its_own_location(): void
+    {
+        $this->importedTraining(40, 'Region III', 'Malolos City, Bulacan');
+        $this->importedTraining(25, 'Region III');
+        $this->importedTraining(10, null);
+
+        $totals = MonitoringController::cityTotals(TrainingRequest::completed()->get());
+
+        // The one with an LGU lands on a city, and so on the City view.
+        $this->assertSame(['City of Malolos'], collect($totals['cities'])->pluck('name')->all());
+        $this->assertSame(40, $totals['cities'][0]['graduates']);
+        $this->assertSame(40, $totals['from_training_location']);
+
+        // All 65 of the Region III graduates show on the Region view.
+        $this->assertSame(65, collect($totals['regions'])->firstWhere('name', 'Region III')['graduates']);
+
+        // The 25 without an LGU are on the Region view only, and are said to be.
+        $this->assertSame(25, $totals['region_only']);
+
+        // Only the one with no region at all is genuinely unplaceable, and it
+        // is not blamed on a missing City — there is no person to have one.
+        $this->assertSame(10, $totals['unplaced']);
+        $this->assertSame(0, $totals['unplaced_people']);
+    }
+
+    public function test_rostered_and_imported_graduates_are_counted_together(): void
+    {
+        $this->graduate(['city' => 'Malolos City, Bulacan']);
+        $this->importedTraining(40, 'Region III', 'Malolos City, Bulacan');
+
+        $totals = MonitoringController::cityTotals(TrainingRequest::completed()->get());
+
+        $malolos = collect($totals['cities'])->firstWhere('name', 'City of Malolos');
+        $this->assertSame(41, $malolos['graduates']);
+        $this->assertSame(2, $malolos['trainings']);
+        $this->assertSame(0, $totals['unplaced']);
     }
 }
