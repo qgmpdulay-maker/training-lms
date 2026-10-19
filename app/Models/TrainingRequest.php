@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ use Illuminate\Support\Collection;
 
 #[Fillable([
     'training_slug', 'training_title', 'category', 'requesting_agency', 'contact_person',
-    'contact_number', 'contact_email', 'number_of_participants', 'preferred_date',
+    'contact_number', 'contact_email', 'number_of_participants', 'preferred_date', 'end_date',
     'venue', 'purpose', 'tna_completed', 'tna_file_path', 'logistics_acknowledged',
     'signature_name', 'signed_letter_path', 'lgu', 'region', 'certificate_remarks',
     'status', 'agency_type', 'latitude', 'longitude', 'teams_organized',
@@ -97,6 +98,7 @@ class TrainingRequest extends Model
     {
         return [
             'preferred_date' => 'date',
+            'end_date' => 'date',
             'tna_completed' => 'boolean',
             'logistics_acknowledged' => 'boolean',
             'latitude' => 'float',
@@ -109,6 +111,57 @@ class TrainingRequest extends Model
             'graduates_age_46_59' => 'integer',
             'graduates_age_60_up' => 'integer',
         ];
+    }
+
+    /**
+     * The last day this training runs.
+     *
+     * `end_date` is only filled in for a training that spans more than one
+     * day, so everything that needs a range — the calendar grid above all —
+     * asks for it here rather than deciding what a null means for itself.
+     */
+    public function endDate(): Carbon
+    {
+        // max() rather than a bare fallback: a row whose end somehow predates
+        // its start would otherwise render as a backwards span.
+        return $this->end_date && $this->end_date->gt($this->preferred_date)
+            ? $this->end_date
+            : $this->preferred_date;
+    }
+
+    /**
+     * How many calendar days this training occupies, start and end included.
+     */
+    public function dayCount(): int
+    {
+        return (int) $this->preferred_date->diffInDays($this->endDate()) + 1;
+    }
+
+    public function spansMultipleDays(): bool
+    {
+        return $this->dayCount() > 1;
+    }
+
+    /**
+     * "Sep 3, 2026" for a one-day training, "Sep 3 – 7, 2026" for a run —
+     * the year and month aren't repeated when both ends share them.
+     */
+    public function dateRangeLabel(): string
+    {
+        $start = $this->preferred_date;
+        $end = $this->endDate();
+
+        if (! $this->spansMultipleDays()) {
+            return $start->format('M j, Y');
+        }
+
+        if ($start->isSameMonth($end)) {
+            return $start->format('M j').' – '.$end->format('j, Y');
+        }
+
+        return $start->isSameYear($end)
+            ? $start->format('M j').' – '.$end->format('M j, Y')
+            : $start->format('M j, Y').' – '.$end->format('M j, Y');
     }
 
     public function user(): BelongsTo

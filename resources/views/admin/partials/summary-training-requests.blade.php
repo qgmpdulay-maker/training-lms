@@ -41,7 +41,7 @@
                             @endif
                         </td>
                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
-                            {{ $record->preferred_date->format('M j, Y') }}
+                            {{ $record->dateRangeLabel() }}
                             <div class="text-xs text-gray-400">{{ $record->venue }}</div>
                         </td>
                         <td class="py-3 pr-4 text-right whitespace-nowrap">

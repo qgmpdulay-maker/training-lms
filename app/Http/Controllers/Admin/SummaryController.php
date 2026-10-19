@@ -167,6 +167,10 @@ class SummaryController extends Controller
         $validated = $request->validate([
             'status' => ['required', 'string', 'in:'.implode(',', array_keys(TrainingRequest::$statusLabels))],
             'preferred_date' => ['required', 'date'],
+            // The last day of a run, empty for a one-day training. Editable
+            // here as well as on the schedule form, or a training that has to
+            // move could keep its start and its old end.
+            'end_date' => ['nullable', 'date', 'after_or_equal:preferred_date'],
             'venue' => ['required', 'string', 'max:255'],
             'lgu' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'in:'.implode(',', config('regions.list'))],

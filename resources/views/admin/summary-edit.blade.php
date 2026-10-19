@@ -151,12 +151,19 @@
                     <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Date & Venue') }}</h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __("Only change these if the training needs to move — for example, because of weather. If it's already Approved, remember to update the Status above too.") }}</p>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                            <x-input-label for="preferred_date" :value="__('Date')" />
+                            <x-input-label for="preferred_date" :value="__('Start Date')" />
                             <x-text-input id="preferred_date" name="preferred_date" type="date" class="mt-1 block w-full" required
                                 value="{{ old('preferred_date', $record->preferred_date->format('Y-m-d')) }}" />
                             <x-input-error :messages="$errors->get('preferred_date')" class="mt-1" />
+                        </div>
+                        <div>
+                            <x-input-label for="end_date" :value="__('End Date')" />
+                            <x-text-input id="end_date" name="end_date" type="date" class="mt-1 block w-full"
+                                value="{{ old('end_date', $record->end_date?->format('Y-m-d')) }}" />
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Empty for a one-day training.') }}</p>
+                            <x-input-error :messages="$errors->get('end_date')" class="mt-1" />
                         </div>
                         <div>
                             <x-input-label for="venue" :value="__('Venue')" />

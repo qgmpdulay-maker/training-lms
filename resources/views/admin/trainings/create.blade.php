@@ -265,13 +265,28 @@
                 <!-- Schedule -->
                 <x-chart-card body-class="p-6 sm:p-8 space-y-5" :title="__('3. Schedule')">
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    {{-- Start and end are separate fields rather than a "number of
+                         days" count: the calendar plots the actual span, and a run
+                         that crosses a weekend isn't the same as N working days. --}}
+                    <div x-data="{ start: @js(old('preferred_date', $defaultPreferredDate)), end: @js(old('end_date', '')) }"
+                        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                         <div>
-                            <x-input-label for="preferred_date" :value="__('Training Date')" />
+                            <x-input-label for="preferred_date" :value="__('Start Date')" />
                             <x-text-input id="preferred_date" type="date" name="preferred_date" class="mt-1 block w-full"
-                                required value="{{ old('preferred_date', $defaultPreferredDate) }}" />
+                                required x-model="start" />
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Weekdays only (Monday–Friday).') }}</p>
                             <x-input-error :messages="$errors->get('preferred_date')" class="mt-1" />
+                        </div>
+                        <div>
+                            <x-input-label for="end_date" :value="__('End Date')" />
+                            {{-- :min keeps the picker from offering an end before the
+                                 start; the server re-checks it either way. --}}
+                            <x-text-input id="end_date" type="date" name="end_date" class="mt-1 block w-full"
+                                x-model="end" ::min="start" />
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {{ __('Leave empty for a one-day training.') }}
+                            </p>
+                            <x-input-error :messages="$errors->get('end_date')" class="mt-1" />
                         </div>
                         <div>
                             <x-input-label for="venue" :value="__('Venue')" />

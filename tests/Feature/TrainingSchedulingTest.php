@@ -113,6 +113,121 @@ class TrainingSchedulingTest extends TestCase
             ->assertDontSee('Schedule Training');
     }
 
+    /**
+     * A training can run for more than one day, so the form takes a range.
+     * Everything below guards the shape that range is stored in — the
+     * calendar grid draws its bars straight off it.
+     */
+    public function test_a_training_can_be_scheduled_across_several_days(): void
+    {
+        $start = now()->addMonth()->next('Monday');
+
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->post(route('admin.trainings.store'), $this->form([
+                'preferred_date' => $start->toDateString(),
+                'end_date' => $start->copy()->addDays(4)->toDateString(),
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $training = TrainingRequest::sole();
+        $this->assertSame(5, $training->dayCount());
+        $this->assertTrue($training->spansMultipleDays());
+    }
+
+    public function test_a_one_day_training_stores_no_end_date(): void
+    {
+        $start = now()->addMonth()->next('Monday');
+
+        // Posting the same day at both ends is the one-day case, and is
+        // normalised to null so nothing downstream has to handle two
+        // spellings of the same thing.
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->post(route('admin.trainings.store'), $this->form([
+                'preferred_date' => $start->toDateString(),
+                'end_date' => $start->toDateString(),
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $training = TrainingRequest::sole();
+        $this->assertNull($training->end_date);
+        $this->assertSame(1, $training->dayCount());
+        $this->assertFalse($training->spansMultipleDays());
+    }
+
+    public function test_a_training_cannot_end_before_it_starts(): void
+    {
+        $start = now()->addMonth()->next('Monday');
+
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->post(route('admin.trainings.store'), $this->form([
+                'preferred_date' => $start->toDateString(),
+                'end_date' => $start->copy()->subDays(3)->toDateString(),
+            ]))
+            ->assertSessionHasErrors('end_date');
+
+        $this->assertSame(0, TrainingRequest::count());
+    }
+
+    public function test_a_training_cannot_end_on_a_weekend(): void
+    {
+        $start = now()->addMonth()->next('Monday');
+
+        // The start has always had to be a weekday; the end is held to the
+        // same rule. Running *through* a weekend is still fine.
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->post(route('admin.trainings.store'), $this->form([
+                'preferred_date' => $start->toDateString(),
+                'end_date' => $start->copy()->next('Saturday')->toDateString(),
+            ]))
+            ->assertSessionHasErrors('end_date');
+
+        $this->assertSame(0, TrainingRequest::count());
+    }
+
+    public function test_a_run_may_cross_a_weekend(): void
+    {
+        $start = now()->addMonth()->next('Thursday');
+
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->post(route('admin.trainings.store'), $this->form([
+                'preferred_date' => $start->toDateString(),
+                'end_date' => $start->copy()->addDays(5)->toDateString(), // the following Tuesday
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(6, TrainingRequest::sole()->dayCount());
+    }
+
+    public function test_a_super_admin_can_change_the_run_length_from_the_summary_page(): void
+    {
+        $training = $this->scheduled('Region III');
+        $start = $training->preferred_date;
+
+        // Stretching a one-day training into a run, and then back again —
+        // the edit page is the only place a scheduled date can be corrected.
+        $this->actingAs(User::factory()->superAdmin()->create())
+            ->patch(route('admin.summary.update', $training), [
+                'status' => TrainingRequest::STATUS_APPROVED,
+                'preferred_date' => $start->toDateString(),
+                'end_date' => $start->copy()->addDays(2)->toDateString(),
+                'venue' => 'Municipal Hall',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(3, $training->fresh()->dayCount());
+
+        $this->actingAs(User::factory()->superAdmin()->create())
+            ->patch(route('admin.summary.update', $training), [
+                'status' => TrainingRequest::STATUS_APPROVED,
+                'preferred_date' => $start->toDateString(),
+                'end_date' => '',
+                'venue' => 'Municipal Hall',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($training->fresh()->end_date);
+    }
+
     public function test_the_calendars_schedule_button_follows_the_same_rule(): void
     {
         $this->actingAs(User::factory()->admin('Region III')->create())

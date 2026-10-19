@@ -153,6 +153,17 @@ class TrainingController extends Controller
                     }
                 },
             ],
+            // Left empty for a one-day training. A run that crosses a weekend
+            // is fine — only the two ends have to be weekdays, the same rule
+            // the start has always had.
+            'end_date' => [
+                'nullable', 'date', 'after_or_equal:preferred_date',
+                function ($attribute, $value, $fail) {
+                    if (Carbon::parse($value)->isWeekend()) {
+                        $fail('A training can only end on a weekday (Monday through Friday).');
+                    }
+                },
+            ],
             'venue' => ['required', 'string', 'max:255'],
             'purpose' => ['required', 'string', 'max:2000'],
             'participant_ids' => ['nullable', 'array'],
@@ -161,6 +172,12 @@ class TrainingController extends Controller
                 Rule::exists('users', 'id')->where(fn ($q) => $q->whereIn('role', [User::ROLE_PARTICIPANT, User::ROLE_ADMIN])),
             ],
         ]);
+
+        // One day is stored as a null end, never as an end equal to the start,
+        // so nothing downstream has to handle both spellings.
+        if (! empty($validated['end_date']) && Carbon::parse($validated['end_date'])->isSameDay(Carbon::parse($validated['preferred_date']))) {
+            $validated['end_date'] = null;
+        }
 
         // A Regional Admin schedules for their own region, whatever the form
         // posted — same rule as adding an instructor.
@@ -206,6 +223,6 @@ class TrainingController extends Controller
         }
 
         return Redirect::route('admin.trainings.index')
-            ->with('status', "\"{$trainingRequest->training_title}\" was scheduled for {$trainingRequest->preferred_date->format('M j, Y')} in {$trainingRequest->region}.");
+            ->with('status', "\"{$trainingRequest->training_title}\" was scheduled for {$trainingRequest->dateRangeLabel()} in {$trainingRequest->region}.");
     }
 }
