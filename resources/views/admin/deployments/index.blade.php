@@ -65,14 +65,7 @@
                     @include('admin.partials.deployment-graduates')
                 </div>
 
-                {{-- Suggestions for every graduate's City field, listed once here
-                     rather than inside each one (the list below is swapped in
-                     on every search, and holds 1,600-plus cities). --}}
-                <datalist id="ph-city-options">
-                    @foreach (\App\Support\CityDirectory::labels() as $cityOption)
-                        <option value="{{ $cityOption }}"></option>
-                    @endforeach
-                </datalist>
+                @include('admin.partials.city-options')
             </x-chart-card>
 
         </div>

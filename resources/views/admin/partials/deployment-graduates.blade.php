@@ -75,6 +75,9 @@
                                     </p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
                                         {{ $deployment->deployment_date->format('M j, Y') }}
+                                        @if ($deployment->city)
+                                            · {{ $deployment->city }}
+                                        @endif
                                         @if ($deployment->recordedBy)
                                             · {{ __('recorded by :name', ['name' => $deployment->recordedBy->name]) }}
                                         @endif
@@ -112,6 +115,14 @@
                     <div>
                         <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{{ __('Role (optional)') }}</label>
                         <input type="text" name="deployment_role" placeholder="{{ __('e.g. Team Leader') }}"
+                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">
+                    </div>
+                    {{-- Where they were sent, which is not the same as the City
+                         saved above: that one is where this graduate is based and
+                         is what the Graduates by Location map counts them under. --}}
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{{ __('City deployed to (optional)') }}</label>
+                        <input type="text" name="city" list="ph-city-options" autocomplete="off" placeholder="{{ __('e.g. City of Legazpi, Albay') }}"
                             class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">
                     </div>
                     <div class="sm:col-span-2 lg:col-span-4 flex justify-end">

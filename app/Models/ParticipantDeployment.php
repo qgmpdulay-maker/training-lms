@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'deployment', 'deployment_date', 'deployment_role', 'notes', 'recorded_by'])]
+#[Fillable(['user_id', 'deployment', 'deployment_date', 'deployment_role', 'city', 'notes', 'recorded_by'])]
 class ParticipantDeployment extends Model
 {
     protected function casts(): array

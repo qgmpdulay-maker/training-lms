@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin\SuperAdmin;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AtarReport;
@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\AtarReportGenerator;
 use App\Services\CertificateService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,18 +24,25 @@ use Symfony\Component\HttpFoundation\Response;
  * CRUD + PDF export for narrative ATAR reports (App\Models\AtarReport) —
  * distinct from AtarRecordController, which only handles the CSV-imported
  * "Training Database" tracker rows.
+ *
+ * Unusually for this app, the writes here are split the other way round from
+ * everywhere else: the Regional Admin is the one who writes the ATAR for
+ * their own region, so create()/store() are reachable by them alone (see the
+ * role:admin route group), while the Super Admin reads, edits, and deletes
+ * every region's. Everything a Regional Admin can reach is scoped to their
+ * own region by scopeToViewer()/authorizeView().
  */
 class AtarReportController extends Controller
 {
     public function index(Request $request): View
     {
-        $reports = AtarReport::with('trainingRequest')
+        $reports = $this->scopeToViewer(AtarReport::with('trainingRequest'), $request)
             ->when(trim((string) $request->query('q')) !== '', fn ($q) => $q->where('title', 'like', '%'.trim($request->query('q')).'%'))
             ->orderByDesc('updated_at')
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin.super-admin.atar-reports.index', [
+        return view('admin.atar-reports.index', [
             'reports' => $reports,
             'search' => $request->query('q'),
         ]);
@@ -47,7 +55,10 @@ class AtarReportController extends Controller
      * filter since a common name (there are plenty in a 3,900-participant
      * roster) is much easier to narrow down by region than by scrolling.
      * Either filter works alone; at least one is required so this never
-     * dumps the entire roster.
+     * dumps the entire roster. Deliberately not narrowed to a Regional
+     * Admin's own region: a training draws attendees from neighbouring
+     * regions, and the ATAR's graduate annex has to be able to name whoever
+     * actually sat in the room.
      */
     public function searchParticipants(Request $request): JsonResponse
     {
@@ -79,8 +90,10 @@ class AtarReportController extends Controller
      * exists still gets a plausible, correctly-formatted placeholder the
      * admin can adjust once the real one is issued.
      */
-    public function participantDetails(AtarReport $atarReport, User $user, CertificateService $certificates): JsonResponse
+    public function participantDetails(Request $request, AtarReport $atarReport, User $user, CertificateService $certificates): JsonResponse
     {
+        $this->authorizeView($atarReport, $request);
+
         $trainingRequest = $atarReport->trainingRequest;
         $sequence = count($atarReport->graduates_list ?? []) + 1;
 
@@ -129,16 +142,24 @@ class AtarReportController extends Controller
      * completed trainings with an actual roster attached are offered —
      * excludes the rare completed request with no participants at all,
      * since Attendees/Graduates would have nothing to draw from either way.
+     *
+     * Regional-Admin-only (role:admin), so the list is their own region's
+     * completed trainings; writing another region's ATAR isn't theirs to do.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
-        $trainingRequests = TrainingRequest::completed()
-            ->where(fn ($q) => $q->whereHas('participants')->orWhereNotNull('user_id'))
+        $trainingRequests = $this->creatableTrainings($request->user())
             ->orderByDesc('preferred_date')
             ->get(['id', 'training_title', 'venue', 'preferred_date', 'region']);
 
-        return view('admin.super-admin.atar-reports.create', [
+        // Arriving from a training's own "Create ATAR" button: that training is
+        // preselected. Checked against the same list the dropdown offers, so an
+        // id from outside this admin's region simply isn't preselected.
+        $selectedTrainingId = (int) $request->query('training_request_id') ?: null;
+
+        return view('admin.atar-reports.create', [
             'trainingRequests' => $trainingRequests,
+            'selectedTrainingId' => $trainingRequests->contains('id', $selectedTrainingId) ? $selectedTrainingId : null,
         ]);
     }
 
@@ -155,11 +176,14 @@ class AtarReportController extends Controller
             'training_request_id' => ['required_if:mode,generate', 'nullable', 'exists:training_requests,id'],
         ]);
 
+        // Re-filtered through creatableTrainings() rather than looked up by
+        // id alone: the dropdown only ever offers this admin's own region,
+        // and a posted id from outside it should 404 rather than be trusted.
         if ($validated['mode'] === 'generate') {
-            $trainingRequest = TrainingRequest::completed()
-                ->where(fn ($q) => $q->whereHas('participants')->orWhereNotNull('user_id'))
+            $trainingRequest = $this->creatableTrainings($request->user())
                 ->findOrFail($validated['training_request_id']);
             $data = $generator->generate($trainingRequest);
+            $region = $trainingRequest->region;
         } else {
             $data = [
                 'status' => AtarReport::STATUS_DRAFT,
@@ -168,9 +192,13 @@ class AtarReportController extends Controller
                     ['role' => 'Approved by', 'name' => '', 'title' => ''],
                 ],
             ];
+            // Nothing to read a region off for a from-scratch report, so it
+            // belongs to whoever wrote it.
+            $region = $request->user()->region;
         }
 
         $data['created_by'] = $request->user()->id;
+        $data['region'] = $region;
 
         $report = AtarReport::create($data);
 
@@ -180,11 +208,13 @@ class AtarReportController extends Controller
                 : 'Blank ATAR created — fill in the details below.');
     }
 
-    public function edit(AtarReport $atarReport): View
+    public function edit(Request $request, AtarReport $atarReport): View
     {
+        $this->authorizeView($atarReport, $request);
+
         $atarReport->load('trainingRequest');
 
-        return view('admin.super-admin.atar-reports.edit', [
+        return view('admin.atar-reports.edit', [
             'report' => $atarReport,
             'regions' => config('regions.list'),
         ]);
@@ -199,6 +229,8 @@ class AtarReportController extends Controller
      */
     public function update(Request $request, AtarReport $atarReport): RedirectResponse
     {
+        $this->authorizeView($atarReport, $request);
+
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
             'venue' => ['nullable', 'string', 'max:255'],
@@ -332,8 +364,10 @@ class AtarReportController extends Controller
      * when certificates or evaluations are added/changed after the ATAR
      * draft was first generated.
      */
-    public function recompute(AtarReport $atarReport, AtarReportGenerator $generator): RedirectResponse
+    public function recompute(Request $request, AtarReport $atarReport, AtarReportGenerator $generator): RedirectResponse
     {
+        $this->authorizeView($atarReport, $request);
+
         abort_unless($atarReport->trainingRequest, 404);
 
         $atarReport->update($generator->recompute($atarReport->trainingRequest));
@@ -346,8 +380,10 @@ class AtarReportController extends Controller
      * Streams the report as a PDF (inline, not a forced download) so it can
      * be previewed in a new tab, printed, and wet-ink signed.
      */
-    public function pdf(AtarReport $atarReport): Response
+    public function pdf(Request $request, AtarReport $atarReport): Response
     {
+        $this->authorizeView($atarReport, $request);
+
         $atarReport->load('trainingRequest');
 
         return Pdf::loadView('pdf.atar-report', ['report' => $atarReport])
@@ -364,6 +400,45 @@ class AtarReportController extends Controller
         $atarReport->delete();
 
         return redirect()->route('admin.atar-reports.index')->with('status', 'ATAR report deleted.');
+    }
+
+    /**
+     * The trainings a Regional Admin may base a new ATAR on: completed, with
+     * an actual roster attached, and in their own region. Shared by create()
+     * (which fills the dropdown) and store() (which re-checks what came back).
+     */
+    private function creatableTrainings(User $user): Builder
+    {
+        return TrainingRequest::completed()
+            ->where(fn ($q) => $q->whereHas('participants')->orWhereNotNull('user_id'))
+            ->when($user->isAdmin(), fn ($q) => $q->where('region', $user->region));
+    }
+
+    /**
+     * Narrows a report query to what the viewer is allowed to see — every
+     * region for a Super Admin, only their own for a Regional Admin.
+     *
+     * @param  Builder<AtarReport>  $query
+     * @return Builder<AtarReport>
+     */
+    private function scopeToViewer(Builder $query, Request $request): Builder
+    {
+        return $query->when(
+            $request->user()->isAdmin(),
+            fn ($q) => $q->where('region', $request->user()->region)
+        );
+    }
+
+    /**
+     * The single-report counterpart to scopeToViewer(). 404 rather than 403
+     * so a Regional Admin poking at ids can't learn which other regions'
+     * reports exist.
+     */
+    private function authorizeView(AtarReport $atarReport, Request $request): void
+    {
+        if ($request->user()->isAdmin()) {
+            abort_unless($atarReport->region === $request->user()->region, 404);
+        }
     }
 
     /**

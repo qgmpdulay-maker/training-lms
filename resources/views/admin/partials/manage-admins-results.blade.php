@@ -59,7 +59,33 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $admin->region ?? '—' }}</td>
+                            {{-- A Regional Admin's region is editable in place: people do transfer
+                                 between regional offices, and this field is what every admin screen
+                                 scopes their data off. The Transfer button only appears once the
+                                 picker is actually changed, so the cell still reads as a value.
+                                 A Super Admin has no region to move. --}}
+                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
+                                @if ($admin->isAdmin())
+                                    <form method="POST" action="{{ route('admin.users.region', $admin) }}"
+                                        x-data="{ region: @js($admin->region) }" class="flex items-center gap-2"
+                                        @submit="if (! confirm('Transfer ' + @js($admin->name) + ' to ' + region + '? They lose access to ' + @js($admin->region) + ' data and gain their new region\'s.')) $event.preventDefault()">
+                                        @csrf
+                                        @method('PATCH')
+                                        <select name="region" x-model="region"
+                                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                            @foreach ($regions as $regionOption)
+                                                <option value="{{ $regionOption }}" @selected($admin->region === $regionOption)>{{ $regionOption }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button type="submit" x-show="region !== @js($admin->region)" x-cloak
+                                            class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-3 py-1.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
+                                            {{ __('Transfer') }}
+                                        </button>
+                                    </form>
+                                @else
+                                    {{ $admin->region ?? '—' }}
+                                @endif
+                            </td>
                             <td class="py-3 pr-4 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center gap-2">
                                     <x-reset-password-button :account="$admin" />

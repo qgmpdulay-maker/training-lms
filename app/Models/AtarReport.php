@@ -17,9 +17,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Can optionally link back to a TrainingRequest (training_request_id) when
  * it was auto-generated from one via AtarReportGenerator; when written from
  * scratch, training_request_id is null and every field is hand-typed.
+ *
+ * `region` is the OCD region the report belongs to — Regional Admins write
+ * these, so it's what scopes a Regional Admin to their own reports. It's
+ * stored here rather than read off the linked training because a
+ * written-from-scratch report has no training to read it from.
  */
 #[Fillable([
-    'training_request_id', 'created_by', 'title', 'venue', 'date_range', 'funding_source',
+    'training_request_id', 'created_by', 'region', 'title', 'venue', 'date_range', 'funding_source',
     'background', 'objectives', 'attendees_narrative', 'highlights', 'issues_and_concerns',
     'ways_forward', 'graduates_summary', 'photos', 'graduates_list', 'dropouts_list',
     'lecturers_list', 'signatories', 'l1_modules', 'l1_analysis', 'l2_stats', 'l2_analysis',

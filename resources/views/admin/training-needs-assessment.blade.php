@@ -20,6 +20,18 @@
             <x-chart-card id="tna-submissions" class="scroll-mt-24" body-class="p-6 sm:p-8"
                 :title="__('TNA Submissions')">
                 <x-slot:action>
+                    <div class="flex items-center gap-2">
+                    @if (Auth::user()->isSuperAdmin())
+                        {{-- The questionnaires themselves. Deliberately not a sidebar
+                             entry — CDTI already finds the nav crowded. --}}
+                        <a href="{{ route('admin.tna-forms.index') }}"
+                            class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border border-white/30 text-white px-3 py-2 hover:bg-white/10 transition whitespace-nowrap">
+                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                            </svg>
+                            {{ __('Edit Questions') }}
+                        </a>
+                    @endif
                     {{-- For agencies that would rather fill it in on paper and
                          hand it back to their Regional Office. --}}
                     <a href="{{ route('admin.tools.tna-template') }}" target="_blank"
@@ -29,26 +41,44 @@
                         </svg>
                         {{ __('Blank TNA Form') }}
                     </a>
+                    </div>
                 </x-slot:action>
                 <x-slot:description>
-                @if (Auth::user()->isAdmin())
-                    {{ __('Training Needs Assessments submitted by participants in :region, most recent first.', ['region' => Auth::user()->region]) }}
-                @elseif ($selectedRegion)
-                    {{ __('Training Needs Assessments submitted by participants in :region, most recent first.', ['region' => $selectedRegion]) }}
-                @else
-                    {{ __('Every Training Needs Assessment participants have submitted, across all regions, most recent first.') }}
-                @endif
+                @php $areaPhrase = Auth::user()->isAdmin() ? Auth::user()->region : ($selectedRegion ?: __('all regions')); @endphp
+                {{ __('What participants in :area have asked for, grouped by area rather than listed person by person — busiest first.', ['area' => $areaPhrase]) }}
                 </x-slot:description>
+
+                {{-- City or region: the same submissions, counted at the level you're
+                     planning at. City is the default — that's where trainings run —
+                     and region rolls those up for the national picture. --}}
+                @php $groupTabs = ['city' => __('By City'), 'region' => __('By Region')]; @endphp
+                <div class="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-900/40 rounded-xl p-1 mb-5">
+                    @foreach ($groupTabs as $value => $label)
+                        <a href="{{ route('admin.training-needs-assessment', array_filter([
+                                'group' => $value,
+                                'region' => $selectedRegion ?: null,
+                                'tna_q' => $submissionSearch ?: null,
+                            ])) }}#tna-submissions"
+                            @class([
+                                'rounded-lg px-4 py-2 text-sm font-semibold transition',
+                                'bg-white dark:bg-gray-700 text-[#152A4E] dark:text-white shadow-sm' => $groupBy === $value,
+                                'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200' => $groupBy !== $value,
+                            ])>
+                            {{ $label }}
+                        </a>
+                    @endforeach
+                </div>
 
                 <form data-live-form data-live-section="tna-submissions" data-live-target="tna-submissions-results"
                     method="GET" action="{{ route('admin.training-needs-assessment') }}#tna-submissions" class="w-full mb-5">
                     <input type="hidden" name="_section" value="tna-submissions">
+                    <input type="hidden" name="group" value="{{ $groupBy }}">
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
                         <div class="relative flex-1 min-w-[14rem]">
                             <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                             </svg>
-                            <input type="text" name="tna_q" value="{{ $submissionSearch }}" placeholder="{{ __('Search participant, organization, category, or date…') }}"
+                            <input type="text" name="tna_q" value="{{ $submissionSearch }}" placeholder="{{ $groupBy === 'region' ? __('Search a region…') : __('Search a city…') }}"
                                 class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
                         </div>
                         @if (Auth::user()->isSuperAdmin())
@@ -71,7 +101,7 @@
                         </button>
                     </div>
                     @if ($submissionSearch !== '' || ($selectedRegion && Auth::user()->isSuperAdmin()))
-                        <a href="{{ route('admin.training-needs-assessment') }}#tna-submissions"
+                        <a href="{{ route('admin.training-needs-assessment', ['group' => $groupBy]) }}#tna-submissions"
                             class="inline-block mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
                             {{ __('Clear') }}
                         </a>

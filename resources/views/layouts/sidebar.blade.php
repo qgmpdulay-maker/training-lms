@@ -91,40 +91,57 @@
                 </x-sidebar-nav-link>
             @endunless
 
+            {{-- Ordered the way the work runs: assess what a region needs, schedule
+                 the training, write its ATAR afterwards. The rosters and the utility
+                 pages sit below that, since they're reference rather than steps. --}}
             <p class="px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-white/40" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ __('Training') }}</p>
 
-            <x-sidebar-nav-link :href="route('admin.tools')" :active="request()->routeIs('admin.tools')">
-                <x-slot:icon>
-                    <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75" /></svg>
-                </x-slot:icon>
-                {{ __('Tools') }}
-            </x-sidebar-nav-link>
-            <x-sidebar-nav-link :href="route('admin.instructors.index')" :active="request()->routeIs('admin.instructors.*')">
-                <x-slot:icon>
-                    <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.62 48.62 0 0112 20.904a48.62 48.62 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" /></svg>
-                </x-slot:icon>
-                {{ __('Instructors') }}
-            </x-sidebar-nav-link>
-            <x-sidebar-nav-link :href="route('admin.deployments.index')" :active="request()->routeIs('admin.deployments.*')">
-                <x-slot:icon>
-                    <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
-                </x-slot:icon>
-                {{ __('Deployments') }}
-            </x-sidebar-nav-link>
             <x-sidebar-nav-link :href="route('admin.training-needs-assessment')" :active="request()->routeIs('admin.training-needs-assessment')">
                 <x-slot:icon>
                     <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
                 </x-slot:icon>
                 {{ __('Needs Assessment') }}
             </x-sidebar-nav-link>
-            @if (Auth::user()->isSuperAdmin())
-                <x-sidebar-nav-link :href="route('admin.trainings.create')" :active="request()->routeIs('admin.trainings.*')">
+
+            {{-- Regional Admin only. They are the ones who schedule trainings, so this
+                 is their list of what's scheduled and where the Schedule Training button
+                 lives. A Super Admin doesn't get the entry — they can't create one, and
+                 the Summary page's Trainings card already lists every region's. --}}
+            @unless (Auth::user()->isSuperAdmin())
+                <x-sidebar-nav-link :href="route('admin.trainings.index')" :active="request()->routeIs('admin.trainings.*')">
                     <x-slot:icon>
-                        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
                     </x-slot:icon>
-                    {{ __('Schedule Training') }}
+                    {{ __('Training') }}
                 </x-sidebar-nav-link>
-            @endif
+            @endunless
+
+            {{-- ATAR is the narrative report builder, and only that. The CSV import
+                 that used to share this entry (as a second tab) is regional training
+                 data, not an ATAR, and lives on the Tools page now. --}}
+            <x-sidebar-nav-link :href="route('admin.atar-reports.index')" :active="request()->routeIs('admin.atar-reports.*')">
+                <x-slot:icon>
+                    <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                </x-slot:icon>
+                {{ __('ATAR') }}
+            </x-sidebar-nav-link>
+
+            {{-- A Regional Admin keeps the rosters here; for a Super Admin they're
+                 further down under Administration. --}}
+            @unless (Auth::user()->isSuperAdmin())
+                @include('admin.partials.sidebar-roster-links')
+            @endunless
+
+            {{-- Last: utilities rather than a step in the work. Also lit for
+                 admin.atar-records.*, the training-data CSV import reached from
+                 the card on this page. --}}
+            <x-sidebar-nav-link :href="route('admin.tools')" :active="request()->routeIs('admin.tools') || request()->routeIs('admin.atar-records.*')">
+                <x-slot:icon>
+                    <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75" /></svg>
+                </x-slot:icon>
+                {{ __('Tools') }}
+            </x-sidebar-nav-link>
+
             @if (Auth::user()->isSuperAdmin())
                 <p class="px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-white/40" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ __('Administration') }}</p>
 
@@ -140,19 +157,7 @@
                     </x-slot:icon>
                     {{ __('Manage Users') }}
                 </x-sidebar-nav-link>
-
-                {{-- One sidebar entry for both ATAR features (the narrative report builder and
-                     the CSV tracker import) — they used to be two separate top-level links,
-                     which read as duplicate/confusing entries for what looks like the same
-                     thing. Now a single entry, active on either route, landing on Reports;
-                     an in-page tab bar (atar-tabs.blade.php, included on both index views)
-                     is what actually switches between them. --}}
-                <x-sidebar-nav-link :href="route('admin.atar-reports.index')" :active="request()->routeIs('admin.atar-reports.*') || request()->routeIs('admin.atar-records.*')">
-                    <x-slot:icon>
-                        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-                    </x-slot:icon>
-                    {{ __('ATAR') }}
-                </x-sidebar-nav-link>
+                @include('admin.partials.sidebar-roster-links')
             @endif
         @endif
     </nav>

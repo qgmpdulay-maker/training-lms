@@ -357,8 +357,8 @@
                                         @checked(in_array($instructor->id, $selectedInstructorIds))
                                         class="rounded border-gray-300 dark:border-gray-600 text-[#152A4E] focus:ring-[#152A4E]">
                                     {{ $instructor->name }}
-                                    @if ($instructor->training_type)
-                                        <span class="text-xs text-gray-400">&middot; {{ $instructor->training_type }}</span>
+                                    @if ($instructor->trainingTypeList())
+                                        <span class="text-xs text-gray-400">&middot; {{ $instructor->trainingTypeList() }}</span>
                                     @endif
                                 </label>
                             @endforeach
@@ -380,7 +380,9 @@
             </form>
 
             <!-- Participant Evaluations -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
+            {{-- Kept for anyone linking to it; the Summary page's Evaluations card
+                 opens the read-only admin/evaluation-summary page instead. --}}
+            <div id="participant-evaluations" class="scroll-mt-24 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
                 <h2 class="text-lg font-bold text-[#152A4E] dark:text-white mb-1">{{ __('Participant Evaluations') }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
                     {{ trans_choice(':count of :total participant|:count of :total participants have submitted an evaluation.', $record->participantEvaluations->count(), ['count' => $record->participantEvaluations->count(), 'total' => $participants->count()]) }}

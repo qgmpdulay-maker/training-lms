@@ -169,12 +169,13 @@ class DemoDataSeeder extends Seeder
         foreach ($instructors as $instructor) {
             Instructor::create([
                 'name' => $instructor['name'],
-                'training_type' => $instructor['training_type'],
-                'certificate_code' => 'INS-'.strtoupper(str()->random(6)),
-                'deployment' => null,
                 'agency_organization' => 'OCD Civil Defense and Disaster Management Training Institute',
                 'lgu' => null,
                 'region' => $instructor['region'],
+                'rating' => $instructor['rating'],
+            ])->trainingTypes()->create([
+                'training_type' => $instructor['training_type'],
+                'certificate_code' => 'INS-'.strtoupper(str()->random(6)),
                 'rating' => $instructor['rating'],
             ]);
         }

@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Instructor;
+use App\Models\InstructorCertification;
+use App\Models\InstructorDeployment;
+use App\Models\InstructorTrainingType;
 use App\Models\TrainingRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,6 +15,16 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
+/**
+ * The instructor roster.
+ *
+ * A Regional Admin maintains their own region's instructors — adding them and
+ * recording their courses, certifications, and deployments — while a Super
+ * Admin does the same for every region and is the only one who can move an
+ * instructor between regions. Each of those three things is many-per-person
+ * (see the Instructor model), so they're added and removed one row at a time
+ * rather than edited as single fields.
+ */
 class InstructorController extends Controller
 {
     public function index(Request $request): View
@@ -23,17 +36,10 @@ class InstructorController extends Controller
             $complaintsOnly = $request->boolean('complaints_only');
             $search = trim((string) $request->query('instructors_q'));
 
-            $instructors = Instructor::when($region, fn ($query) => $query->where('region', $region))
+            $instructors = Instructor::with(['trainingTypes', 'certifications', 'deployments'])
+                ->when($region, fn ($query) => $query->where('region', $region))
                 ->when($complaintsOnly, fn ($query) => $query->whereNotNull('complaints')->where('complaints', '!=', ''))
-                ->when($search !== '', function ($query) use ($search) {
-                    $query->where(function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('training_type', 'like', "%{$search}%")
-                            ->orWhere('certificate_code', 'like', "%{$search}%")
-                            ->orWhere('agency_organization', 'like', "%{$search}%")
-                            ->orWhere('lgu', 'like', "%{$search}%");
-                    });
-                })
+                ->tap(fn ($query) => $this->applySearch($query, $search))
                 ->orderBy('name')
                 ->get();
 
@@ -62,9 +68,9 @@ class InstructorController extends Controller
                 'complaintsOnly' => $complaintsOnly,
                 'instructorSearch' => $search,
                 'stats' => [
-                    'total' => $instructors->pluck('name')->unique()->count(),
+                    'total' => $instructors->count(),
                     'regions' => $instructors->pluck('region')->filter()->unique()->count(),
-                    'complaints' => $withComplaints->pluck('name')->unique()->count(),
+                    'complaints' => $withComplaints->count(),
                 ],
             ]);
         }
@@ -72,23 +78,21 @@ class InstructorController extends Controller
         $trainingType = trim((string) $request->query('training_type'));
         $search = trim((string) $request->query('instructors_q'));
 
-        $instructors = Instructor::where('region', $user->region)
-            ->when($trainingType !== '', fn ($query) => $query->where('training_type', $trainingType))
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('training_type', 'like', "%{$search}%")
-                        ->orWhere('certificate_code', 'like', "%{$search}%")
-                        ->orWhere('agency_organization', 'like', "%{$search}%")
-                        ->orWhere('lgu', 'like', "%{$search}%");
-                });
-            })
+        $instructors = Instructor::with(['trainingTypes', 'certifications', 'deployments'])
+            ->where('region', $user->region)
+            ->when($trainingType !== '', fn ($query) => $query->whereHas(
+                'trainingTypes',
+                fn ($t) => $t->where('training_type', $trainingType)
+            ))
+            ->tap(fn ($query) => $this->applySearch($query, $search))
             ->orderBy('name')
             ->paginate(20)
             ->withQueryString();
 
-        $trainingTypes = Instructor::where('region', $user->region)
-            ->whereNotNull('training_type')
+        $trainingTypes = InstructorTrainingType::whereHas(
+            'instructor',
+            fn ($q) => $q->where('region', $user->region)
+        )
             ->distinct()
             ->orderBy('training_type')
             ->pluck('training_type');
@@ -111,6 +115,30 @@ class InstructorController extends Controller
         ]);
     }
 
+    /**
+     * Roster search spans the person and their child rows — a name, the
+     * courses they teach, a certificate code, or their agency/LGU.
+     */
+    private function applySearch($query, string $search): void
+    {
+        $query->when($search !== '', function ($query) use ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('agency_organization', 'like', "%{$search}%")
+                    ->orWhere('lgu', 'like', "%{$search}%")
+                    ->orWhereHas('trainingTypes', fn ($t) => $t->where('training_type', 'like', "%{$search}%")
+                        ->orWhere('certificate_code', 'like', "%{$search}%"))
+                    ->orWhereHas('certifications', fn ($c) => $c->where('title', 'like', "%{$search}%")
+                        ->orWhere('code', 'like', "%{$search}%"));
+            });
+        });
+    }
+
+    /**
+     * Adds an instructor along with however many courses, certifications, and
+     * deployments were filled in on the form — all three are repeatable rows,
+     * so a person who teaches four courses is entered once, not four times.
+     */
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -120,88 +148,222 @@ class InstructorController extends Controller
             'sex' => ['nullable', 'string', 'in:Male,Female,Other'],
             'photo' => ['nullable', 'image', 'max:2048'],
             'position' => ['nullable', 'string', 'max:255'],
-            'training_type' => ['required', 'string', 'max:255'],
             'specialization' => ['nullable', 'string', 'max:255'],
-            'certification' => ['nullable', 'string', 'max:255'],
-            'certificate_code' => ['nullable', 'string', 'max:255'],
-            'deployment' => ['nullable', 'string', 'max:255'],
-            'deployment_date' => ['nullable', 'date'],
-            'deployment_role' => ['nullable', 'string', 'max:255'],
             'agency_organization' => ['nullable', 'string', 'max:255'],
             'lgu' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'in:'.implode(',', config('regions.list'))],
+
+            'training_types' => ['required', 'array', 'min:1'],
+            'training_types.*.training_type' => ['nullable', 'string', 'max:255'],
+            'training_types.*.certificate_code' => ['nullable', 'string', 'max:255'],
+
+            'certifications' => ['nullable', 'array'],
+            'certifications.*.title' => ['nullable', 'string', 'max:255'],
+            'certifications.*.code' => ['nullable', 'string', 'max:255'],
+            'certifications.*.issued_on' => ['nullable', 'date'],
+            'certifications.*.file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+
+            'deployments' => ['nullable', 'array'],
+            'deployments.*.deployment' => ['nullable', 'string', 'max:255'],
+            'deployments.*.deployment_date' => ['nullable', 'date'],
+            'deployments.*.deployment_role' => ['nullable', 'string', 'max:255'],
+            'deployments.*.area' => ['nullable', 'string', 'max:255'],
+            'deployments.*.city' => ['nullable', 'string', 'max:255'],
         ]);
+
+        // At least one actual course. The form always submits its first row
+        // even when left blank, so array|min:1 alone wouldn't catch an empty one.
+        $courses = $this->filledRows($validated['training_types'] ?? [], 'training_type');
+
+        if ($courses->isEmpty()) {
+            return Redirect::back()
+                ->withErrors(['training_types' => __('Add at least one type of training this instructor can teach.')])
+                ->withInput();
+        }
 
         // Regional admins can only add instructors under their own region.
         if ($request->user()->isAdmin()) {
             $validated['region'] = $request->user()->region;
         }
 
-        if ($request->hasFile('photo')) {
-            $validated['photo_path'] = $validated['photo']->store('instructors/photos', 'public');
+        $instructor = Instructor::create([
+            ...collect($validated)->only([
+                'name', 'email', 'phone', 'sex', 'position',
+                'specialization', 'agency_organization', 'lgu', 'region',
+            ])->all(),
+            'photo_path' => $request->hasFile('photo')
+                ? $request->file('photo')->store('instructors/photos', 'public')
+                : null,
+        ]);
+
+        $instructor->trainingTypes()->createMany($courses->values()->all());
+
+        // Keyed by the original row index so each certification keeps its own
+        // uploaded file, which validation strips out of $validated.
+        foreach ($this->filledRows($validated['certifications'] ?? [], 'title') as $index => $row) {
+            $instructor->certifications()->create([
+                ...$row,
+                'file_path' => $request->file("certifications.{$index}.file")?->store('instructors/certificates', 'public'),
+            ]);
         }
-        unset($validated['photo']);
 
-        Instructor::create($validated);
+        $instructor->deployments()->createMany(
+            $this->filledRows($validated['deployments'] ?? [], 'deployment')->values()->all()
+        );
 
-        return Redirect::back()->with('status', "{$validated['name']} was added to the instructor roster.");
+        return Redirect::back()->with('status', "{$instructor->name} was added to the instructor roster.");
+    }
+
+    public function addTrainingType(Request $request, Instructor $instructor): RedirectResponse
+    {
+        $this->authorizeFor($request, $instructor);
+
+        $validated = $request->validate([
+            'training_type' => ['required', 'string', 'max:255'],
+            'certificate_code' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $instructor->trainingTypes()->create($validated);
+
+        return Redirect::back()->with('status', "{$validated['training_type']} added to {$instructor->name}'s courses.");
+    }
+
+    public function removeTrainingType(Request $request, InstructorTrainingType $trainingType): RedirectResponse
+    {
+        $trainingType->loadMissing('instructor');
+        $this->authorizeFor($request, $trainingType->instructor);
+
+        // An instructor with no courses at all drops off every roster filter
+        // and can't be attached to a session.
+        if ($trainingType->instructor->trainingTypes()->count() <= 1) {
+            return Redirect::back()->withErrors([
+                'training_type' => __('An instructor needs at least one type of training — add the replacement before removing this one.'),
+            ]);
+        }
+
+        $instructor = $trainingType->instructor;
+        $trainingType->delete();
+        $instructor->refreshOverallRating();
+
+        return Redirect::back()->with('status', 'Training type removed.');
+    }
+
+    public function addCertification(Request $request, Instructor $instructor): RedirectResponse
+    {
+        $this->authorizeFor($request, $instructor);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'code' => ['nullable', 'string', 'max:255'],
+            'issued_on' => ['nullable', 'date'],
+            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ]);
+
+        $instructor->certifications()->create([
+            ...collect($validated)->except('file')->all(),
+            'file_path' => $request->file('file')?->store('instructors/certificates', 'public'),
+        ]);
+
+        return Redirect::back()->with('status', "Certification added for {$instructor->name}.");
+    }
+
+    public function removeCertification(Request $request, InstructorCertification $certification): RedirectResponse
+    {
+        $certification->loadMissing('instructor');
+        $this->authorizeFor($request, $certification->instructor);
+
+        if ($certification->file_path) {
+            Storage::disk('public')->delete($certification->file_path);
+        }
+
+        $certification->delete();
+
+        return Redirect::back()->with('status', 'Certification removed.');
+    }
+
+    public function addDeployment(Request $request, Instructor $instructor): RedirectResponse
+    {
+        $this->authorizeFor($request, $instructor);
+
+        $validated = $request->validate($this->deploymentRules());
+
+        $instructor->deployments()->create($validated);
+
+        return Redirect::back()->with('status', "Deployment recorded for {$instructor->name}.");
     }
 
     /**
-     * Correct a roster row's deployment record — the only fields an
-     * instructor row can be edited on after creation.
+     * Correct one deployment record — details of where someone was sent, not
+     * anything about the person.
      */
-    public function update(Request $request, Instructor $instructor): RedirectResponse
+    public function updateDeployment(Request $request, InstructorDeployment $deployment): RedirectResponse
     {
-        abort_if($request->user()->isAdmin() && $instructor->region !== $request->user()->region, 403);
+        $deployment->loadMissing('instructor');
+        $this->authorizeFor($request, $deployment->instructor);
 
-        $validated = $request->validate([
-            'deployment' => ['nullable', 'string', 'max:255'],
+        $deployment->update($request->validate($this->deploymentRules()));
+
+        return Redirect::back()->with('status', "Deployment updated for {$deployment->instructor->name}.");
+    }
+
+    public function removeDeployment(Request $request, InstructorDeployment $deployment): RedirectResponse
+    {
+        $deployment->loadMissing('instructor');
+        $this->authorizeFor($request, $deployment->instructor);
+
+        $deployment->delete();
+
+        return Redirect::back()->with('status', 'Deployment record removed.');
+    }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    private function deploymentRules(): array
+    {
+        return [
+            'deployment' => ['required', 'string', 'max:255'],
             'deployment_date' => ['nullable', 'date'],
             'deployment_role' => ['nullable', 'string', 'max:255'],
-            'agency_organization' => ['nullable', 'string', 'max:255'],
-            'lgu' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $instructor->update($validated);
-
-        return Redirect::back()->with('status', "Deployment details updated for {$instructor->name}.");
+            'area' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+        ];
     }
 
     /**
-     * Upload (or replace) the scanned certificate for one roster row — a
-     * regional admin may only do this for instructors on file for their own
-     * region, same boundary as update().
+     * Reassign an instructor to a different region. Instructors get posted to
+     * another regional office, or sent to run a training outside their own,
+     * and the roster is grouped and filtered by region everywhere — so this
+     * is what moves them onto the receiving region's roster.
+     *
+     * Super Admin only, by route — a Regional Admin can't post an instructor
+     * out of, or into, their own region.
      */
-    public function uploadCertificate(Request $request, Instructor $instructor): RedirectResponse
+    public function updateRegion(Request $request, Instructor $instructor): RedirectResponse
     {
-        abort_if($request->user()->isAdmin() && $instructor->region !== $request->user()->region, 403);
-
         $validated = $request->validate([
-            'certificate_file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'region' => ['required', 'string', 'in:'.implode(',', config('regions.list'))],
         ]);
 
-        $previousFile = $instructor->certificate_file_path;
+        $previous = $instructor->region;
 
-        $instructor->update([
-            'certificate_file_path' => $validated['certificate_file']->store('instructors/certificates', 'public'),
-        ]);
-
-        // Delete the scan this upload replaced so unused files don't pile up.
-        if ($previousFile) {
-            Storage::disk('public')->delete($previousFile);
+        if ($previous === $validated['region']) {
+            return Redirect::back();
         }
 
-        return Redirect::back()->with('status', "Certificate uploaded for {$instructor->name}.");
+        $instructor->update(['region' => $validated['region']]);
+
+        $from = $previous ?: 'Central / Unassigned';
+
+        return Redirect::back()->with('status', "{$instructor->name} was moved from {$from} to {$validated['region']}.");
     }
 
     /**
-     * Upload (or replace) an instructor's profile photo — same region
-     * boundary as update() and uploadCertificate().
+     * Upload (or replace) an instructor's profile photo.
      */
     public function uploadPhoto(Request $request, Instructor $instructor): RedirectResponse
     {
-        abort_if($request->user()->isAdmin() && $instructor->region !== $request->user()->region, 403);
+        $this->authorizeFor($request, $instructor);
 
         $validated = $request->validate([
             'photo' => ['required', 'image', 'max:2048'],
@@ -221,15 +383,18 @@ class InstructorController extends Controller
         return Redirect::back()->with('status', "Photo updated for {$instructor->name}.");
     }
 
-    public function show(Instructor $instructor): View
+    public function show(Request $request, Instructor $instructor): View
     {
-        $records = Instructor::where('name', $instructor->name)->orderBy('training_type')->get();
+        $this->authorizeFor($request, $instructor, read: true);
 
-        $ratings = $records->pluck('rating')->filter(fn ($r) => is_numeric($r));
+        $instructor->load(['trainingTypes', 'certifications', 'deployments']);
+
+        $ratings = $instructor->trainingTypes->pluck('rating')->filter(fn ($r) => is_numeric($r));
 
         return view('admin.super-admin.instructors.show', [
             'instructor' => $instructor,
-            'records' => $records,
+            'records' => $instructor->trainingTypes,
+            'regions' => config('regions.list'),
             'overallRating' => $ratings->isNotEmpty() ? round($ratings->avg(), 2) : null,
             'sessions' => $this->sessionHistory($instructor),
         ]);
@@ -269,5 +434,33 @@ class InstructorController extends Controller
                     'comments' => $ratingRows->pluck('comment')->filter(fn ($c) => filled(trim((string) $c)))->values()->all(),
                 ];
             });
+    }
+
+    /**
+     * Drops repeatable-row entries the admin added and left blank, keyed on
+     * the one field that makes the row mean anything. Keeps the original row
+     * indexes so an uploaded file can still be matched back to its row.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function filledRows(array $rows, string $requiredKey): Collection
+    {
+        return collect($rows)
+            ->filter(fn ($row) => filled(trim((string) ($row[$requiredKey] ?? ''))))
+            ->map(fn ($row) => collect($row)->except('file')->all());
+    }
+
+    /**
+     * A Regional Admin works only on their own region's instructors; a Super
+     * Admin on anyone's. Reads 404 and writes 403, matching how the rest of
+     * the app treats "not yours" versus "not allowed".
+     */
+    private function authorizeFor(Request $request, ?Instructor $instructor, bool $read = false): void
+    {
+        abort_unless($instructor, 404);
+
+        $actor = $request->user();
+        abort_if($actor->isAdmin() && $instructor->region !== $actor->region, $read ? 404 : 403);
     }
 }

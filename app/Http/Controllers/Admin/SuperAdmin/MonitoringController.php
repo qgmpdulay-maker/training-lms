@@ -84,8 +84,12 @@ class MonitoringController extends Controller
      * no participant roster (e.g. an ATAR import), since there's no one to
      * look a city up for.
      *
+     * `regions` adds the same figures up per region, for the map's Region
+     * view — by the region each city is in, so a region's graduates are the
+     * people who live there, whichever region held their training.
+     *
      * @param  Collection<int, TrainingRequest>  $trainings
-     * @return array{cities: array<int, array{id: int, name: string, province: string, graduates: int, deployed: int, trainings: int}>, unplaced: int, unplaced_people: int}
+     * @return array{cities: array<int, array{id: int, name: string, province: string, graduates: int, deployed: int, trainings: int}>, regions: array<int, array{name: string, graduates: int, deployed: int, trainings: int, cities: int}>, unplaced: int, unplaced_people: int}
      */
     public static function cityTotals(Collection $trainings): array
     {
@@ -131,6 +135,18 @@ class MonitoringController extends Controller
             }
         }
 
+        // Unions of the per-city sets, so a training with graduates in two of
+        // a region's cities still counts once there. People live in one city,
+        // so the deployed sets never overlap.
+        $regions = [];
+        foreach ($totals as $cityId => $total) {
+            $region = CityDirectory::find($cityId)['region'];
+            $regions[$region]['graduates'] = ($regions[$region]['graduates'] ?? 0) + $total['graduates'];
+            $regions[$region]['deployed'] = ($regions[$region]['deployed'] ?? []) + ($total['deployed'] ?? []);
+            $regions[$region]['trainings'] = ($regions[$region]['trainings'] ?? []) + $total['trainings'];
+            $regions[$region]['cities'] = ($regions[$region]['cities'] ?? 0) + 1;
+        }
+
         return [
             'cities' => collect($totals)
                 ->map(function (array $total, int $cityId) {
@@ -145,6 +161,17 @@ class MonitoringController extends Controller
                         'trainings' => count($total['trainings']),
                     ];
                 })
+                ->sortByDesc('graduates')
+                ->values()
+                ->all(),
+            'regions' => collect($regions)
+                ->map(fn (array $total, string $region) => [
+                    'name' => $region,
+                    'graduates' => $total['graduates'],
+                    'deployed' => count($total['deployed']),
+                    'trainings' => count($total['trainings']),
+                    'cities' => $total['cities'],
+                ])
                 ->sortByDesc('graduates')
                 ->values()
                 ->all(),

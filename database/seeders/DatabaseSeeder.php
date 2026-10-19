@@ -15,6 +15,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // The TNA questionnaires live in the database so the Super Admin can
+        // edit them; this loads the question content the app shipped with.
+        $this->call(TnaFormSeeder::class);
+
         // User::factory(10)->create();
 
         User::factory()->create([

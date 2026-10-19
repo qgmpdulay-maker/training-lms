@@ -12,7 +12,6 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
@@ -102,7 +101,6 @@ class DashboardController extends Controller
                 lowestCompletionRateTraining: $this->lowestCompletionRateTraining($filters),
                 lguNgaReach: $this->lguNgaReach($completed),
             ),
-            'needsAssessmentByOrganization' => $this->needsAssessmentByOrganization($request, $filters),
         ];
 
         // Changing a filter submits via fetch() instead of a plain GET
@@ -604,52 +602,6 @@ class DashboardController extends Controller
             ->sortByDesc('graduates')
             ->values()
             ->all();
-    }
-
-    /**
-     * TNA demand grouped by the participant's LGU/organization, per the TOR
-     * requirement to generate needs-assessment data per LGU/organization —
-     * moved here from the Needs Assessment tab, which had no dashboard
-     * equivalent for this specific breakdown.
-     */
-    private function needsAssessmentByOrganization(Request $request, array $filters): LengthAwarePaginator
-    {
-        // Skips the large answers/category_scores JSON columns — only the
-        // recommendation and the submitter's organization/region are used.
-        $submissions = $this->needsAssessments($filters)->select(['id', 'user_id', 'recommended_training_title'])
-            ->with('user:id,organization,region')
-            ->get();
-
-        $rows = $submissions
-            ->groupBy(fn (TrainingNeedsAssessment $tna) => $tna->user->organization ?: 'Unspecified organization')
-            ->map(function ($rows, $organization) {
-                $topTraining = $rows->pluck('recommended_training_title')
-                    ->filter()
-                    ->countBy()
-                    ->sortDesc()
-                    ->keys()
-                    ->first();
-
-                return [
-                    'organization' => $organization,
-                    'region' => $rows->pluck('user.region')->filter()->unique()->sort()->implode(', ') ?: '—',
-                    'submissions' => $rows->count(),
-                    'top_training' => $topTraining,
-                ];
-            })
-            ->sortByDesc('submissions')
-            ->values();
-
-        $perPage = 10;
-        $page = LengthAwarePaginator::resolveCurrentPage('org_page');
-
-        return (new LengthAwarePaginator(
-            $rows->slice(($page - 1) * $perPage, $perPage)->values(),
-            $rows->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query(), 'pageName' => 'org_page']
-        ))->fragment('needs-assessment-by-organization');
     }
 
     /**

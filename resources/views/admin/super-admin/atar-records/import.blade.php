@@ -8,11 +8,14 @@
     <div class="py-10">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-            <a href="{{ route('admin.atar-records.index') }}" class="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white">
+            {{-- Back to Tools: that's where the import is entered from now (it used
+                 to be a tab under ATAR). The imported rows themselves are one click
+                 further on, from the card there. --}}
+            <a href="{{ route('admin.tools') }}" class="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white">
                 <svg class="w-4 h-4 me-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
-                {{ __('Back to ATAR Records') }}
+                {{ __('Back to Tools') }}
             </a>
 
             @if ($errors->any())

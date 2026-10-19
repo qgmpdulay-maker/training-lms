@@ -8,6 +8,7 @@ use App\Models\ParticipantEvaluation;
 use App\Models\TrainingRequest;
 use App\Models\User;
 use App\Services\CertificateService;
+use App\Services\EvaluationSummary;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -29,22 +30,18 @@ class SummaryController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $statusParam = $request->query('status');
-        // No status chosen yet: prioritize newly received requests over ones
-        // already being reviewed, approved, completed, or declined.
-        $status = $statusParam ?? TrainingRequest::STATUS_SUBMITTED;
-        $statusDefaulted = $statusParam === null;
-        $showAllStatuses = $status === 'all';
         $search = trim((string) $request->query('q'));
         $region = $user->isSuperAdmin() ? $request->query('region') : null;
 
+        // Listed whatever their status: a Regional Admin's scheduled training is
+        // approved the moment it is saved, so there is nothing to filter for.
+        //
         // Super Admin only: they schedule trainings and are the ones who move a
         // training to Completed, which is what issues the participants'
-        // certificates. A Regional Admin reads their region's data from the
-        // sections below instead, so this query is skipped for them entirely.
+        // certificates. A Regional Admin's Summary page is the Evaluations
+        // section alone, so this query is skipped for them entirely.
         $records = ! $user->isSuperAdmin() ? null : TrainingRequest::with(['user', 'participants'])
             ->when($region, fn ($query) => $query->where('region', $region))
-            ->when(! $showAllStatuses, fn ($query) => $query->where('status', $status))
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('venue', 'like', "%{$search}%")
@@ -61,69 +58,27 @@ class SummaryController extends Controller
             ->withQueryString()
             ->fragment('training-requests');
 
-        $participantSearch = trim((string) $request->query('participants_q'));
-
-        $participants = ($user->isAdmin() || $user->isSuperAdmin())
-            ? User::where('role', User::ROLE_PARTICIPANT)
-                ->when($user->isAdmin(), fn ($query) => $query->where('region', $user->region))
-                ->when($region, fn ($query) => $query->where('region', $region))
-                ->when($participantSearch !== '', function ($query) use ($participantSearch) {
-                    $query->where(function ($q) use ($participantSearch) {
-                        $q->where('name', 'like', "%{$participantSearch}%")
-                            ->orWhere('email', 'like', "%{$participantSearch}%")
-                            ->orWhere('organization', 'like', "%{$participantSearch}%")
-                            ->orWhere('agency', 'like', "%{$participantSearch}%")
-                            ->orWhere('participant_type', 'like', "%{$participantSearch}%");
-                    });
-                })
-                // Every certificate this participant has ever earned —
-                // deliberately not region-scoped: a participant who transferred
-                // regions (e.g. trained in Region III, now registered under NCR)
-                // keeps every certificate they've earned, and their new region's
-                // admin should still be able to view all of them here.
-                // Loaded for the whole page in one query (not one per participant).
-                ->with(['certificates' => fn ($query) => $query->with('trainingRequest')->orderByDesc('issued_on')])
-                ->orderBy('name')
-                ->paginate(10, ['*'], 'participants')
-                ->withQueryString()
-                ->fragment('registered-participants')
-            : null;
-
-        $instructorSearch = trim((string) $request->query('instructors_q'));
-
-        $instructors = $user->isSuperAdmin()
-            ? Instructor::when($region, fn ($query) => $query->where('region', $region))
-                ->when($instructorSearch !== '', function ($query) use ($instructorSearch) {
-                    $query->where(function ($q) use ($instructorSearch) {
-                        $q->where('name', 'like', "%{$instructorSearch}%")
-                            ->orWhere('training_type', 'like', "%{$instructorSearch}%")
-                            ->orWhere('specialization', 'like', "%{$instructorSearch}%")
-                            ->orWhere('agency_organization', 'like', "%{$instructorSearch}%")
-                            ->orWhere('lgu', 'like', "%{$instructorSearch}%")
-                            ->orWhere('certificate_code', 'like', "%{$instructorSearch}%");
-                    });
-                })
-                ->orderBy('name')
-                ->paginate(10, ['*'], 'instructors')
-                ->withQueryString()
-                ->fragment('instructors')
-            : null;
-
         $evaluationSearch = trim((string) $request->query('evaluations_q'));
 
-        $evaluations = ($user->isAdmin() || $user->isSuperAdmin())
-            ? ParticipantEvaluation::with(['user', 'trainingRequest'])
-                ->whereHas('trainingRequest', function ($query) use ($user, $region) {
-                    $query->when($user->isAdmin(), fn ($q) => $q->where('region', $user->region))
-                        ->when($region, fn ($q) => $q->where('region', $region));
-                })
+        // Evaluations roll up per training, not per participant: an admin reads
+        // how a training was received, and one row per submission said nothing on
+        // its own. Only trainings with at least one submission appear; the
+        // per-participant breakdown lives on the training's View page.
+        $evaluatedTrainings = ($user->isAdmin() || $user->isSuperAdmin())
+            ? TrainingRequest::with(['user', 'participants'])
+                ->has('participantEvaluations')
+                ->withCount('participantEvaluations')
+                ->withMax('participantEvaluations', 'updated_at')
+                ->when($user->isAdmin(), fn ($query) => $query->where('region', $user->region))
+                ->when($region, fn ($query) => $query->where('region', $region))
                 ->when($evaluationSearch !== '', function ($query) use ($evaluationSearch) {
                     $query->where(function ($q) use ($evaluationSearch) {
-                        $q->whereHas('user', fn ($u) => $u->where('name', 'like', "%{$evaluationSearch}%"))
-                            ->orWhereHas('trainingRequest', fn ($t) => $t->where('training_title', 'like', "%{$evaluationSearch}%"));
+                        $q->where('training_title', 'like', "%{$evaluationSearch}%")
+                            ->orWhere('requesting_agency', 'like', "%{$evaluationSearch}%")
+                            ->orWhere('venue', 'like', "%{$evaluationSearch}%");
                     });
                 })
-                ->orderByDesc('updated_at')
+                ->orderByDesc('participant_evaluations_max_updated_at')
                 ->paginate(10, ['*'], 'evaluations')
                 ->withQueryString()
                 ->fragment('evaluations')
@@ -131,18 +86,9 @@ class SummaryController extends Controller
 
         $payload = [
             'records' => $records,
-            'statusLabels' => TrainingRequest::$statusLabels,
-            'statusColors' => self::STATUS_COLORS,
-            'selectedStatus' => $status,
-            'statusDefaulted' => $statusDefaulted,
             'search' => $search,
-            'participants' => $participants,
-            'participantSearch' => $participantSearch,
-            'instructors' => $instructors,
-            'instructorSearch' => $instructorSearch,
-            'evaluations' => $evaluations,
+            'evaluatedTrainings' => $evaluatedTrainings,
             'evaluationSearch' => $evaluationSearch,
-            'certificateRemarksLabels' => TrainingRequest::$certificateRemarksLabels,
             'regions' => config('regions.list'),
             'selectedRegion' => $region,
         ];
@@ -152,8 +98,6 @@ class SummaryController extends Controller
         // in place instead of reloading the whole page.
         $sectionPartials = [
             'training-requests' => 'admin.partials.summary-training-requests',
-            'participants' => 'admin.partials.summary-participants',
-            'instructors' => 'admin.partials.summary-instructors',
             'evaluations' => 'admin.partials.summary-evaluations',
         ];
 
@@ -164,6 +108,27 @@ class SummaryController extends Controller
         }
 
         return view('admin.summary', $payload);
+    }
+
+    /**
+     * One training's evaluation results, read-only — where the Summary page's
+     * Evaluations card lands. The Super Admin reads what participants reported
+     * and changes nothing here: no status, no roster, no certificate fields.
+     * Editing an evaluation is a separate page (EvaluationController), and
+     * editing the training itself is edit() below.
+     */
+    public function evaluations(Request $request, TrainingRequest $trainingRequest, EvaluationSummary $evaluationSummary): View
+    {
+        // Same region rule as everywhere else a Regional Admin reads a training.
+        abort_if($request->user()->isAdmin() && $trainingRequest->region !== $request->user()->region, 403);
+
+        $trainingRequest->load(['trainingEvaluation', 'participantEvaluations.user:id,name', 'instructors'])
+            ->loadCount('participants');
+
+        return view('admin.evaluation-summary', [
+            'record' => $trainingRequest,
+            'session' => $evaluationSummary->forSession($trainingRequest),
+        ]);
     }
 
     public function edit(Request $request, TrainingRequest $trainingRequest): View
@@ -178,7 +143,8 @@ class SummaryController extends Controller
         // for a request with no region yet).
         $instructorRegion = $request->user()->isAdmin() ? $request->user()->region : $trainingRequest->region;
 
-        $availableInstructors = Instructor::when($instructorRegion, fn ($query) => $query->where('region', $instructorRegion))
+        $availableInstructors = Instructor::with('trainingTypes')
+            ->when($instructorRegion, fn ($query) => $query->where('region', $instructorRegion))
             ->orderBy('name')
             ->get();
 

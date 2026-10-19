@@ -27,9 +27,9 @@
                     <thead>
                         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
                             <th class="py-2 pr-4">{{ __('Name') }}</th>
-                            <th class="py-2 pr-4">{{ __('Type of Training') }}</th>
-                            <th class="py-2 pr-4">{{ __('Certificate Code') }}</th>
-                            <th class="py-2 pr-4">{{ __('Deployment') }}</th>
+                            <th class="py-2 pr-4">{{ __('Types of Training') }}</th>
+                            <th class="py-2 pr-4">{{ __('Certifications') }}</th>
+                            <th class="py-2 pr-4">{{ __('Latest Deployment') }}</th>
                             <th class="py-2 pr-4">{{ __('Agency / LGU') }}</th>
                             <th class="py-2 pr-4">{{ __('Rating') }}</th>
                             <th class="py-2 pr-4">{{ __('Complaints') }}</th>
@@ -44,9 +44,29 @@
                                         {{ $instructor->name }}
                                     </a>
                                 </td>
-                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructor->training_type }}</td>
-                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructor->certificate_code ?? '—' }}</td>
-                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructor->deployment ?? '—' }}</td>
+                                <td class="py-3 pr-4">
+                                    @forelse ($instructor->trainingTypes as $type)
+                                        <span class="inline-flex items-center text-xs font-medium rounded-full border px-2 py-0.5 mr-1 mb-1 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600">
+                                            {{ $type->training_type }}
+                                        </span>
+                                    @empty
+                                        <span class="text-gray-400">—</span>
+                                    @endforelse
+                                </td>
+                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
+                                    {{ $instructor->certifications->isEmpty() ? '—' : trans_choice(':count certification|:count certifications', $instructor->certifications->count(), ['count' => $instructor->certifications->count()]) }}
+                                </td>
+                                <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
+                                    @php $latest = $instructor->deployments->first(); @endphp
+                                    @if ($latest)
+                                        {{ $latest->deployment }}
+                                        @if ($instructor->deployments->count() > 1)
+                                            <span class="text-xs text-gray-400">{{ __('+:count more', ['count' => $instructor->deployments->count() - 1]) }}</span>
+                                        @endif
+                                    @else
+                                        —
+                                    @endif
+                                </td>
                                 <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructor->agency_organization ?? $instructor->lgu ?? '—' }}</td>
                                 <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $instructor->rating ?? '—' }}</td>
                                 <td class="py-3 pr-4">

@@ -155,6 +155,11 @@ class NationwideDemoSeeder extends Seeder
         $nextId = $startId + 1;
         $idsByRegion = [];
         $rows = [];
+        // Courses, certifications, and deployments are each many-per-instructor,
+        // so they're built alongside the instructor rows and bulk-inserted into
+        // their own tables below.
+        $courseRows = [];
+        $deploymentRows = [];
         $trainingTypes = collect(config('trainings.catalog'))->pluck('title')->all();
 
         foreach ($regions as $region) {
@@ -162,21 +167,47 @@ class NationwideDemoSeeder extends Seeder
             $idsByRegion[$region] = [];
 
             for ($i = 0; $i < $count; $i++) {
+                $rating = round(random_int(350, 500) / 100, 2);
+
                 $rows[] = [
                     'name' => fake()->name(),
                     'email' => 'instructor'.$nextId.'@nationwide.demo.ocd.local',
                     'phone' => '09'.random_int(100000000, 999999999),
                     'sex' => fake()->randomElement(['Male', 'Female']),
                     'position' => fake()->randomElement(['Training Officer', 'Fire Marshal', 'DRRM Specialist', 'Retired Officer', 'Faculty Member']),
-                    'training_type' => fake()->randomElement($trainingTypes),
-                    'certificate_code' => 'INS-'.strtoupper(Str::random(6)),
-                    'deployment' => fake()->boolean(30) ? fake()->randomElement(['IMT', 'RDANA', 'PDNA', 'EOC']) : null,
                     'agency_organization' => $this->fakeOrganization($region),
                     'region' => $region,
-                    'rating' => round(random_int(350, 500) / 100, 2),
+                    'rating' => $rating,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
+
+                // Most instructors teach one course; a good number teach two or
+                // three, which is what the roster has to handle now.
+                foreach ((array) fake()->randomElements($trainingTypes, random_int(1, 3)) as $course) {
+                    $courseRows[] = [
+                        'instructor_id' => $nextId,
+                        'training_type' => $course,
+                        'certificate_code' => 'INS-'.strtoupper(Str::random(6)),
+                        'rating' => $rating,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+
+                foreach (range(1, random_int(0, 2)) as $ignored) {
+                    if (fake()->boolean(40)) {
+                        $deploymentRows[] = [
+                            'instructor_id' => $nextId,
+                            'deployment' => fake()->randomElement(['IMT', 'RDANA', 'PDNA', 'EOC']),
+                            'deployment_date' => fake()->dateTimeBetween('-3 years', 'now')->format('Y-m-d'),
+                            'deployment_role' => fake()->randomElement(['Team Leader', 'Member', 'Coordinator']),
+                            'area' => $this->fakeOrganization($region),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+                }
 
                 $idsByRegion[$region][] = $nextId;
                 $nextId++;
@@ -184,6 +215,8 @@ class NationwideDemoSeeder extends Seeder
         }
 
         collect($rows)->chunk(500)->each(fn ($chunk) => DB::table('instructors')->insert($chunk->all()));
+        collect($courseRows)->chunk(500)->each(fn ($chunk) => DB::table('instructor_training_types')->insert($chunk->all()));
+        collect($deploymentRows)->chunk(500)->each(fn ($chunk) => DB::table('instructor_deployments')->insert($chunk->all()));
 
         return $idsByRegion;
     }

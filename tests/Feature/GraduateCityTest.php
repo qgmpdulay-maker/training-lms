@@ -157,6 +157,13 @@ class GraduateCityTest extends TestCase
         $this->assertSame(1, $byName['City of Malolos']['graduates']);
         $this->assertSame(0, $byName['City of Malolos']['deployed']);
 
+        // The Region view adds both cities up, but the training with
+        // graduates in each of them is still one training.
+        $this->assertSame(
+            [['name' => 'Region III', 'graduates' => 4, 'deployed' => 1, 'trainings' => 2, 'cities' => 2]],
+            $totals['regions'],
+        );
+
         // The person with no City is counted, just not on the map.
         $this->assertSame(1, $totals['unplaced']);
         $this->assertSame(1, $totals['unplaced_people']);

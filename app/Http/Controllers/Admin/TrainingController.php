@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin\SuperAdmin;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\TrainingRequestConfirmation;
@@ -17,8 +17,59 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
+/**
+ * Scheduling trainings, and the list of what's scheduled.
+ *
+ * The Regional Admin schedules — they're already authorised to run trainings
+ * in their region, so there is **no approval step**: a training they schedule
+ * is approved the moment it's saved. The Super Admin can't create one; they
+ * view every region's and edit them (via Summary → Manage), and they're still
+ * the only one who marks a training Completed, which issues the certificates.
+ */
 class TrainingController extends Controller
 {
+    /**
+     * Everything scheduled — a Regional Admin's own region, every region for
+     * a Super Admin. This is the "Training" page both of them land on; the
+     * Super Admin's Summary carries the same list as one of its sections.
+     */
+    public function index(Request $request): View
+    {
+        $user = $request->user();
+        $search = trim((string) $request->query('q', ''));
+        $status = $request->query('status', 'all');
+        $region = $user->isAdmin() ? $user->region : $request->query('region');
+
+        // atarReport is loaded for the Regional Admin's list, where each completed
+        // training offers to start (or open) its ATAR.
+        $records = TrainingRequest::with(['user', 'participants', 'atarReport'])
+            ->when($region, fn ($query) => $query->where('region', $region))
+            ->when($status !== 'all', fn ($query) => $query->where('status', $status))
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('training_title', 'like', "%{$search}%")
+                        ->orWhere('venue', 'like', "%{$search}%")
+                        ->orWhere('requesting_agency', 'like', "%{$search}%")
+                        ->orWhere('contact_person', 'like', "%{$search}%");
+                });
+            })
+            ->orderByDesc('preferred_date')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('admin.trainings.index', [
+            'records' => $records,
+            'search' => $search,
+            'selectedStatus' => $status,
+            'selectedRegion' => $region,
+            'statusLabels' => TrainingRequest::$statusLabels,
+            // Same palette the Summary uses, so a status reads the same
+            // colour wherever a training is listed.
+            'statusColors' => SummaryController::STATUS_COLORS,
+            'regions' => config('regions.list'),
+        ]);
+    }
+
     public function create(Request $request): View
     {
         // Re-hydrate names for previously selected participants after a
@@ -26,7 +77,7 @@ class TrainingController extends Controller
         $selectedParticipants = User::whereIn('id', old('participant_ids', []))
             ->get(['id', 'name', 'organization', 'region']);
 
-        return view('admin.super-admin.trainings.create', [
+        return view('admin.trainings.create', [
             'trainings' => config('trainings.catalog'),
             'selectedSlug' => $request->query('training'),
             'agencyTypeLabels' => TrainingRequest::$agencyTypeLabels,
@@ -111,6 +162,12 @@ class TrainingController extends Controller
             ],
         ]);
 
+        // A Regional Admin schedules for their own region, whatever the form
+        // posted — same rule as adding an instructor.
+        if ($user->isAdmin()) {
+            $validated['region'] = $user->region;
+        }
+
         if ($validated['training_type'] === 'custom') {
             // Typed in rather than picked from the TA catalog — treated as an
             // APB training, and its slug is derived from the title since there's
@@ -132,8 +189,9 @@ class TrainingController extends Controller
         $trainingRequest->category = $category;
         $trainingRequest->source = TrainingRequest::SOURCE_ADMIN_SCHEDULED;
         $trainingRequest->signature_name = $user->name;
-        // Super Admin is scheduling this directly — it doesn't go through the
-        // regional-office review pipeline (submitted -> under_review -> approved).
+        // Approved on save: there is no approval step. The Regional Admin
+        // scheduling this is already authorised to run trainings in their
+        // region, so nothing is waiting on a Super Admin to say yes.
         $trainingRequest->status = TrainingRequest::STATUS_APPROVED;
         $trainingRequest->save();
         $trainingRequest->reference_number = sprintf('TR-%s-%05d', now()->year, $trainingRequest->id);
@@ -147,7 +205,7 @@ class TrainingController extends Controller
             Log::error('Failed to send training schedule confirmation email: '.$e->getMessage());
         }
 
-        return Redirect::route('admin.calendar')
+        return Redirect::route('admin.trainings.index')
             ->with('status', "\"{$trainingRequest->training_title}\" was scheduled for {$trainingRequest->preferred_date->format('M j, Y')} in {$trainingRequest->region}.");
     }
 }

@@ -38,7 +38,7 @@
                     trainingType: {{ Js::from(old('training_type', 'catalog') ?? '') }},
                     trainingSlug: {{ Js::from(old('training_slug', $preselected['slug'] ?? '') ?? '') }},
                     customTrainingTitle: {{ Js::from(old('custom_training_title', '') ?? '') }},
-                    region: {{ Js::from(old('region', '') ?? '') }},
+                    region: {{ Js::from(old('region', Auth::user()->isAdmin() ? Auth::user()->region : '') ?? '') }},
                     trainings: {{ Js::from($trainings) }},
                     trainingSearch: '',
                     trainingCategory: 'All',
@@ -188,15 +188,26 @@
                 <x-chart-card body-class="p-6 sm:p-8 space-y-5" :title="__('2. Training details')">
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {{-- A Regional Admin schedules for their own region only, so the
+                             picker is replaced by their region (the controller forces it
+                             server-side too). The hidden input still submits it, and
+                             Alpine's `region` is seeded from it either way so the
+                             participant picker below can default to the same region. --}}
                         <div>
                             <x-input-label for="region" :value="__('Region')" />
-                            <select id="region" name="region" required x-model="region"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                <option value="" disabled {{ old('region') ? '' : 'selected' }}>{{ __('Select') }}</option>
-                                @foreach ($regions as $regionOption)
-                                    <option value="{{ $regionOption }}" @selected(old('region') === $regionOption)>{{ $regionOption }}</option>
-                                @endforeach
-                            </select>
+                            @if (Auth::user()->isAdmin())
+                                <input type="hidden" name="region" value="{{ Auth::user()->region }}">
+                                <x-text-input type="text" class="mt-1 block w-full bg-gray-50 dark:bg-gray-700" value="{{ Auth::user()->region }}" disabled />
+                                <p class="text-xs text-gray-400 mt-1">{{ __('Locked to your region.') }}</p>
+                            @else
+                                <select id="region" name="region" required x-model="region"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#152A4E] focus:ring-[#152A4E]">
+                                    <option value="" disabled {{ old('region') ? '' : 'selected' }}>{{ __('Select') }}</option>
+                                    @foreach ($regions as $regionOption)
+                                        <option value="{{ $regionOption }}" @selected(old('region') === $regionOption)>{{ $regionOption }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
                             <x-input-error :messages="$errors->get('region')" class="mt-1" />
                         </div>
                         <div>

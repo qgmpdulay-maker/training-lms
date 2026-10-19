@@ -54,7 +54,7 @@
                         class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-[#152A4E] focus:ring-[#152A4E]">
                         <option value="">{{ __('Select a training...') }}</option>
                         @foreach ($trainingRequests as $trainingRequest)
-                            <option value="{{ $trainingRequest->id }}">
+                            <option value="{{ $trainingRequest->id }}" @selected($selectedTrainingId === $trainingRequest->id)>
                                 {{ $trainingRequest->training_title }} — {{ $trainingRequest->region }} ({{ optional($trainingRequest->preferred_date)->format('M d, Y') }})
                             </option>
                         @endforeach

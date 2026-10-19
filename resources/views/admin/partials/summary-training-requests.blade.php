@@ -11,7 +11,6 @@
                     <th class="py-2 pr-4">{{ __('Requesting Agency') }}</th>
                     <th class="py-2 pr-4">{{ __('Participants') }}</th>
                     <th class="py-2 pr-4">{{ __('Date & Venue') }}</th>
-                    <th class="py-2 pr-4">{{ __('Status') }}</th>
                     <th class="py-2 pr-4"></th>
                 </tr>
             </thead>
@@ -45,15 +44,32 @@
                             {{ $record->preferred_date->format('M j, Y') }}
                             <div class="text-xs text-gray-400">{{ $record->venue }}</div>
                         </td>
-                        <td class="py-3 pr-4">
-                            <span class="inline-flex items-center text-xs font-semibold rounded-full border px-2.5 py-1 {{ $statusColors[$record->status] ?? '' }}">
-                                {{ $record->statusLabel() }}
-                            </span>
-                        </td>
-                        <td class="py-3 pr-4 text-right">
+                        <td class="py-3 pr-4 text-right whitespace-nowrap">
+                            {{-- The ATAR for this training, for whoever writes it: a
+                                 Regional Admin, once the training is completed. Opens the
+                                 draft if one exists, otherwise starts one with this
+                                 training already picked. --}}
+                            @if (Auth::user()->isAdmin() && $record->status === \App\Models\TrainingRequest::STATUS_COMPLETED)
+                                @if ($record->atarReport)
+                                    <a href="{{ route('admin.atar-reports.edit', $record->atarReport) }}"
+                                        class="inline-flex items-center justify-center text-xs font-semibold text-[#152A4E] dark:text-white border border-[#152A4E]/30 dark:border-white/30 rounded-md px-3 py-2 me-1 hover:bg-[#152A4E]/5 dark:hover:bg-white/10 transition">
+                                        {{ __('Open ATAR') }}
+                                    </a>
+                                @else
+                                    <a href="{{ route('admin.atar-reports.create', ['training_request_id' => $record->id]) }}"
+                                        class="inline-flex items-center justify-center text-xs font-semibold text-[#152A4E] dark:text-white border border-[#152A4E]/30 dark:border-white/30 rounded-md px-3 py-2 me-1 hover:bg-[#152A4E]/5 dark:hover:bg-white/10 transition">
+                                        {{ __('Create ATAR') }}
+                                    </a>
+                                @endif
+                            @endif
+
+                            {{-- Always "View": the page opens as the record, read-only for a
+                                 Regional Admin (summary-edit hides the Save button for them)
+                                 and still editable for a Super Admin, who needs it just in
+                                 case something has to be corrected. --}}
                             <a href="{{ route('admin.summary.edit', $record) }}"
                                 class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-4 py-2 hover:bg-[#1E3A66] transition whitespace-nowrap">
-                                {{ __('Manage') }}
+                                {{ __('View') }}
                             </a>
                         </td>
                     </tr>

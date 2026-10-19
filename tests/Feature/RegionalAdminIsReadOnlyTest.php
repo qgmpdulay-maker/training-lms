@@ -4,16 +4,22 @@ namespace Tests\Feature;
 
 use App\Models\Certificate;
 use App\Models\Instructor;
+use App\Models\ParticipantEvaluation;
 use App\Models\TrainingRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
  * A Regional Admin sees their region's data and changes none of it —
  * scheduling, approving, evaluations, instructors, and certificate issuance
  * all belong to the Super Admin (decision recorded 2026-09-22).
+ *
+ * Two deliberate exceptions, each covered by its own file: their graduates'
+ * deployments and map city (ParticipantDeploymentTest), and writing their
+ * region's ATAR (AtarReportAuthoringTest) — which the Super Admin in turn
+ * cannot do. Moving an admin or instructor between regions stays Super Admin
+ * only (RegionTransferTest).
  */
 class RegionalAdminIsReadOnlyTest extends TestCase
 {
@@ -78,22 +84,26 @@ class RegionalAdminIsReadOnlyTest extends TestCase
         $this->assertSame(0, Certificate::count());
     }
 
-    public function test_regional_admin_cannot_edit_evaluations_upload_files_or_manage_instructors(): void
+    public function test_regional_admin_cannot_edit_evaluations(): void
     {
-        Storage::fake('public');
         $record = $this->request();
-        $instructor = Instructor::create(['name' => 'Ana Reyes', 'region' => 'Region III', 'training_type' => 'CBDRRM']);
-        $admin = $this->regionalAdmin();
 
-        $this->actingAs($admin)->put(route('admin.evaluations.update', $record), [])->assertForbidden();
-        $this->actingAs($admin)->post(route('admin.tools.files', $record), [])->assertForbidden();
-        $this->actingAs($admin)->post(route('admin.instructors.store'), ['name' => 'New Person'])->assertForbidden();
-        $this->actingAs($admin)->patch(route('admin.instructors.update', $instructor), ['name' => 'Renamed'])->assertForbidden();
-        $this->actingAs($admin)->post(route('admin.instructors.certificate', $instructor), [])->assertForbidden();
-        $this->actingAs($admin)->post(route('admin.instructors.photo', $instructor), [])->assertForbidden();
+        $this->actingAs($this->regionalAdmin())
+            ->put(route('admin.evaluations.update', $record), [])
+            ->assertForbidden();
+    }
 
-        $this->assertSame('Ana Reyes', $instructor->fresh()->name);
-        $this->assertSame(1, Instructor::count());
+    public function test_regional_admin_cannot_move_an_instructor_between_regions(): void
+    {
+        // Maintaining their own region's roster is theirs (see
+        // InstructorRosterTest); posting someone out of it is not.
+        $instructor = Instructor::create(['name' => 'Ana Reyes', 'region' => 'Region III']);
+
+        $this->actingAs($this->regionalAdmin())
+            ->patch(route('admin.instructors.region', $instructor), ['region' => 'Region V'])
+            ->assertForbidden();
+
+        $this->assertSame('Region III', $instructor->fresh()->region);
     }
 
     public function test_regional_admin_can_still_read_their_region(): void
@@ -153,7 +163,7 @@ class RegionalAdminIsReadOnlyTest extends TestCase
             ->get(route('admin.summary'))
             ->assertOk()
             ->assertDontSee($record->training_title)
-            ->assertDontSee('Trainings marked', false);
+            ->assertDontSee('id="training-requests"', false);
 
         $this->actingAs(User::factory()->superAdmin()->create())
             ->get(route('admin.summary'))
@@ -172,13 +182,31 @@ class RegionalAdminIsReadOnlyTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_regional_admins_still_see_the_rest_of_summary(): void
+    /**
+     * What's left of their Summary page is the Evaluations section — the
+     * Registered Participants and Instructors cards were removed from it
+     * (2026-10-19), so this is the one thing they read here, and it stays
+     * scoped to their own region.
+     */
+    public function test_regional_admins_still_see_their_regions_evaluations(): void
     {
-        $participant = User::factory()->create(['name' => 'Maria Santos', 'region' => 'Region III']);
+        $ownRegion = $this->request(['training_title' => 'Water Search and Rescue']);
+        $otherRegion = $this->request(['region' => 'Region I', 'training_title' => 'Fire Safety Orientation']);
+
+        foreach ([$ownRegion, $otherRegion] as $training) {
+            $participant = User::factory()->create(['region' => $training->region]);
+            $training->participants()->sync([$participant->id]);
+            ParticipantEvaluation::create([
+                'training_request_id' => $training->id,
+                'user_id' => $participant->id,
+                'overall_comments' => 'Well run.',
+            ]);
+        }
 
         $this->actingAs($this->regionalAdmin())
             ->get(route('admin.summary'))
             ->assertOk()
-            ->assertSee($participant->name);
+            ->assertSee($ownRegion->training_title)
+            ->assertDontSee($otherRegion->training_title);
     }
 }

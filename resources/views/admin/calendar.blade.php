@@ -16,7 +16,9 @@
                 </div>
             @endif
 
-            @if (Auth::user()->isSuperAdmin())
+            {{-- Scheduling is the Regional Admin's — a Super Admin views the
+                 calendar and edits trainings, but never creates one. --}}
+            @if (Auth::user()->isAdmin())
                 <div class="flex justify-end">
                     <a href="{{ route('admin.trainings.create') }}"
                         class="inline-flex items-center gap-2 bg-[#152A4E] text-white text-sm font-semibold rounded-lg px-5 py-2.5 hover:bg-[#1E3A66] transition">

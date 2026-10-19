@@ -1,14 +1,19 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('ATAR') }}
+            {{ __('Tools') }}
         </h2>
     </x-slot>
 
     <div class="py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-            @include('admin.super-admin.partials.atar-tabs')
+            <a href="{{ route('admin.tools') }}" class="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white">
+                <svg class="w-4 h-4 me-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+                {{ __('Back to Tools') }}
+            </a>
 
             @if (session('status'))
                 <div class="flex items-start gap-3 text-sm text-green-800 dark:text-green-300 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3">
@@ -21,8 +26,8 @@
 
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-2xl font-bold text-[#152A4E] dark:text-white">{{ __('ATAR Records') }}</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Historical training accomplishment data, imported from regional Training Database exports.') }}</p>
+                    <h1 class="text-2xl font-bold text-[#152A4E] dark:text-white">{{ __('Imported Training Records') }}</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Training data the regions sent in, imported from their Training Database exports.') }}</p>
                     {{-- Full column-order instructions + a downloadable template live on the
                          Import page itself (see import.blade.php) — this is just a visible
                          pointer to them from here, so the guidance isn't hidden behind a
@@ -50,7 +55,7 @@
                 </select>
             </form>
 
-            <x-chart-card body-class="" :title="__('All ATAR Records')">
+            <x-chart-card body-class="" :title="__('All Imported Records')">
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm text-left">
                         <thead class="bg-gray-50 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400">
@@ -84,7 +89,7 @@
                             @empty
                                 <tr>
                                     <td colspan="7" class="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
-                                        {{ __('No ATAR records imported yet.') }}
+                                        {{ __('No training records imported yet.') }}
                                     </td>
                                 </tr>
                             @endforelse

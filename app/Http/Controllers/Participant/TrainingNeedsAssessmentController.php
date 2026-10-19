@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Participant;
 
 use App\Http\Controllers\Controller;
+use App\Models\TnaForm;
+use App\Models\TnaQuestion;
 use App\Models\TrainingNeedsAssessment;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
@@ -39,7 +41,45 @@ class TrainingNeedsAssessmentController extends Controller
             ? collect($trainings)->firstWhere('slug', $user->recommended_training_slug)
             : null;
 
-        return view('participant.training-needs-assessment.index', compact('trainings', 'existingRecommendation'));
+        // Every other participant type is served from the database: their own
+        // assessment if the Super Admin built one for the type (see
+        // Admin\TnaFormController), otherwise the fallback assessment.
+        $form = TnaForm::forParticipantType($user->participant_type);
+
+        return view('participant.training-needs-assessment.index', [
+            'trainings' => $trainings,
+            'existingRecommendation' => $existingRecommendation,
+            'form' => $form,
+            'questions' => $this->questionPayload($form),
+        ]);
+    }
+
+    /**
+     * The questions as the stepper needs them — prompt, kind and the options
+     * with whatever scoring each one carries.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function questionPayload(?TnaForm $form): array
+    {
+        if (! $form) {
+            return [];
+        }
+
+        return $form->questions->map(fn (TnaQuestion $question) => [
+            'id' => $question->id,
+            'question' => $question->prompt,
+            'help_text' => $question->help_text,
+            'group_label' => $question->group_label,
+            'kind' => $question->kind,
+            'is_required' => $question->is_required,
+            'options' => $question->options->map(fn ($option) => [
+                'label' => $option->label,
+                'category' => $option->category,
+                'points' => $option->points,
+                'hours' => $option->hours,
+            ])->values()->all(),
+        ])->values()->all();
     }
 
     public function storeRecommendation(Request $request)
@@ -50,7 +90,10 @@ class TrainingNeedsAssessmentController extends Controller
             'training_slug' => ['required', 'string', 'in:'.$catalog->pluck('slug')->implode(',')],
             'answers' => ['required', 'array', 'min:1'],
             'answers.*.question' => ['required', 'string'],
+            // A checklist answer arrives as the joined list of what was ticked,
+            // a competency pair as "3 / 5"; either way it is stored as given.
             'answers.*.selected' => ['required', 'string'],
+            'answers.*.kind' => ['nullable', 'string'],
             'answers.*.category' => ['nullable', 'string'],
             'answers.*.points' => ['nullable', 'integer'],
             'answers.*.hours' => ['nullable', 'integer'],

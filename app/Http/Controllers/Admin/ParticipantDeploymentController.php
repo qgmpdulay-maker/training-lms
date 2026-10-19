@@ -73,6 +73,11 @@ class ParticipantDeploymentController extends Controller
             'deployment' => ['required', 'string', 'max:255'],
             'deployment_date' => ['required', 'date', 'before_or_equal:today'],
             'deployment_role' => ['nullable', 'string', 'max:255'],
+            // Where they were sent. Free text rather than matched against
+            // CityDirectory like updateCity() below, because a deployment can
+            // be anywhere — including outside this admin's own region, which
+            // is the normal case for a graduate sent to help elsewhere.
+            'city' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ], [
             'deployment_date.before_or_equal' => 'A deployment is recorded after it happens, so the date cannot be in the future.',

@@ -73,7 +73,7 @@ class UserManagementController extends Controller
         // results, so typing doesn't reload the whole page — see resources/views/
         // admin/partials/live-search-script.blade.php.
         if ($request->ajax() && $request->query('_section') === 'admins') {
-            return view('admin.partials.manage-admins-results', compact('admins', 'adminSearch'));
+            return view('admin.partials.manage-admins-results', compact('admins', 'adminSearch', 'regions'));
         }
 
         if ($request->ajax() && $request->query('_section') === 'participants') {
@@ -192,6 +192,37 @@ class UserManagementController extends Controller
         ])->save();
 
         return Redirect::route('admin.users.index')->with('status', "{$user->name} is now an admin for {$validated['region']}.");
+    }
+
+    /**
+     * Move a Regional Admin to a different regional office. Staff do get
+     * reassigned between offices, and every admin screen scopes off
+     * users.region — so changing it here is what hands them their new
+     * region's data and takes away their old one's.
+     *
+     * Only the admin account moves. Work already filed under the old region
+     * (its ATAR reports, its graduates' deployments) carries its own region
+     * and stays where it was filed, which is what you want: the record
+     * belongs to the region that did the work, not to whoever ran it.
+     */
+    public function updateRegion(Request $request, User $user): RedirectResponse
+    {
+        abort_unless($user->isAdmin(), 403, 'Only regional admins are assigned to a region.');
+
+        $validated = $request->validate([
+            'region' => ['required', 'string', 'in:'.implode(',', config('regions.list'))],
+        ]);
+
+        $previous = $user->region;
+
+        if ($previous === $validated['region']) {
+            return Redirect::route('admin.users.index');
+        }
+
+        $user->update(['region' => $validated['region']]);
+
+        return Redirect::route('admin.users.index')
+            ->with('status', "{$user->name} was transferred from {$previous} to {$validated['region']}.");
     }
 
     public function demote(User $user): RedirectResponse

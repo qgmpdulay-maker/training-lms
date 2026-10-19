@@ -174,12 +174,14 @@ class DemoEnrichmentSeeder extends Seeder
                 'name' => $instructor['name'],
                 'sex' => $instructor['sex'],
                 'position' => $instructor['position'],
-                'training_type' => $instructor['training'],
-                'certificate_code' => 'INS-'.strtoupper(str()->random(6)),
                 'agency_organization' => 'OCD Civil Defense and Disaster Management Training Institute',
                 'region' => 'NCR',
                 'rating' => $instructor['rating'],
                 'complaints' => $instructor['complaints'],
+            ])->trainingTypes()->create([
+                'training_type' => $instructor['training'],
+                'certificate_code' => 'INS-'.strtoupper(str()->random(6)),
+                'rating' => $instructor['rating'],
             ]);
         }
     }

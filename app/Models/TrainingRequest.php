@@ -137,6 +137,16 @@ class TrainingRequest extends Model
      * has submitted theirs. Distinct from trainingEvaluation(), which is the
      * admin's single aggregate record for the whole class.
      */
+    /**
+     * The narrative ATAR written for this training, if its Regional Admin has
+     * started one. Null until they do — an ATAR is optional and is written
+     * after the training is completed.
+     */
+    public function atarReport(): HasOne
+    {
+        return $this->hasOne(AtarReport::class);
+    }
+
     public function participantEvaluations(): HasMany
     {
         return $this->hasMany(ParticipantEvaluation::class);
