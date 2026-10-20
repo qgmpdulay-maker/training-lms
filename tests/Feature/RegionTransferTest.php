@@ -40,12 +40,26 @@ class RegionTransferTest extends TestCase
         $this->assertSame('Region III', $admin->fresh()->region);
     }
 
-    public function test_a_participant_has_no_region_to_transfer(): void
+    public function test_super_admin_can_move_a_participant_to_another_region(): void
     {
-        $participant = User::factory()->create(['region' => 'Region III']);
+        $participant = User::factory()->create(['region' => 'Region III', 'city' => 'City of Malolos, Bulacan']);
 
         $this->actingAs(User::factory()->superAdmin()->create())
             ->patch(route('admin.users.region', $participant), ['region' => 'Region V'])
+            ->assertRedirect(route('admin.users.index'));
+
+        $participant->refresh();
+        $this->assertSame('Region V', $participant->region);
+        // The old region's city would keep them on the wrong part of the map.
+        $this->assertNull($participant->city);
+    }
+
+    public function test_a_super_admin_has_no_region_to_transfer(): void
+    {
+        $other = User::factory()->superAdmin()->create();
+
+        $this->actingAs(User::factory()->superAdmin()->create())
+            ->patch(route('admin.users.region', $other), ['region' => 'Region V'])
             ->assertForbidden();
     }
 

@@ -72,21 +72,22 @@ class OrganizationController extends Controller
         // the nationwide roster would be mostly noise. A body with no region
         // set isn't narrowed, since there's nothing to narrow to.
         $candidateSearch = trim((string) $request->query('candidates_q', ''));
+        $candidateCity = trim((string) $request->query('city', ''));
 
-        $candidates = User::unassigned()
-            ->where('role', '!=', User::ROLE_SUPER_ADMIN)
-            ->when($organization->region, fn ($query) => $query->where('region', $organization->region))
-            ->when($candidateSearch !== '', function ($query) use ($candidateSearch) {
-                $query->where(function ($inner) use ($candidateSearch) {
-                    $inner->where('name', 'like', "%{$candidateSearch}%")
-                        ->orWhere('email', 'like', "%{$candidateSearch}%")
-                        ->orWhere('organization', 'like', "%{$candidateSearch}%");
-                });
-            })
+        $candidates = $this->candidateQuery($organization, $candidateSearch, $candidateCity)
             ->orderBy('name')
             ->paginate(10, ['id', 'name', 'email', 'organization', 'city', 'region'], 'candidates')
             ->withQueryString()
             ->fragment('organization-candidates');
+
+        // Only cities somebody in this pool actually lives in, so the filter
+        // never offers a choice that comes back empty.
+        $cityOptions = $this->candidateQuery($organization)
+            ->whereNotNull('city')
+            ->where('city', '!=', '')
+            ->distinct()
+            ->orderBy('city')
+            ->pluck('city');
 
         $payload = [
             'organization' => $organization,
@@ -94,6 +95,8 @@ class OrganizationController extends Controller
             'regions' => config('regions.list'),
             'candidates' => $candidates,
             'candidateSearch' => $candidateSearch,
+            'candidateCity' => $candidateCity,
+            'cityOptions' => $cityOptions,
         ];
 
         // Typing in the member search re-requests this route and swaps in just
@@ -105,6 +108,28 @@ class OrganizationController extends Controller
         }
 
         return view('admin.organizations.show', $payload);
+    }
+
+    /**
+     * People who can still be placed into this body, optionally narrowed by a
+     * search and a city. Shared by the candidate table and by "select all
+     * matching", so both always mean exactly the same set of people.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<User>
+     */
+    private function candidateQuery(Organization $organization, string $search = '', string $city = '')
+    {
+        return User::unassigned()
+            ->where('role', '!=', User::ROLE_SUPER_ADMIN)
+            ->when($organization->region, fn ($query) => $query->where('region', $organization->region))
+            ->when($city !== '', fn ($query) => $query->where('city', $city))
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('organization', 'like', "%{$search}%");
+                });
+            });
     }
 
     public function store(Request $request): RedirectResponse
@@ -163,22 +188,31 @@ class OrganizationController extends Controller
     public function addMembers(Request $request, Organization $organization): RedirectResponse
     {
         $validated = $request->validate([
-            'user_ids' => ['required', 'array', 'min:1'],
+            'select_all_matching' => ['nullable', 'boolean'],
+            'candidates_q' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'user_ids' => ['required_without:select_all_matching', 'array'],
             'user_ids.*' => [
                 'integer',
                 Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', '!=', User::ROLE_SUPER_ADMIN)),
             ],
             'position' => ['nullable', 'string', 'max:255'],
         ], [
-            'user_ids.required' => 'Tick at least one person to add.',
+            'user_ids.required_without' => 'Tick at least one person to add.',
         ]);
 
-        $added = User::whereIn('id', $validated['user_ids'])
-            ->where('role', '!=', User::ROLE_SUPER_ADMIN)
-            ->update([
-                'organization_id' => $organization->id,
-                'position' => $validated['position'] ?? null,
-            ]);
+        // "Select all matching" sends the filters rather than thousands of
+        // ids: the set is re-queried here, from the same candidateQuery() the
+        // table used, so it's exactly the people the admin was looking at —
+        // and only ever people still unassigned.
+        $people = $request->boolean('select_all_matching')
+            ? $this->candidateQuery($organization, trim((string) ($validated['candidates_q'] ?? '')), trim((string) ($validated['city'] ?? '')))
+            : User::whereIn('id', $validated['user_ids'])->where('role', '!=', User::ROLE_SUPER_ADMIN);
+
+        $added = $people->update([
+            'organization_id' => $organization->id,
+            'position' => $validated['position'] ?? null,
+        ]);
 
         return Redirect::route('admin.organizations.show', $organization)
             ->with('status', trans_choice(

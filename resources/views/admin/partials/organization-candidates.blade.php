@@ -8,13 +8,44 @@
     which is the behaviour you want, since the rows themselves changed.
 --}}
 <form method="POST" action="{{ route('admin.organizations.members.add', $organization) }}"
-    x-data="{ selected: [] }">
+    x-data="{ selected: [], allMatching: false }"
+    x-init="$watch('selected', value => { if (value.length !== {{ $candidates->count() }}) allMatching = false })"
+    @submit="if (allMatching && ! confirm('Add all {{ $candidates->total() }} matching people to {{ addslashes($organization->name) }}?')) $event.preventDefault()">
     @csrf
+
+    {{-- "Select all matching" sends the search and city instead of ids, and the
+         server re-runs the same query — so it covers every page, not just this one. --}}
+    <template x-if="allMatching">
+        <div>
+            <input type="hidden" name="select_all_matching" value="1">
+            <input type="hidden" name="candidates_q" value="{{ $candidateSearch }}">
+            <input type="hidden" name="city" value="{{ $candidateCity }}">
+        </div>
+    </template>
 
     <div x-show="selected.length > 0" x-cloak
         class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 bg-[#152A4E]/5 dark:bg-white/5 border border-[#152A4E]/15 dark:border-white/15 rounded-lg px-4 py-3">
         <span class="text-xs font-semibold text-[#152A4E] dark:text-white">
-            <span x-text="selected.length"></span> {{ __('selected') }}
+            <template x-if="allMatching">
+                <span>{{ __('All :count matching people are selected.', ['count' => $candidates->total()]) }}</span>
+            </template>
+            <template x-if="! allMatching">
+                <span><span x-text="selected.length"></span> {{ __('selected') }}</span>
+            </template>
+            @if ($candidates->total() > $candidates->count())
+                <template x-if="! allMatching && selected.length === {{ $candidates->count() }}">
+                    <button type="button" @click="allMatching = true"
+                        class="ms-3 font-semibold underline hover:no-underline">
+                        {{ __('Select all :count matching', ['count' => $candidates->total()]) }}
+                    </button>
+                </template>
+                <template x-if="allMatching">
+                    <button type="button" @click="allMatching = false; selected = []"
+                        class="ms-3 font-semibold underline hover:no-underline">
+                        {{ __('Clear selection') }}
+                    </button>
+                </template>
+            @endif
         </span>
         <div class="flex items-center gap-2">
             {{-- One position for the batch: add people with different positions separately. --}}
@@ -29,7 +60,7 @@
 
     @if ($candidates->isEmpty())
         <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
-            @if ($candidateSearch !== '')
+            @if ($candidateSearch !== '' || $candidateCity !== '')
                 {{ $organization->region
                     ? __('Nobody in :region matches that search, among people not already in an organization.', ['region' => $organization->region])
                     : __('No unassigned users match that search.') }}

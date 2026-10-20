@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Mail\AccountApproved;
 use App\Mail\AccountRejected;
-use App\Models\Organization;
 use App\Models\PendingRegistration;
 use App\Models\User;
 use App\Rules\NotSimilarToAccount;
@@ -56,12 +55,6 @@ class UserManagementController extends Controller
             ->paginate(15, ['*'], 'participants')
             ->withQueryString();
 
-        // Organizations to assign people into, plus a suggested match per
-        // unassigned participant — see suggestOrganizations() for why the
-        // suggestion is only ever a starting point.
-        $organizations = Organization::orderBy('name')->get(['id', 'name', 'type', 'region']);
-        $suggestedOrganizations = self::suggestOrganizations($participants->getCollection(), $organizations);
-
         $admins = User::whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])
             ->tap(fn ($q) => $searchScope($q, $adminSearch))
             ->orderBy('role')
@@ -78,71 +71,10 @@ class UserManagementController extends Controller
         }
 
         if ($request->ajax() && $request->query('_section') === 'participants') {
-            return view('admin.partials.manage-participants-results', compact('participants', 'participantSearch', 'regions', 'organizations', 'suggestedOrganizations'));
+            return view('admin.partials.manage-participants-results', compact('participants', 'participantSearch', 'regions'));
         }
 
-        return view('admin.super-admin.users.index', compact('pendingAccounts', 'pendingAccountsByRegion', 'participants', 'admins', 'regions', 'adminSearch', 'participantSearch', 'organizations', 'suggestedOrganizations'));
-    }
-
-    /**
-     * Best-guess organization for each unassigned participant, based on the
-     * freetext they typed about themselves at signup.
-     *
-     * This is a convenience for the Super Admin, never an authority: the
-     * freetext is unverified, so the suggestion is pre-selected in the picker
-     * but still has to be confirmed. Matching is deliberately crude (one name
-     * containing the other) — anything cleverer would invite trusting it.
-     *
-     * @param  \Illuminate\Support\Collection<int, User>  $participants
-     * @param  \Illuminate\Support\Collection<int, Organization>  $organizations
-     * @return array<int, int> participant id => organization id
-     */
-    private static function suggestOrganizations($participants, $organizations): array
-    {
-        $suggestions = [];
-
-        foreach ($participants as $participant) {
-            if ($participant->organization_id || ! $participant->organization) {
-                continue;
-            }
-
-            $typed = mb_strtolower(trim($participant->organization));
-
-            $match = $organizations->first(function (Organization $organization) use ($typed) {
-                $name = mb_strtolower($organization->name);
-
-                return $name === $typed || str_contains($name, $typed) || str_contains($typed, $name);
-            });
-
-            if ($match) {
-                $suggestions[$participant->id] = $match->id;
-            }
-        }
-
-        return $suggestions;
-    }
-
-    /**
-     * Place an approved user into an organization, or clear their membership
-     * by submitting an empty organization.
-     */
-    public function assignOrganization(Request $request, User $user): RedirectResponse
-    {
-        $validated = $request->validate([
-            'organization_id' => ['nullable', 'integer', 'exists:organizations,id'],
-            'position' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $user->organization_id = $validated['organization_id'] ?? null;
-        // Position only means something inside an organization.
-        $user->position = $user->organization_id ? ($validated['position'] ?? null) : null;
-        $user->save();
-
-        $message = $user->organization_id
-            ? "{$user->name} was assigned to ".$user->assignedOrganization->name.'.'
-            : "{$user->name}'s organization was cleared.";
-
-        return Redirect::route('admin.users.index')->with('status', $message);
+        return view('admin.super-admin.users.index', compact('pendingAccounts', 'pendingAccountsByRegion', 'participants', 'admins', 'regions', 'adminSearch', 'participantSearch'));
     }
 
     public function approve(PendingRegistration $registration): RedirectResponse
@@ -196,19 +128,22 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Move a Regional Admin to a different regional office. Staff do get
+     * Move a Regional Admin (or a participant) to a different region. Staff do get
      * reassigned between offices, and every admin screen scopes off
      * users.region — so changing it here is what hands them their new
      * region's data and takes away their old one's.
      *
-     * Only the admin account moves. Work already filed under the old region
+     * Participants move the same way when they relocate — the region decides
+     * which Regional Admin sees them.
+     *
+     * Only the account moves. Work already filed under the old region
      * (its ATAR reports, its graduates' deployments) carries its own region
      * and stays where it was filed, which is what you want: the record
      * belongs to the region that did the work, not to whoever ran it.
      */
     public function updateRegion(Request $request, User $user): RedirectResponse
     {
-        abort_unless($user->isAdmin(), 403, 'Only regional admins are assigned to a region.');
+        abort_unless($user->isAdmin() || $user->isParticipant(), 403, 'Only regional admins and participants are assigned to a region.');
 
         $validated = $request->validate([
             'region' => ['required', 'string', 'in:'.implode(',', config('regions.list'))],
@@ -220,10 +155,19 @@ class UserManagementController extends Controller
             return Redirect::route('admin.users.index');
         }
 
-        $user->update(['region' => $validated['region']]);
+        $attributes = ['region' => $validated['region']];
+
+        // A participant's city belongs to the region they left — the
+        // Graduates by Location map would keep counting them there. The new
+        // region's admin sets it again.
+        if ($user->isParticipant()) {
+            $attributes['city'] = null;
+        }
+
+        $user->update($attributes);
 
         return Redirect::route('admin.users.index')
-            ->with('status', "{$user->name} was transferred from {$previous} to {$validated['region']}.");
+            ->with('status', "{$user->name} was transferred from ".($previous ?: 'no region')." to {$validated['region']}.");
     }
 
     public function demote(User $user): RedirectResponse

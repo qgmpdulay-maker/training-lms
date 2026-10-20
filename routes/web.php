@@ -135,13 +135,9 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
     Route::post('/registrations/{registration}/approve', [UserManagementController::class, 'approve'])->name('users.approve');
     Route::post('/registrations/{registration}/reject', [UserManagementController::class, 'reject'])->name('users.reject');
-    // Placing an approved user into an LGU / NGA / academe body / team. This
-    // is the membership that later lets them act for that body, which is why
-    // only a Super Admin can set it.
-    Route::post('/users/{user}/organization', [UserManagementController::class, 'assignOrganization'])->name('users.assign-organization');
-    // Staff transfer between regional offices. Every admin screen scopes off
-    // users.region, so this is what hands a Regional Admin their new
-    // region's data and takes away their old one's.
+    // Staff transfer between regional offices, and participants who relocate.
+    // Every admin screen scopes off users.region, so this is what hands a
+    // Regional Admin their new region's data and takes away their old one's.
     Route::patch('/users/{user}/region', [UserManagementController::class, 'updateRegion'])->name('users.region');
     Route::post('/users/{user}/promote', [UserManagementController::class, 'promote'])->name('users.promote');
     Route::post('/users/{user}/demote', [UserManagementController::class, 'demote'])->name('users.demote');

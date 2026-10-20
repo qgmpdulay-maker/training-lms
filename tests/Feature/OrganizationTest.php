@@ -140,7 +140,7 @@ class OrganizationTest extends TestCase
             ->assertSee('Maria Santos')
             // Shown so the admin can sanity-check the match, never as proof.
             ->assertSee('MDRRMO Fictional Town')
-            ->assertDontSee('value="'.$alreadyAssigned->id.'"', false);
+            ->assertDontSee('name="user_ids[]" value="'.$alreadyAssigned->id.'"', false);
     }
 
     public function test_a_super_admins_list_spans_every_region_and_links_into_each_body(): void
@@ -274,61 +274,6 @@ class OrganizationTest extends TestCase
             ->assertSee(route('admin.organizations.index'));
     }
 
-    public function test_the_users_page_suggests_a_match_from_what_they_typed_at_signup(): void
-    {
-        $organization = $this->organization(['name' => 'Municipality of Fictional Town']);
-        User::factory()->create(['name' => 'Maria Santos', 'organization' => 'Municipality of Fictional Town']);
-
-        $this->actingAs($this->superAdmin())
-            ->get(route('admin.users.index'))
-            ->assertOk()
-            // Pre-selected in the picker, but still needs confirming.
-            ->assertSee('<option value="'.$organization->id.'"'.PHP_EOL.'                                                selected>', false);
-    }
-
-    public function test_super_admin_can_assign_an_organization_from_the_users_page(): void
-    {
-        $organization = $this->organization();
-        $user = User::factory()->create();
-
-        $this->actingAs($this->superAdmin())
-            ->post(route('admin.users.assign-organization', $user), [
-                'organization_id' => $organization->id,
-                'position' => 'MDRRM Officer',
-            ])
-            ->assertRedirect(route('admin.users.index'));
-
-        $user->refresh();
-        $this->assertSame($organization->id, $user->organization_id);
-        $this->assertSame('MDRRM Officer', $user->position);
-    }
-
-    public function test_clearing_the_organization_also_clears_the_position(): void
-    {
-        $organization = $this->organization();
-        $user = User::factory()->create(['organization_id' => $organization->id, 'position' => 'Head']);
-
-        $this->actingAs($this->superAdmin())
-            ->post(route('admin.users.assign-organization', $user), ['organization_id' => '', 'position' => 'Head'])
-            ->assertRedirect();
-
-        $user->refresh();
-        $this->assertNull($user->organization_id);
-        $this->assertNull($user->position);
-    }
-
-    public function test_only_super_admin_can_assign_an_organization(): void
-    {
-        $organization = $this->organization();
-        $user = User::factory()->create();
-
-        $this->actingAs(User::factory()->admin('Region III')->create())
-            ->post(route('admin.users.assign-organization', $user), ['organization_id' => $organization->id])
-            ->assertForbidden();
-
-        $this->assertNull($user->fresh()->organization_id);
-    }
-
     public function test_the_member_picker_only_searches_the_bodys_own_region(): void
     {
         $organization = $this->organization(['region' => 'Region III']);
@@ -416,5 +361,41 @@ class OrganizationTest extends TestCase
             ->assertSee('name="user_ids[]"', false)
             ->assertSee('Maria Santos')
             ->assertDontSee('Elsewhere Person');
+    }
+
+    public function test_candidates_can_be_filtered_by_city(): void
+    {
+        $organization = $this->organization(['region' => 'Region III']);
+        User::factory()->create(['name' => 'Maria Santos', 'region' => 'Region III', 'city' => 'City of Malolos, Bulacan']);
+        User::factory()->create(['name' => 'Pedro Reyes', 'region' => 'Region III', 'city' => 'City of Angeles, Pampanga']);
+
+        $this->actingAs($this->superAdmin())
+            ->get(route('admin.organizations.show', $organization).'?city='.urlencode('City of Malolos, Bulacan'))
+            ->assertOk()
+            ->assertSee('Maria Santos')
+            ->assertDontSee('Pedro Reyes')
+            // The dropdown still offers every city in the pool.
+            ->assertSee('City of Angeles, Pampanga');
+    }
+
+    public function test_select_all_matching_adds_everyone_the_filters_match_across_pages(): void
+    {
+        $organization = $this->organization(['region' => 'Region III']);
+        $inCity = User::factory()->count(25)->create(['region' => 'Region III', 'city' => 'City of Malolos, Bulacan']);
+        $elsewhere = User::factory()->create(['region' => 'Region III', 'city' => 'City of Angeles, Pampanga']);
+        $alreadyIn = User::factory()->create(['region' => 'Region III', 'city' => 'City of Malolos, Bulacan', 'organization_id' => $this->organization(['name' => 'Other Body'])->id]);
+
+        $this->actingAs($this->superAdmin())
+            ->post(route('admin.organizations.members.add', $organization), [
+                'select_all_matching' => '1',
+                'city' => 'City of Malolos, Bulacan',
+                'position' => 'Member',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(25, $organization->members()->count());
+        $this->assertNull($elsewhere->fresh()->organization_id);
+        // Someone already placed elsewhere is not pulled across.
+        $this->assertSame('Other Body', $alreadyIn->fresh()->assignedOrganization->name);
     }
 }

@@ -34,8 +34,7 @@
                         </th>
                         <th class="py-2 pr-4">{{ __('Name') }}</th>
                         <th class="py-2 pr-4">{{ __('Email') }}</th>
-                        <th class="py-2 pr-4">{{ __('Organization') }}</th>
-                        <th class="py-2 pr-4">{{ __('Assign To') }}</th>
+                        <th class="py-2 pr-4">{{ __('Assign Region') }}</th>
                         <th class="py-2 pr-4 text-right">{{ __('Actions') }}</th>
                     </tr>
                 </thead>
@@ -48,42 +47,27 @@
                             </td>
                             <td class="py-3 pr-4 font-medium text-[#152A4E] dark:text-white">{{ $participant->name }}</td>
                             <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">{{ $participant->email }}</td>
+                            {{-- A participant's region is editable in place: people move, and
+                                 the region decides which Regional Admin sees them. The Transfer
+                                 button only appears once the picker is actually changed. --}}
                             <td class="py-3 pr-4 text-gray-600 dark:text-gray-300">
-                                @if ($participant->assignedOrganization)
-                                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#152A4E] dark:text-white">
-                                        <svg class="w-3.5 h-3.5 shrink-0 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {{ $participant->assignedOrganization->name }}
-                                    </span>
-                                    <p class="text-[11px] text-gray-400 mt-0.5">{{ $participant->position ?: __('No position set') }}</p>
-                                @else
-                                    {{-- Unverified: what they typed about themselves at signup. --}}
-                                    <span class="text-xs text-gray-400 italic">
-                                        {{ $participant->organization ?: __('Not assigned') }}
-                                    </span>
-                                    <p class="text-[11px] text-gray-400 mt-0.5">{{ __('self-declared, unconfirmed') }}</p>
-                                @endif
-                            </td>
-                            <td class="py-3 pr-4">
-                                <form method="POST" action="{{ route('admin.users.assign-organization', $participant) }}" class="flex items-center gap-2">
+                                <form method="POST" action="{{ route('admin.users.region', $participant) }}"
+                                    x-data="{ region: @js($participant->region ?? '') }" class="flex items-center gap-2"
+                                    @submit="if (! confirm('Move ' + @js($participant->name) + ' to ' + region + '? Regional admins for ' + @js($participant->region ?? 'no region') + ' will no longer see them, and their city is cleared until the new region sets it.')) $event.preventDefault()">
                                     @csrf
-                                    <select name="organization_id"
+                                    @method('PATCH')
+                                    <select name="region" x-model="region"
                                         class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                        <option value="">{{ __('Unassigned') }}</option>
-                                        @foreach ($organizations as $organization)
-                                            {{-- Pre-selected from the freetext hint where one matched; still has to be confirmed. --}}
-                                            <option value="{{ $organization->id }}"
-                                                @selected($participant->organization_id === $organization->id || (($suggestedOrganizations[$participant->id] ?? null) === $organization->id))>
-                                                {{ $organization->name }}
-                                            </option>
+                                        @unless ($participant->region)
+                                            <option value="" disabled>{{ __('No region') }}</option>
+                                        @endunless
+                                        @foreach ($regions as $regionOption)
+                                            <option value="{{ $regionOption }}" @selected($participant->region === $regionOption)>{{ $regionOption }}</option>
                                         @endforeach
                                     </select>
-                                    <input type="text" name="position" value="{{ $participant->position }}" placeholder="{{ __('Position') }}"
-                                        class="w-28 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs py-1.5 focus:border-[#152A4E] focus:ring-[#152A4E]">
-                                    <button type="submit"
+                                    <button type="submit" x-show="region !== @js($participant->region ?? '')" x-cloak
                                         class="inline-flex items-center justify-center bg-[#152A4E] text-white text-xs font-semibold rounded-md px-3 py-1.5 hover:bg-[#1E3A66] transition whitespace-nowrap">
-                                        {{ __('Save') }}
+                                        {{ __('Transfer') }}
                                     </button>
                                 </form>
                             </td>
