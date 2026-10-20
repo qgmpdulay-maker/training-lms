@@ -11,19 +11,22 @@ use Illuminate\View\View;
 
 class CalendarController extends Controller
 {
-    // TOR asks for APB/TA color-coding at both the Regional and Central level —
-    // one shared palette so a category reads the same everywhere it appears.
-    const CATEGORY_COLORS = [
-        TrainingRequest::CATEGORY_APB => 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
-        TrainingRequest::CATEGORY_TA => 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700',
-    ];
-
-    // The same two categories as solid bars, for the month grid — a tinted
-    // background doesn't read as an event when it sits inside a day cell that
-    // is already tinted for "outside this month".
+    // TOR asks for APB/TA colour-coding at both the Regional and Central level.
+    // One palette, used solid in both calendars — as the bar itself in the
+    // month grid and as the row's accent in the all-regions agenda — so a
+    // category reads the same wherever it appears. The agenda used to carry
+    // its own pastel pills, which is half of why the two pages looked like
+    // different products.
     const CATEGORY_BARS = [
         TrainingRequest::CATEGORY_APB => 'bg-blue-600 hover:bg-blue-700 text-white',
         TrainingRequest::CATEGORY_TA => 'bg-orange-500 hover:bg-orange-600 text-white',
+    ];
+
+    // The same two colours with nothing layered on them, for the flat accent
+    // down the side of an agenda row and for the legend swatches.
+    const CATEGORY_SWATCHES = [
+        TrainingRequest::CATEGORY_APB => 'bg-blue-600',
+        TrainingRequest::CATEGORY_TA => 'bg-orange-500',
     ];
 
     public function index(Request $request): View
@@ -51,22 +54,74 @@ class CalendarController extends Controller
             return $this->monthView($request, $region, $search, canSchedule: false, regionPicker: true);
         }
 
-        // Super Admin (Central), all regions at once — a free-text search over
-        // training/agency keeps the whole-country agenda usable at scale.
+        // Super Admin (Central), all regions at once.
+        return $this->agendaView($request, $search);
+    }
+
+    /**
+     * Central's whole-country view: the same month, the same controls and the
+     * same palette as the grid, but listed by day instead of drawn as a wall
+     * calendar. Eighteen regions of bars in one month grid is unreadable —
+     * the region, not the shape of the week, is what Central is reading for.
+     */
+    private function agendaView(Request $request, string $search): View
+    {
+        $month = $this->requestedMonth($request);
+        $monthStart = $month->copy()->startOfMonth();
+        $monthEnd = $month->copy()->endOfMonth();
+
+        // One month at a time, filtered in SQL rather than in PHP: the grid
+        // can afford to load a region's whole history, but every region's is
+        // thousands of rows. Overlap, not "starts this month", so a course
+        // running in from last month still appears — the same rule the grid
+        // uses, expressed against the database.
         $requests = TrainingRequest::query()
             ->when($search !== '', fn ($q) => $this->searchTrainings($q, $search))
+            ->whereDate('preferred_date', '<=', $monthEnd)
+            ->whereRaw('COALESCE(end_date, preferred_date) >= ?', [$monthStart->toDateString()])
             ->orderBy('preferred_date')
+            ->orderBy('training_title')
             ->get();
 
-        $groupedByMonth = $this->groupEntries($requests);
-
         return view('admin.calendar', [
-            'groupedByMonth' => $groupedByMonth,
-            'defaultMonth' => $this->defaultMonth($groupedByMonth),
-            'categoryColors' => self::CATEGORY_COLORS,
+            'month' => $month,
+            'days' => $this->agendaDays($requests, $monthStart),
+            'previousMonth' => $month->copy()->subMonth()->format('Y-m'),
+            'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
+            'monthCount' => $requests->count(),
+            'categorySwatches' => self::CATEGORY_SWATCHES,
             'regions' => config('regions.list'),
+            'selectableYears' => $this->selectableYears(null, $month),
             'search' => $search,
         ]);
+    }
+
+    /**
+     * The month's trainings, bucketed under the day they appear on.
+     *
+     * A run that began last month is listed on the 1st rather than vanishing
+     * or being filed under a date that isn't on screen; its row still shows
+     * the true range, so nothing about it reads as starting that day.
+     *
+     * @param  Collection<int, TrainingRequest>  $requests
+     * @return array<int, array<string, mixed>>
+     */
+    private function agendaDays(Collection $requests, Carbon $monthStart): array
+    {
+        $today = now()->startOfDay();
+
+        return $requests
+            ->groupBy(fn (TrainingRequest $r) => $r->preferred_date->lt($monthStart)
+                ? $monthStart->toDateString()
+                : $r->preferred_date->toDateString())
+            ->sortKeys()
+            ->map(fn (Collection $trainings, string $date) => [
+                'date' => Carbon::parse($date),
+                'isToday' => Carbon::parse($date)->isSameDay($today),
+                'trainings' => $trainings,
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -115,7 +170,11 @@ class CalendarController extends Controller
      */
     private function selectableYears(?string $region, Carbon $month): array
     {
-        $bounds = TrainingRequest::where('region', $region)
+        $bounds = TrainingRequest::query()
+            // No region means Central's all-regions agenda, whose year list
+            // should span the whole country rather than the rows with a null
+            // region, which is what where('region', null) would ask for.
+            ->when($region, fn ($q) => $q->where('region', $region))
             ->selectRaw('MIN(preferred_date) as first_day, MAX(COALESCE(end_date, preferred_date)) as last_day')
             ->first();
 
@@ -278,44 +337,5 @@ class CalendarController extends Controller
             $q->where('training_title', 'like', "%{$search}%")
                 ->orWhere('requesting_agency', 'like', "%{$search}%");
         });
-    }
-
-    /**
-     * Which month tab opens by default: this month if it has anything on it,
-     * else the nearest upcoming month, else the most recent past one — so the
-     * calendar never opens on a stale, empty first tab. Relies on
-     * groupEntries() already returning months in chronological key order.
-     */
-    private function defaultMonth(Collection $groupedByMonth): ?string
-    {
-        if ($groupedByMonth->isEmpty()) {
-            return null;
-        }
-
-        $currentLabel = now()->format('F Y');
-        if ($groupedByMonth->has($currentLabel)) {
-            return $currentLabel;
-        }
-
-        $monthStart = now()->startOfMonth();
-        $upcoming = $groupedByMonth->keys()
-            ->first(fn (string $label) => Carbon::createFromFormat('F Y', $label)->startOfMonth()->gte($monthStart));
-
-        return $upcoming ?? $groupedByMonth->keys()->last();
-    }
-
-    /**
-     * Groups training requests by month so the agenda view can tab between
-     * months. Sorting before grouping keeps each month's entries in date
-     * order, and the months themselves fall in chronological order since
-     * groupBy preserves first-seen order.
-     *
-     * @param  Collection<int, TrainingRequest>  $requests
-     */
-    private function groupEntries(Collection $requests): Collection
-    {
-        return $requests
-            ->sortBy('preferred_date')
-            ->groupBy(fn (TrainingRequest $request) => $request->preferred_date->format('F Y'));
     }
 }

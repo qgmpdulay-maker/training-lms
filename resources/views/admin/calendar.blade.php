@@ -16,110 +16,75 @@
                 </div>
             @endif
 
-            {{-- Central's whole-country agenda. A Regional Admin never lands
-                 here: one region is a month grid (admin/calendar-month), and
-                 so is this page the moment a region is picked below. --}}
-            <x-chart-card body-class="p-6 sm:p-8"
-                :title="__('Filter')"
-                :subtitle="__('Pick a region to open its month calendar, or search the whole country\'s agenda below.')">
+            {{-- Central's whole-country view. Same month, same controls, same
+                 palette as a region's month grid (admin/calendar-month) — the
+                 only difference is that eighteen regions are listed by day
+                 rather than drawn as one unreadable wall calendar. Picking a
+                 region in the header opens that region's grid. --}}
+            @include('admin.partials.calendar-header', [
+                'region' => null,
+                'regionPicker' => true,
+                'canSchedule' => false,
+                'countLabel' => trans_choice(
+                    ':count training across all regions|:count trainings across all regions',
+                    $monthCount,
+                    ['count' => $monthCount],
+                ),
+                'legendHint' => __('Listed under the day it starts; a run shows its full dates.'),
+            ])
 
-                <form method="GET" action="{{ route('admin.calendar') }}">
-                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-700 p-2">
-                        <div class="relative flex-1 min-w-[14rem]">
-                            <x-input-label for="search" :value="__('Search')" class="sr-only" />
-                            <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                            </svg>
-                            <input id="search" name="search" type="text" value="{{ $search }}" placeholder="{{ __('e.g. PCO, TA for LGU/NGA') }}" oninput="debounceCalendarFilter(this)"
-                                class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 py-2.5 transition">
-                        </div>
-                        <div class="relative sm:w-56 shrink-0">
-                            <x-input-label for="region" :value="__('Region')" class="sr-only" />
-                            <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
-                            </svg>
-                            <select id="region" name="region" onchange="this.form.submit()"
-                                class="w-full rounded-xl border-0 bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-[#152A4E]/15 text-sm pl-10 pr-9 py-2.5 transition">
-                                <option value="">{{ __('All Regions') }}</option>
-                                @foreach ($regions as $regionOption)
-                                    <option value="{{ $regionOption }}">{{ $regionOption }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                @forelse ($days as $day)
+                    {{-- The day strip is the agenda's answer to the grid's
+                         weekday header: same grey, same small uppercase type. --}}
+                    <div class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700 {{ $loop->first ? '' : 'border-t' }}">
+                        <span class="text-[11px] font-semibold uppercase tracking-wider {{ $day['isToday'] ? 'text-[#152A4E] dark:text-white' : 'text-gray-500 dark:text-gray-400' }}">
+                            {{ $day['date']->format('D j F') }}
+                        </span>
+                        @if ($day['isToday'])
+                            <span class="inline-flex items-center rounded-full bg-[#152A4E] text-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+                                {{ __('Today') }}
+                            </span>
+                        @endif
+                        <span class="ms-auto text-[11px] tabular-nums text-gray-400 dark:text-gray-500">
+                            {{ trans_choice(':count training|:count trainings', $day['trainings']->count(), ['count' => $day['trainings']->count()]) }}
+                        </span>
                     </div>
-                    @if ($search !== '')
-                        <a href="{{ route('admin.calendar') }}" class="inline-block mt-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-[#152A4E] dark:hover:text-white transition whitespace-nowrap">
-                            {{ __('Reset') }}
-                        </a>
-                    @endif
-                </form>
-            </x-chart-card>
 
-            <div class="flex items-center gap-4 flex-wrap text-xs font-medium text-gray-500 dark:text-gray-400">
-                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-orange-400"></span>{{ __('TA') }}</span>
-                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-blue-400"></span>{{ __('APB') }}</span>
-            </div>
+                    <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach ($day['trainings'] as $training)
+                            <li>
+                                <a href="{{ route('admin.summary.edit', $training) }}"
+                                    class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition">
+                                    {{-- The same solid category colour the grid
+                                         draws its bars in, stood on its end. --}}
+                                    <span class="w-1.5 h-9 shrink-0 rounded-sm {{ $categorySwatches[$training->category] ?? 'bg-gray-400' }}"></span>
 
-            @if ($groupedByMonth->isEmpty())
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sm:p-8">
-                    <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-5 text-sm text-gray-500 dark:text-gray-400">
-                        {{ __('No scheduled trainings match yet.') }}
-                    </div>
-                </div>
-            @else
-                <div x-data="{ activeMonth: @js($defaultMonth) }">
-                    <div class="flex items-center gap-1 overflow-x-auto bg-gray-100 dark:bg-gray-900/40 rounded-xl p-1.5">
-                        @foreach ($groupedByMonth as $month => $entries)
-                            <button type="button" @click="activeMonth = @js($month)"
-                                x-init="@js($month) === @js($defaultMonth) && $nextTick(() => $el.scrollIntoView({ block: 'nearest', inline: 'center' }))"
-                                :class="activeMonth === @js($month)
-                                    ? 'bg-white dark:bg-gray-700 text-[#152A4E] dark:text-white shadow-sm'
-                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
-                                class="shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition whitespace-nowrap">
-                                {{ $month }}
-                                <span :class="activeMonth === @js($month)
-                                        ? 'bg-[#152A4E]/10 text-[#152A4E] dark:bg-white/15 dark:text-white px-1.5 py-0.5 rounded-full text-xs font-semibold'
-                                        : 'text-gray-400 dark:text-gray-500 text-xs font-normal'">
-                                    {{ $entries->count() }}
-                                </span>
-                            </button>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-semibold text-[#152A4E] dark:text-white truncate">{{ $training->training_title }}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                            {{ $training->dateRangeLabel() }} &middot; {{ $training->venue ?: __('Venue TBD') }}
+                                        </p>
+                                    </div>
+
+                                    {{-- The one thing a region's own calendar
+                                         never has to say, and the thing Central
+                                         is reading for. --}}
+                                    <span class="shrink-0 inline-flex items-center text-[10px] font-semibold uppercase tracking-wide rounded-full border px-2 py-1 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600">
+                                        {{ $training->region ?: __('No region') }}
+                                    </span>
+                                </a>
+                            </li>
                         @endforeach
-                    </div>
-
-                    @foreach ($groupedByMonth as $month => $entries)
-                        {{-- Blade does not compile @js() inside a component attribute, so the
-                             Alpine expression is built in PHP and bound with ":x-show". --}}
-                        <x-chart-card :x-show="'activeMonth === ' . json_encode($month)" x-cloak class="mt-5"
-                            body-class="p-6 sm:p-8" :title="$month">
-                            <ul class="space-y-2">
-                                @php $categoryShort = ['apb' => 'APB', 'ta' => 'TA']; @endphp
-                                @foreach ($entries as $request)
-                                    <li class="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2">
-                                        <div class="min-w-0">
-                                            <p class="font-semibold text-[#152A4E] dark:text-white text-sm truncate">{{ $request->training_title }}</p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                                {{ $request->preferred_date->format('M j, Y') }} &middot; {{ $request->venue ?? __('Venue TBD') }}
-                                            </p>
-                                        </div>
-                                        <span class="shrink-0 inline-flex items-center text-xs font-semibold rounded-full border px-2.5 py-1 {{ $categoryColors[$request->category] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600' }}">
-                                            {{ $categoryShort[$request->category] ?? '—' }}
-                                        </span>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </x-chart-card>
-                    @endforeach
-                </div>
-            @endif
-
+                    </ul>
+                @empty
+                    <p class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                        {{ $search !== ''
+                            ? __('Nothing in :month matches ":search".', ['month' => $month->format('F Y'), 'search' => $search])
+                            : __('Nothing scheduled in :month yet.', ['month' => $month->format('F Y')]) }}
+                    </p>
+                @endforelse
+            </div>
         </div>
     </div>
-
-    <script>
-        let calendarFilterTimeout;
-        function debounceCalendarFilter(el) {
-            clearTimeout(calendarFilterTimeout);
-            calendarFilterTimeout = setTimeout(() => el.form.submit(), 500);
-        }
-    </script>
 </x-app-layout>

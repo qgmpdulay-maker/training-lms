@@ -204,6 +204,80 @@ class CalendarMonthGridTest extends TestCase
             ->assertDontSee('grid-template-rows', false);
     }
 
+    /**
+     * The agenda is the same month, the same controls and the same palette as
+     * the grid — only the shape below the legend differs. These guard the
+     * parts of that promise a stylesheet can't.
+     */
+    public function test_the_agenda_lists_each_training_under_its_day_with_its_region(): void
+    {
+        $this->training(['preferred_date' => '2026-11-03', 'training_title' => 'Incident Command System', 'region' => 'Region III']);
+        $this->training(['preferred_date' => '2026-11-17', 'training_title' => 'Contingency Planning', 'region' => 'NCR']);
+
+        $response = $this->actingAs(User::factory()->superAdmin()->create())
+            ->get(route('admin.calendar', ['month' => '2026-11']))
+            ->assertOk();
+
+        // The strip is uppercased by CSS, so the markup reads "Tue 3 November".
+        $response->assertSeeText('Tue 3 November');
+        $response->assertSeeText('Incident Command System');
+        // The region is the thing Central reads for, and the one thing a
+        // region's own calendar never has to say.
+        $response->assertSeeText('Region III');
+        $response->assertSeeText('NCR');
+    }
+
+    public function test_the_agenda_only_covers_the_month_in_view(): void
+    {
+        $this->training(['preferred_date' => '2026-11-03', 'training_title' => 'This Month']);
+        $this->training(['preferred_date' => '2026-12-03', 'training_title' => 'Next Month']);
+
+        // The grid can load a region's whole history; every region's would be
+        // thousands of rows, so the agenda is filtered in SQL to one month.
+        $this->actingAs(User::factory()->superAdmin()->create())
+            ->get(route('admin.calendar', ['month' => '2026-11']))
+            ->assertOk()
+            ->assertSeeText('This Month')
+            ->assertDontSeeText('Next Month');
+    }
+
+    public function test_the_agenda_carries_in_a_run_that_started_last_month(): void
+    {
+        $this->training([
+            'preferred_date' => '2026-10-28',
+            'end_date' => '2026-11-03',
+            'training_title' => 'Started In October',
+        ]);
+
+        $response = $this->actingAs(User::factory()->superAdmin()->create())
+            ->get(route('admin.calendar', ['month' => '2026-11']))
+            ->assertOk();
+
+        // Listed on the 1st rather than vanishing, and still showing the true
+        // range so nothing reads as if it started that day.
+        $response->assertSeeText('Sun 1 November');
+        $response->assertSeeText('Started In October');
+        $response->assertSeeText('Oct 28 – Nov 3, 2026');
+    }
+
+    public function test_the_agenda_wears_the_same_header_as_the_grid(): void
+    {
+        $response = $this->actingAs(User::factory()->superAdmin()->create())
+            ->get(route('admin.calendar', ['month' => '2026-11']))
+            ->assertOk();
+
+        // Month title, the jump-to-month selects, and the shared legend —
+        // the chrome both calendars now include from one partial.
+        $response->assertSee('November 2026');
+        $response->assertSee('<option value="11" selected>', false);
+        $response->assertSee('bg-orange-500', false);
+        $response->assertSee('bg-blue-600', false);
+        $response->assertSee(route('admin.calendar', ['month' => '2026-10']), false);
+        // Still Central's page: no Schedule button, and a region picker.
+        $response->assertDontSee(route('admin.trainings.create'), false);
+        $response->assertSee('All Regions (agenda)');
+    }
+
     public function test_a_super_admin_who_picks_a_region_gets_that_regions_grid(): void
     {
         $this->training(['preferred_date' => '2026-11-02', 'end_date' => '2026-11-06', 'training_title' => 'Ours', 'region' => 'Region III']);
