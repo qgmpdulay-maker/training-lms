@@ -1,0 +1,54 @@
+# Rebuilds the Graduates by Location map's city outlines and city list from
+# the PSA's PSGC boundaries (see scripts/build-ph-city-boundaries.mjs), and
+# opens a pull request when anything changed, with a report of which cities
+# were added, removed or renamed. Nothing goes live until that PR is merged
+# and deployed.
+#
+# The PSA publishes PSGC changes quarterly, about six weeks after each
+# quarter ends, so this runs mid-February, May, August and November. It can
+# also be started by hand from the Actions tab.
+#
+# Needs: Settings → Actions → General → "Allow GitHub Actions to create and
+# approve pull requests".
+
+name: Refresh city boundaries
+
+on:
+  schedule:
+    - cron: '0 1 15 2,5,8,11 *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Rebuild outlines and city list
+        run: npm run geo:build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Open a pull request if anything changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/refresh-city-boundaries
+          commit-message: Refresh city boundaries from the latest PSGC data
+          title: Refresh city boundaries from the latest PSGC data
+          body-path: storage/app/geo-source/report.md
+          add-paths: |
+            public/geo/ph-cities.json
+            public/geo/ph-regions.json
+            resources/data/ph-cities.json
+          delete-branch: true

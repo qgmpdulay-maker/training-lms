@@ -78,7 +78,7 @@ class GraduateCityTest extends TestCase
     {
         $label = fn (?string $value, ?string $region = null) => ($city = CityDirectory::match($value, $region)) ? CityDirectory::label($city) : null;
 
-        $this->assertSame('Angeles City, Pampanga', $label('Angeles, Pampanga'));
+        $this->assertSame('City of Angeles, Pampanga', $label('Angeles, Pampanga'));
         $this->assertSame('City of Biñan, Laguna', $label('Binan City'));
         $this->assertSame('Quezon City, Metro Manila', $label('Quezon City', 'Region III'));
         $this->assertSame('Quezon, Palawan', $label('Quezon, Palawan'));
@@ -176,7 +176,7 @@ class GraduateCityTest extends TestCase
         // (twice, but they're one person), across both trainings.
         $this->assertSame(
             ['graduates' => 3, 'deployed' => 1, 'trainings' => 2],
-            collect($byName['Angeles City'])->only(['graduates', 'deployed', 'trainings'])->all(),
+            collect($byName['City of Angeles'])->only(['graduates', 'deployed', 'trainings'])->all(),
         );
         $this->assertSame(1, $byName['City of Malolos']['graduates']);
         $this->assertSame(0, $byName['City of Malolos']['deployed']);

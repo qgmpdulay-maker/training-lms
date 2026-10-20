@@ -8,7 +8,7 @@
     optionally $onlyRegion (a Regional Admin's region, drawn with a heavier
     outline) and $height.
 
-    The outlines come from public/geo (see scripts/build-ph-city-boundaries.py)
+    The outlines come from public/geo (see scripts/build-ph-city-boundaries.mjs)
     and are matched to the totals by city id or region name. Each map's data
     rides on its own element, so renderCityMaps() can redraw every map on the
     page after the dashboard swaps in a re-filtered copy of this partial; the
@@ -286,7 +286,7 @@
                 maps.push(map);
                 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
                 L.control.attribution({ position: 'bottomright', prefix: false })
-                    .addAttribution('&copy; OpenStreetMap contributors · Boundaries: <a href="https://www.geoboundaries.org" target="_blank" rel="noopener">geoBoundaries</a> (NAMRIA, PSA, OCHA), CC BY 3.0 IGO')
+                    .addAttribution('&copy; OpenStreetMap contributors · Boundaries: PSA PSGC via <a href="https://github.com/altcoder/philippines-psgc-shapefiles" target="_blank" rel="noopener">philippines-psgc-shapefiles</a> (OCHA COD-AB, CC BY 3.0 IGO)')
                     .addTo(map);
 
                 loadOutlines().then(([cityOutlines, regionOutlines]) => {

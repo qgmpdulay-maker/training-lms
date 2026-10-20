@@ -79,7 +79,7 @@ class AdminDashboardRegionTest extends TestCase
             ->assertViewHas('regionLocked', true)
             ->assertViewHas('filters', fn (array $filters) => $filters['regions'] === ['Region III'])
             ->assertViewHas('monitoringSummary', fn (array $summary) => $summary['graduates'] === 1 && $summary['deployed'] === 1)
-            ->assertViewHas('cityTotals', fn (array $totals) => $cityNames($totals) === ['Angeles City'])
+            ->assertViewHas('cityTotals', fn (array $totals) => $cityNames($totals) === ['City of Angeles'])
             ->assertViewHas('graduatesByCity', fn (array $byCity) => array_keys($byCity) === ['Region III'])
             ->assertSee('data-only-region="Region III"', false);
 
@@ -89,7 +89,7 @@ class AdminDashboardRegionTest extends TestCase
             ->get(route('admin.dashboard'))
             ->assertOk()
             ->assertViewHas('regionLocked', false)
-            ->assertViewHas('cityTotals', fn (array $totals) => $cityNames($totals) === ['Angeles City', 'City of Santa Rosa'])
+            ->assertViewHas('cityTotals', fn (array $totals) => $cityNames($totals) === ['City of Angeles', 'City of Santa Rosa'])
             ->assertSee('data-only-region=""', false);
 
         // ...and can narrow it to one region, which is then outlined.

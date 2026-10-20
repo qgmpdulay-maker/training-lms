@@ -9,9 +9,10 @@ use Illuminate\Support\Str;
  * draw, and the matching from a person's free-text City ("Angeles, Pampanga",
  * "Quezon City, Metro Manila", "City of Biñan") to one of them.
  *
- * The list is built by scripts/build-ph-city-boundaries.py from geoBoundaries
- * (NAMRIA / PSA / OCHA data), and its ids line up with the outlines in
- * public/geo/ph-cities.json, so the map only needs an id to shade a city.
+ * The list is built by `npm run geo:build` (scripts/build-ph-city-boundaries.mjs)
+ * from the PSA's PSGC boundaries. Each id is the city's PSGC code and lines
+ * up with its outline in public/geo/ph-cities.json, so the map only needs an
+ * id to shade a city.
  */
 class CityDirectory
 {
@@ -30,8 +31,6 @@ class CityDirectory
         'metropolitan manila' => 'metro manila',
         'manila' => 'metro manila',
         'compostela valley' => 'davao de oro',
-        'maguindanao del norte' => 'maguindanao',
-        'maguindanao del sur' => 'maguindanao',
         'western samar' => 'samar',
     ];
 
