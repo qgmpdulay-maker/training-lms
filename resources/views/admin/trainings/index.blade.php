@@ -21,13 +21,6 @@
                     <h1 class="text-2xl font-bold text-[#152A4E] dark:text-white">
                         {{ Auth::user()->isAdmin() ? __('Trainings in :region', ['region' => Auth::user()->region]) : __('Trainings') }}
                     </h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        @if (Auth::user()->isAdmin())
-                            {{ __('Trainings you have scheduled for your region. Scheduling one needs no approval — it is set the moment you save it.') }}
-                        @else
-                            {{ __('Every training on record, most recent first. Scheduled by each Regional Admin; use Manage to edit one or mark it Completed.') }}
-                        @endif
-                    </p>
                 </div>
                 {{-- Scheduling belongs to the Regional Admin: they run the trainings in
                      their region and are already authorised to, so there's no approval

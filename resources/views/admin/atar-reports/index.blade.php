@@ -20,12 +20,6 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-[#152A4E] dark:text-white">{{ __('ATAR Reports') }}</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        {{ __('After Training Activity Reports — auto-generated from completed trainings or written from scratch.') }}
-                        @if (Auth::user()->isSuperAdmin())
-                            {{ __('Written by each Regional Admin; you review, edit, and finalize them here.') }}
-                        @endif
-                    </p>
                 </div>
                 {{-- Writing a new ATAR belongs to the Regional Admin — the region
                      reports on the training it ran. A Super Admin edits and

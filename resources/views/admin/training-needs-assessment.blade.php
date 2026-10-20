@@ -43,10 +43,6 @@
                     </a>
                     </div>
                 </x-slot:action>
-                <x-slot:description>
-                @php $areaPhrase = Auth::user()->isAdmin() ? Auth::user()->region : ($selectedRegion ?: __('all regions')); @endphp
-                {{ __('What participants in :area have asked for, grouped by area rather than listed person by person — busiest first.', ['area' => $areaPhrase]) }}
-                </x-slot:description>
 
                 {{-- City or region: the same submissions, counted at the level you're
                      planning at. City is the default — that's where trainings run —

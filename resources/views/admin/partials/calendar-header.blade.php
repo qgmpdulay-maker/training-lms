@@ -9,7 +9,7 @@
 
      Expects: $month, $previousMonth, $nextMonth, $selectableYears, $search,
      $regions, $region (null on the all-regions agenda), $regionPicker,
-     $canSchedule, $countLabel, $legendHint. --}}
+     $canSchedule, $countLabel. --}}
 
 @php
     // A Regional Admin's region is implied by who they are, so it never needs
@@ -142,7 +142,6 @@
 <div class="flex items-center gap-4 flex-wrap text-xs font-medium text-gray-500 dark:text-gray-400">
     <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-orange-500"></span>{{ __('TA') }}</span>
     <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-blue-600"></span>{{ __('APB') }}</span>
-    <span class="text-gray-400 dark:text-gray-500">{{ $legendHint }}</span>
 </div>
 
 <script>
