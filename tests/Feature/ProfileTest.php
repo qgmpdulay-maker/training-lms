@@ -93,4 +93,16 @@ class ProfileTest extends TestCase
         $this->assertSame($before, $user->only($locked));
         $this->assertNotNull($user->email_verified_at);
     }
+
+    public function test_the_id_card_carries_a_qr_code_of_the_id_number_only(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('profile.id-card'))
+            ->assertOk()
+            ->assertSee(sprintf('OCD-PID-%06d', $user->id))
+            ->assertSee('data:image/svg+xml;base64', false)
+            ->assertSee(sprintf('QR code for OCD-PID-%06d', $user->id));
+    }
 }

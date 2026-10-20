@@ -43,7 +43,7 @@
                     <dl class="divide-y divide-gray-100 text-sm border-t border-b border-gray-100">
                         <div class="py-3 flex justify-between gap-4">
                             <dt class="text-gray-500">{{ __('ID Number') }}</dt>
-                            <dd class="font-semibold text-gray-800">{{ sprintf('OCD-PID-%06d', $user->id) }}</dd>
+                            <dd class="font-semibold text-gray-800">{{ $idNumber }}</dd>
                         </div>
                         <div class="py-3 flex justify-between gap-4">
                             <dt class="text-gray-500">{{ __('Agency/Organization') }}</dt>
@@ -58,6 +58,16 @@
                             <dd class="font-semibold text-gray-800">{{ now()->format('F j, Y') }}</dd>
                         </div>
                     </dl>
+
+                    {{-- Encodes the ID number only. A data-URI image rather than inline
+                         SVG so its size is plain width/height — it can't blow up to fill
+                         the card — and it still survives Print / Save as PDF. --}}
+                    <div class="flex flex-col items-center mt-5">
+                        <img src="data:image/svg+xml;base64,{{ base64_encode($qr) }}"
+                            alt="{{ __('QR code for :id', ['id' => $idNumber]) }}"
+                            width="64" height="64" style="width: 64px; height: 64px;">
+                        <p class="text-[10px] text-gray-400 mt-1 tracking-wide">{{ __('Scan to read ID number') }}</p>
+                    </div>
 
                     <p class="text-xs text-gray-400 text-center mt-6">
                         {{ __('This ID identifies a registered participant of the OCD Training IMS and is valid while the account remains active.') }}

@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Participant;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProfileUpdateRequest;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -54,8 +58,22 @@ class ProfileController extends Controller
      */
     public function idCard(Request $request): View
     {
+        $user = $request->user();
+        $idNumber = sprintf('OCD-PID-%06d', $user->id);
+
+        // The QR carries only the ID number — no name, no contact details — so
+        // a printed card that gets photographed or lost gives away nothing a
+        // scanner couldn't read off the card face. Drawn server-side as SVG so
+        // it needs no external service and prints crisp at any size.
+        $qr = (new Writer(new ImageRenderer(
+            new RendererStyle(240, 0),
+            new SvgImageBackEnd,
+        )))->writeString($idNumber);
+
         return view('participant.profile.id-card', [
-            'user' => $request->user(),
+            'user' => $user,
+            'idNumber' => $idNumber,
+            'qr' => $qr,
         ]);
     }
 }
