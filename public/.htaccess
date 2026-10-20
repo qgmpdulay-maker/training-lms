@@ -5,6 +5,12 @@
 
     RewriteEngine On
 
+    # Uploads land in public/storage and are served straight from here (see
+    # the public disk in config/filesystems.php), so never run or serve a
+    # script from it. Upload validation already rejects these; this is the
+    # backstop if a file ever slips past it.
+    RewriteRule ^storage/.*\.(php\d?|phtml|phar|pht|phps)$ - [F,L,NC]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

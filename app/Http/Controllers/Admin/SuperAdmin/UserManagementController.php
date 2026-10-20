@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Rules\NotSimilarToAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -258,6 +259,7 @@ class UserManagementController extends Controller
         $newPassword = filled($validated['password'] ?? null) ? $validated['password'] : Str::password(12);
 
         $user->forceFill(['password' => Hash::make($newPassword)])->save();
+        $this->keepSignedInIfSelf($request, $user);
 
         return Redirect::back()->with([
             'status' => "{$user->name}'s password was reset.",
@@ -278,9 +280,10 @@ class UserManagementController extends Controller
         ]);
 
         $results = User::whereIn('id', $validated['user_ids'])->get()
-            ->map(function (User $user) {
+            ->map(function (User $user) use ($request) {
                 $newPassword = Str::password(12);
                 $user->forceFill(['password' => Hash::make($newPassword)])->save();
+                $this->keepSignedInIfSelf($request, $user);
 
                 return ['name' => $user->name, 'password' => $newPassword];
             })
@@ -291,5 +294,20 @@ class UserManagementController extends Controller
             'status' => count($results).' password(s) were reset.',
             'tempPasswords' => $results,
         ]);
+    }
+
+    /**
+     * A password reset signs the account out everywhere (AuthenticateSession,
+     * see bootstrap/app.php) — that's the point when the account is someone
+     * else's. But the Super Admin can reset their own from the admins list,
+     * and being signed out there would also lose the one-time password the
+     * next page shows. Handing this session the updated account keeps it
+     * signed in; their other sessions still end.
+     */
+    private function keepSignedInIfSelf(Request $request, User $user): void
+    {
+        if ($user->is($request->user())) {
+            Auth::setUser($user);
+        }
     }
 }
