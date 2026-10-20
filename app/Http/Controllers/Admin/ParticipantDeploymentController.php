@@ -8,7 +8,9 @@ use App\Models\User;
 use App\Support\CityDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -29,8 +31,22 @@ class ParticipantDeploymentController extends Controller
         $search = trim((string) $request->query('q', ''));
         $status = $request->query('status');
 
-        $graduates = User::graduates()
-            ->when($user->isAdmin(), fn ($query) => $query->where('region', $user->region))
+        // A Regional Admin is always held to their own region; Super Admin
+        // can narrow to one, or leave it blank for the whole country.
+        $region = $user->isAdmin()
+            ? $user->region
+            : (in_array($request->query('region'), config('regions.list'), true) ? $request->query('region') : null);
+
+        // A Regional Admin browses their region by city instead: the home
+        // cities their graduates are counted under, each with its spellings.
+        $cities = $user->isAdmin() ? $this->homeCities($region) : collect();
+        $city = $cities->has($request->query('city')) ? $request->query('city') : null;
+
+        $inScope = fn () => User::graduates()
+            ->when($region, fn ($query) => $query->where('region', $region))
+            ->when($city, fn ($query) => $query->whereIn('city', $cities[$city]['values']));
+
+        $graduates = $inScope()
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -40,6 +56,8 @@ class ParticipantDeploymentController extends Controller
             })
             // Lets an admin jump straight to who still needs recording, rather
             // than paging through graduates who are already accounted for.
+            // no_city isn't in the dropdown; it's reached from the "missing a
+            // home city" notice above the list.
             ->when($status === 'deployed', fn ($query) => $query->has('deployments'))
             ->when($status === 'not_deployed', fn ($query) => $query->doesntHave('deployments'))
             ->when($status === 'no_city', fn ($query) => $this->notOnMap($query))
@@ -49,10 +67,27 @@ class ParticipantDeploymentController extends Controller
             ->withQueryString()
             ->fragment('deployment-graduates');
 
+        // The counts across the top of the list. They follow the region and
+        // city filters but not the search box, so they describe the whole
+        // region (or city) rather than whatever's been typed.
+        $total = $inScope()->count();
+        $deployed = $inScope()->has('deployments')->count();
+        $counts = [
+            'total' => $total,
+            'deployed' => $deployed,
+            'not_deployed' => $total - $deployed,
+            'no_city' => tap($inScope(), fn ($query) => $this->notOnMap($query))->count(),
+        ];
+
         $payload = [
             'graduates' => $graduates,
             'search' => $search,
             'status' => $status,
+            'region' => $region,
+            'regions' => config('regions.list'),
+            'city' => $city,
+            'cities' => $cities,
+            'counts' => $counts,
         ];
 
         // Typing re-requests this route and swaps in just the list, so the page
@@ -73,22 +108,33 @@ class ParticipantDeploymentController extends Controller
             'deployment' => ['required', 'string', 'max:255'],
             'deployment_date' => ['required', 'date', 'before_or_equal:today'],
             'deployment_role' => ['nullable', 'string', 'max:255'],
-            // Where they were sent. Free text rather than matched against
-            // CityDirectory like updateCity() below, because a deployment can
-            // be anywhere — including outside this admin's own region, which
-            // is the normal case for a graduate sent to help elsewhere.
-            'city' => ['nullable', 'string', 'max:255'],
+            // Where they were sent: any number of cities, each one picked
+            // from CityDirectory's own list. Not narrowed to this admin's
+            // region — a graduate sent to help elsewhere is the normal case.
+            'cities' => ['nullable', 'array', 'max:50'],
+            'cities.*' => ['string', Rule::in(CityDirectory::labels())],
             'notes' => ['nullable', 'string', 'max:1000'],
         ], [
             'deployment_date.before_or_equal' => 'A deployment is recorded after it happens, so the date cannot be in the future.',
         ]);
 
-        $user->deployments()->create([
-            ...$validated,
-            'recorded_by' => $request->user()->id,
-        ]);
+        // One record per city, so a graduate sent to several places shows
+        // each of them separately and any one can be removed on its own. No
+        // city picked still records the deployment itself.
+        $cities = array_values(array_unique($validated['cities'] ?? [])) ?: [null];
+        unset($validated['cities']);
 
-        return Redirect::back()->with('status', "Deployment recorded for {$user->name}.");
+        foreach ($cities as $city) {
+            $user->deployments()->create([
+                ...$validated,
+                'city' => $city,
+                'recorded_by' => $request->user()->id,
+            ]);
+        }
+
+        return Redirect::back()->with('status', count($cities) > 1
+            ? "Deployment recorded for {$user->name} in ".count($cities).' cities.'
+            : "Deployment recorded for {$user->name}.");
     }
 
     /**
@@ -149,6 +195,31 @@ class ParticipantDeploymentController extends Controller
                 $q->orWhere(fn ($pair) => $pair->where('city', $row->city)->where('region', $row->region));
             }
         });
+    }
+
+    /**
+     * The home cities a region's graduates are counted under, as label =>
+     * ['values' => the City spellings that mean it, 'count' => graduates].
+     * Matched in PHP like notOnMap(), so "Angeles, Pampanga" and "Angeles
+     * City" are one option; anything the map can't place is left out, since
+     * the "no home city" notice already covers those.
+     */
+    private function homeCities(?string $region): Collection
+    {
+        return User::graduates()
+            ->where('region', $region)
+            ->whereNotNull('city')
+            ->where('city', '!=', '')
+            ->selectRaw('city, count(*) as total')
+            ->groupBy('city')
+            ->get()
+            ->groupBy(fn (User $row) => ($match = CityDirectory::match($row->city, $region)) ? CityDirectory::label($match) : '')
+            ->forget('')
+            ->map(fn (Collection $rows) => [
+                'values' => $rows->pluck('city')->all(),
+                'count' => (int) $rows->sum('total'),
+            ])
+            ->sortKeys();
     }
 
     /**

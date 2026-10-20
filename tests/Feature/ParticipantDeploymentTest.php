@@ -191,6 +191,64 @@ class ParticipantDeploymentTest extends TestCase
             ->assertDontSee('Needs Recording');
     }
 
+    public function test_super_admin_can_narrow_the_list_to_one_region(): void
+    {
+        $bicol = $this->graduate('Region V');
+        $bicol->update(['name' => 'Bicol Graduate']);
+        $luzon = $this->graduate('Region III');
+        $luzon->update(['name' => 'Central Luzon Graduate']);
+
+        $superAdmin = User::factory()->superAdmin()->create();
+
+        $this->actingAs($superAdmin)
+            ->get(route('admin.deployments.index'))
+            ->assertSee('Bicol Graduate')
+            ->assertSee('Central Luzon Graduate');
+
+        $this->actingAs($superAdmin)
+            ->get(route('admin.deployments.index', ['region' => 'Region V']))
+            ->assertOk()
+            ->assertSee('Bicol Graduate')
+            ->assertDontSee('Central Luzon Graduate');
+    }
+
+    public function test_a_regional_admin_cannot_use_the_region_filter_to_see_another_region(): void
+    {
+        $other = $this->graduate('Region V');
+        $other->update(['name' => 'Bicol Graduate']);
+
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->get(route('admin.deployments.index', ['region' => 'Region V']))
+            ->assertOk()
+            ->assertDontSee('Bicol Graduate');
+    }
+
+    public function test_a_regional_admin_can_browse_their_graduates_by_home_city(): void
+    {
+        $angeles = $this->graduate();
+        $angeles->update(['name' => 'Angeles Graduate', 'city' => 'Angeles, Pampanga']);
+        // Same city, spelled the way the picker saves it — still one option.
+        $alsoAngeles = $this->graduate();
+        $alsoAngeles->update(['name' => 'Second Angeles Graduate', 'city' => 'Angeles City, Pampanga']);
+        $malolos = $this->graduate();
+        $malolos->update(['name' => 'Malolos Graduate', 'city' => 'City of Malolos, Bulacan']);
+
+        $admin = User::factory()->admin('Region III')->create();
+
+        $page = $this->actingAs($admin)->get(route('admin.deployments.index'))->assertOk();
+        $options = $page->viewData('cities');
+        $this->assertCount(2, $options);
+        $angelesLabel = $options->keys()->first(fn (string $label) => str_contains($label, 'Angeles'));
+        $this->assertSame(2, $options[$angelesLabel]['count']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.deployments.index', ['city' => $angelesLabel]))
+            ->assertOk()
+            ->assertSee('Angeles Graduate')
+            ->assertSee('Second Angeles Graduate')
+            ->assertDontSee('Malolos Graduate');
+    }
+
     public function test_the_search_returns_just_the_list_fragment(): void
     {
         $graduate = $this->graduate();
@@ -232,7 +290,7 @@ class ParticipantDeploymentTest extends TestCase
         User::whereKey([$graduate->id, $alsoDeployed->id, $neverDeployed->id])->update(['city' => 'Angeles, Pampanga']);
         $cities = \App\Http\Controllers\Admin\SuperAdmin\MonitoringController::cityTotals($trainings)['cities'];
         $this->assertSame(
-            [['name' => 'Angeles City', 'graduates' => 3, 'deployed' => 2]],
+            [['name' => 'City of Angeles', 'graduates' => 3, 'deployed' => 2]],
             collect($cities)->map(fn (array $city) => collect($city)->only(['name', 'graduates', 'deployed'])->all())->all(),
         );
     }
@@ -244,5 +302,32 @@ class ParticipantDeploymentTest extends TestCase
         $trainings = \App\Http\Controllers\Admin\SuperAdmin\MonitoringController::completedTrainings([])->get();
 
         $this->assertSame(0, \App\Http\Controllers\Admin\SuperAdmin\MonitoringController::summary($trainings)['deployed']);
+    }
+
+    public function test_a_deployment_in_several_cities_is_recorded_once_per_city(): void
+    {
+        $graduate = $this->graduate();
+
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->post(route('admin.deployments.store', $graduate), $this->payload([
+                'cities' => ['City of Legazpi, Albay', 'City of Malolos, Bulacan', 'City of Legazpi, Albay'],
+            ]))
+            ->assertRedirect();
+
+        $this->assertEqualsCanonicalizing(
+            ['City of Legazpi, Albay', 'City of Malolos, Bulacan'],
+            $graduate->deployments()->pluck('city')->all()
+        );
+    }
+
+    public function test_a_deployed_to_city_has_to_come_from_the_list(): void
+    {
+        $graduate = $this->graduate();
+
+        $this->actingAs(User::factory()->admin('Region III')->create())
+            ->post(route('admin.deployments.store', $graduate), $this->payload(['cities' => ['Atlantis']]))
+            ->assertSessionHasErrors('cities.0');
+
+        $this->assertSame(0, ParticipantDeployment::count());
     }
 }
