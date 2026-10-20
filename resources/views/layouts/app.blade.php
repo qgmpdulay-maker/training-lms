@@ -13,6 +13,18 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        <script>
+            // Some browsers can still restore a page on Back/Forward from
+            // memory (the back-forward cache) without asking the server.
+            // Reload instead, so a page left behind by logging out goes back
+            // through the login check rather than showing stale data.
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted) {
+                    window.location.reload();
+                }
+            });
+        </script>
     </head>
     <body class="font-sans antialiased">
         <div
